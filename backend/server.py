@@ -182,9 +182,10 @@ async def get_session_data(x_session_id: str = Header(None)):
         raise HTTPException(status_code=400, detail="X-Session-ID header required")
     
     # Call Emergent Auth API to get user data
+    emergent_backend_url = os.environ.get('EMERGENT_BACKEND_URL', 'https://demobackend.emergentagent.com')
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+            f"{emergent_backend_url}/auth/v1/env/oauth/session-data",
             headers={"X-Session-ID": x_session_id}
         )
         
