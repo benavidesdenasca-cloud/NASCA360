@@ -1,9 +1,22 @@
 import { useState, useEffect } from 'react';
+import React from 'react';
 import '@/App.css';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import { Toaster } from '@/components/ui/sonner';
+
+// Public pages
 import LandingPage from '@/pages/LandingPage';
+
+// Auth pages
+import Login from '@/pages/auth/Login';
+import Register from '@/pages/auth/Register';
+import ForgotPassword from '@/pages/auth/ForgotPassword';
+import ResetPassword from '@/pages/auth/ResetPassword';
+import VerifyEmail from '@/pages/auth/VerifyEmail';
+import AuthSuccess from '@/pages/auth/AuthSuccess';
+
+// Protected pages
 import Gallery from '@/pages/Gallery';
 import VideoPlayer from '@/pages/VideoPlayer';
 import Subscription from '@/pages/Subscription';
@@ -17,88 +30,67 @@ const API = `${BACKEND_URL}/api`;
 
 export const AuthContext = React.createContext();
 
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('access_token');
+  
+  if (!token) {
+    return <Navigate to="/auth/login" replace />;
+  }
+  
+  return children;
+};
+
 function App() {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sessionToken, setSessionToken] = useState(null);
 
   useEffect(() => {
-    // Check for session_id in URL hash (from Emergent Auth)
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.substring(1));
-    const sessionId = params.get('session_id');
-
-    if (sessionId) {
-      // Exchange session_id for session_token
-      exchangeSession(sessionId);
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname);
+    // Check for existing access token
+    const savedToken = localStorage.getItem('access_token');
+    if (savedToken) {
+      setToken(savedToken);
+      fetchCurrentUser(savedToken);
     } else {
-      // Check for existing session token in localStorage
-      const token = localStorage.getItem('session_token');
-      if (token) {
-        setSessionToken(token);
-        fetchCurrentUser(token);
-      } else {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, []);
 
-  const exchangeSession = async (sessionId) => {
-    try {
-      const response = await axios.get(`${API}/auth/session`, {
-        headers: {
-          'X-Session-ID': sessionId
-        }
-      });
-      
-      const { user: userData, session_token } = response.data;
-      setUser(userData);
-      setSessionToken(session_token);
-      localStorage.setItem('session_token', session_token);
-      setLoading(false);
-    } catch (error) {
-      console.error('Session exchange failed:', error);
-      setLoading(false);
-    }
-  };
-
-  const fetchCurrentUser = async (token) => {
+  const fetchCurrentUser = async (accessToken) => {
     try {
       const response = await axios.get(`${API}/auth/me`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${accessToken}`
         }
       });
       setUser(response.data);
       setLoading(false);
     } catch (error) {
       console.error('Failed to fetch user:', error);
-      localStorage.removeItem('session_token');
-      setSessionToken(null);
+      localStorage.removeItem('access_token');
+      setToken(null);
+      setUser(null);
       setLoading(false);
     }
   };
 
-  const login = () => {
-    window.location.href = `${API}/auth/login`;
-  };
-
   const logout = async () => {
     try {
-      await axios.post(`${API}/auth/logout`, {}, {
-        headers: {
-          'Authorization': `Bearer ${sessionToken}`
-        }
-      });
+      if (token) {
+        await axios.post(`${API}/auth/logout`, {}, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
     } catch (error) {
       console.error('Logout error:', error);
     }
     
-    localStorage.removeItem('session_token');
+    localStorage.removeItem('access_token');
     setUser(null);
-    setSessionToken(null);
+    setToken(null);
   };
 
   if (loading) {
@@ -113,24 +105,81 @@ function App() {
   }
 
   return (
-    <AuthContext.Provider value={{ user, sessionToken, login, logout }}>
+    <AuthContext.Provider value={{ user, token, setUser, setToken, logout, fetchCurrentUser }}>
       <div className="App">
         <BrowserRouter>
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
-            <Route path="/gallery" element={<Gallery />} />
-            <Route path="/video/:id" element={<VideoPlayer />} />
-            <Route path="/subscription" element={<Subscription />} />
-            <Route path="/subscription/success" element={<SubscriptionSuccess />} />
-            <Route path="/reservations" element={<Reservations />} />
+            
+            {/* Auth Routes */}
+            <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/register" element={<Register />} />
+            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/auth-success" element={<AuthSuccess />} />
+            
+            {/* Protected Routes */}
+            <Route 
+              path="/gallery" 
+              element={
+                <ProtectedRoute>
+                  <Gallery />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/video/:id" 
+              element={
+                <ProtectedRoute>
+                  <VideoPlayer />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/subscription" 
+              element={
+                <ProtectedRoute>
+                  <Subscription />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/subscription/success" 
+              element={
+                <ProtectedRoute>
+                  <SubscriptionSuccess />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reservations" 
+              element={
+                <ProtectedRoute>
+                  <Reservations />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/dashboard" 
-              element={user ? <Dashboard /> : <Navigate to="/" />} 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/admin" 
-              element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/" />} 
+              element={
+                <ProtectedRoute>
+                  <AdminPanel />
+                </ProtectedRoute>
+              } 
             />
+
+            {/* Catch all - redirect to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
         <Toaster position="top-right" />
@@ -139,5 +188,4 @@ function App() {
   );
 }
 
-import React from 'react';
 export default App;
