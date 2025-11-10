@@ -12,7 +12,7 @@ import {
 import { User, LogOut, LayoutDashboard, Crown, Menu } from 'lucide-react';
 
 const Navbar = () => {
-  const { user, login, logout } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
