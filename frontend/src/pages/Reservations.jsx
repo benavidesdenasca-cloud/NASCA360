@@ -213,7 +213,7 @@ const Reservations = () => {
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
-                    <span>Sesión privada de 1 hora</span>
+                    <span>Sesión privada de 20 minutos</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
@@ -231,10 +231,13 @@ const Reservations = () => {
               </div>
 
               <div className="glass rounded-2xl p-8 bg-gradient-to-r from-amber-100 to-orange-100">
-                <h3 className="text-xl font-bold text-amber-900 mb-2">Precio Especial</h3>
-                <p className="text-3xl font-bold text-amber-900 mb-2">$15.00</p>
+                <h3 className="text-xl font-bold text-amber-900 mb-2">Precio</h3>
+                <p className="text-4xl font-bold text-amber-900 mb-2">$10.00</p>
                 <p className="text-sm text-gray-700">
-                  Usuarios Premium: <span className="font-bold">$10.00</span>
+                  USD por sesión de 20 minutos
+                </p>
+                <p className="text-xs text-gray-600 mt-2">
+                  *Mismo precio para todos los usuarios
                 </p>
               </div>
             </div>
