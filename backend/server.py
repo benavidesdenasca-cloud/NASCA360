@@ -120,6 +120,7 @@ class CabinReservation(BaseModel):
     user_email: str
     reservation_date: str  # "2025-01-15"
     time_slot: str  # "09:00-09:20" (20 minutes)
+    cabin_number: int  # 1, 2, or 3
     status: str = "pending"  # pending, confirmed, cancelled
     qr_code: str = ""
     stripe_session_id: Optional[str] = None
