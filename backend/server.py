@@ -6,12 +6,21 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 import httpx
+from authlib.integrations.starlette_client import OAuth
+
+# Import custom auth utilities
+from auth_utils import (
+    hash_password, verify_password, create_access_token, decode_access_token,
+    generate_verification_token, verify_email_token,
+    generate_password_reset_token, verify_password_reset_token,
+    send_verification_email, send_password_reset_email
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -23,6 +32,20 @@ db = client[os.environ['DB_NAME']]
 
 # Stripe setup
 STRIPE_API_KEY = os.environ['STRIPE_API_KEY']
+
+# Google OAuth setup
+GOOGLE_CLIENT_ID = os.environ['GOOGLE_CLIENT_ID']
+GOOGLE_CLIENT_SECRET = os.environ['GOOGLE_CLIENT_SECRET']
+GOOGLE_REDIRECT_URI = os.environ['GOOGLE_REDIRECT_URI']
+
+oauth = OAuth()
+oauth.register(
+    name='google',
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -44,9 +67,12 @@ class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: str
     name: str
+    password_hash: Optional[str] = None  # None for OAuth users
     picture: Optional[str] = None
     role: str = "user"  # user or admin
     subscription_plan: str = "basic"  # basic or premium
+    is_verified: bool = False  # Email verification status
+    oauth_provider: Optional[str] = None  # google, None for email/password
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserSession(BaseModel):
@@ -54,6 +80,7 @@ class UserSession(BaseModel):
     user_id: str
     session_token: str
     expires_at: datetime
+    last_activity: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Subscription(BaseModel):
@@ -106,6 +133,22 @@ class PaymentTransaction(BaseModel):
 
 # ==================== REQUEST/RESPONSE MODELS ====================
 
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 class SubscriptionCheckoutRequest(BaseModel):
     plan_type: str  # premium
     origin_url: str
@@ -126,35 +169,47 @@ class VideoCreate(BaseModel):
 
 # ==================== AUTHENTICATION ====================
 
-async def get_current_user(authorization: Optional[str] = Header(None), session_token: Optional[str] = None) -> User:
-    """Get current authenticated user from session token"""
-    token = None
-    
-    # Try to get token from Authorization header
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.replace("Bearer ", "")
-    # Fallback to direct session_token
-    elif session_token:
-        token = session_token
-    
-    if not token:
+async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
+    """Get current authenticated user from JWT token"""
+    if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = authorization.replace("Bearer ", "")
+    user_id = decode_access_token(token)
+    
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     
     # Find session
     session = await db.user_sessions.find_one({"session_token": token})
     if not session:
-        raise HTTPException(status_code=401, detail="Invalid session token")
+        raise HTTPException(status_code=401, detail="Session not found")
     
-    # Check if session expired
-    if datetime.fromisoformat(session['expires_at']) < datetime.now(timezone.utc):
-        raise HTTPException(status_code=401, detail="Session expired")
+    # Check session expiration (30 minutes of inactivity)
+    last_activity = datetime.fromisoformat(session['last_activity']) if isinstance(session['last_activity'], str) else session['last_activity']
+    if datetime.now(timezone.utc) - last_activity > timedelta(minutes=30):
+        await db.user_sessions.delete_one({"session_token": token})
+        raise HTTPException(status_code=401, detail="Session expired due to inactivity")
+    
+    # Update last activity
+    await db.user_sessions.update_one(
+        {"session_token": token},
+        {"$set": {"last_activity": datetime.now(timezone.utc).isoformat()}}
+    )
     
     # Get user
-    user_doc = await db.users.find_one({"id": session['user_id']}, {"_id": 0})
+    user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not user_doc:
         raise HTTPException(status_code=401, detail="User not found")
     
     return User(**user_doc)
+
+async def get_current_user_optional(authorization: Optional[str] = Header(None)) -> Optional[User]:
+    """Get current user if authenticated, None otherwise"""
+    try:
+        return await get_current_user(authorization)
+    except:
+        return None
 
 async def require_admin(current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
@@ -163,90 +218,236 @@ async def require_admin(current_user: User = Depends(get_current_user)):
 
 # ==================== AUTH ROUTES ====================
 
-@api_router.get("/auth/login")
-async def auth_login(request: Request):
-    """Redirect to Emergent Auth for Google/Facebook login"""
-    # Get the origin from request
-    origin = str(request.base_url).rstrip('/')
-    redirect_url = f"{origin}/dashboard"
+@api_router.post("/auth/register")
+async def register(request: RegisterRequest, req: Request):
+    """Register new user with email and password"""
+    # Check if user already exists
+    existing_user = await db.users.find_one({"email": request.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Redirect to Emergent Auth
-    emergent_auth_url = os.environ.get('EMERGENT_AUTH_URL', 'https://auth.emergentagent.com')
-    auth_url = f"{emergent_auth_url}/?redirect={redirect_url}"
-    return RedirectResponse(url=auth_url)
+    # Hash password
+    password_hash = hash_password(request.password)
+    
+    # Create user
+    new_user = User(
+        email=request.email,
+        name=request.name,
+        password_hash=password_hash,
+        is_verified=False,
+        oauth_provider=None
+    )
+    
+    user_dict = new_user.model_dump()
+    user_dict['created_at'] = user_dict['created_at'].isoformat()
+    await db.users.insert_one(user_dict)
+    
+    # Generate verification token
+    verification_token = generate_verification_token(request.email)
+    
+    # Send verification email
+    base_url = str(req.base_url).rstrip('/')
+    email_sent = await send_verification_email(request.email, verification_token, base_url)
+    
+    if not email_sent:
+        logger.error(f"Failed to send verification email to {request.email}")
+    
+    return {
+        "message": "Registro exitoso. Por favor verifica tu correo electrónico para activar tu cuenta.",
+        "email": request.email
+    }
 
-@api_router.get("/auth/session")
-async def get_session_data(x_session_id: str = Header(None)):
-    """Exchange session_id for user data and session_token"""
-    if not x_session_id:
-        raise HTTPException(status_code=400, detail="X-Session-ID header required")
+@api_router.get("/auth/verify-email")
+async def verify_email(token: str):
+    """Verify email address"""
+    email = verify_email_token(token)
+    if not email:
+        raise HTTPException(status_code=400, detail="Token inválido o expirado")
     
-    # Call Emergent Auth API to get user data
-    emergent_backend_url = os.environ.get('EMERGENT_BACKEND_URL', 'https://demobackend.emergentagent.com')
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{emergent_backend_url}/auth/v1/env/oauth/session-data",
-            headers={"X-Session-ID": x_session_id}
-        )
-        
-        if response.status_code != 200:
-            raise HTTPException(status_code=401, detail="Invalid session ID")
-        
-        auth_data = response.json()
+    # Update user verification status
+    result = await db.users.update_one(
+        {"email": email},
+        {"$set": {"is_verified": True}}
+    )
     
-    # Check if user exists
-    user_doc = await db.users.find_one({"email": auth_data['email']}, {"_id": 0})
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
+    return {"message": "Email verificado exitosamente. Ya puedes iniciar sesión."}
+
+@api_router.post("/auth/login")
+async def login(request: LoginRequest):
+    """Login with email and password"""
+    # Find user
+    user_doc = await db.users.find_one({"email": request.email}, {"_id": 0})
     if not user_doc:
-        # Create new user
-        new_user = User(
-            id=auth_data['id'],
-            email=auth_data['email'],
-            name=auth_data.get('name', ''),
-            picture=auth_data.get('picture', ''),
-            role="user",
-            subscription_plan="basic"
-        )
-        user_dict = new_user.model_dump()
-        user_dict['created_at'] = user_dict['created_at'].isoformat()
-        await db.users.insert_one(user_dict)
-        user_doc = new_user.model_dump()
+        raise HTTPException(status_code=401, detail="Credenciales inválidas")
     
     user = User(**user_doc)
     
-    # Create or update session
-    session_token = auth_data['session_token']
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    # Check if user registered with OAuth
+    if user.oauth_provider:
+        raise HTTPException(status_code=400, detail=f"Esta cuenta fue creada con {user.oauth_provider}. Por favor inicia sesión con {user.oauth_provider}.")
     
-    await db.user_sessions.update_one(
-        {"session_token": session_token},
-        {"$set": {
-            "user_id": user.id,
-            "session_token": session_token,
-            "expires_at": expires_at.isoformat(),
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }},
-        upsert=True
+    # Verify password
+    if not user.password_hash or not verify_password(request.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+    
+    # Check if email is verified
+    if not user.is_verified:
+        raise HTTPException(status_code=403, detail="Por favor verifica tu correo electrónico antes de iniciar sesión")
+    
+    # Create session token
+    session_token = create_access_token(user.id)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
+    
+    # Save session
+    session = UserSession(
+        user_id=user.id,
+        session_token=session_token,
+        expires_at=expires_at
     )
     
+    session_dict = session.model_dump()
+    session_dict['expires_at'] = session_dict['expires_at'].isoformat()
+    session_dict['last_activity'] = session_dict['last_activity'].isoformat()
+    session_dict['created_at'] = session_dict['created_at'].isoformat()
+    
+    await db.user_sessions.insert_one(session_dict)
+    
     return {
-        "user": user.model_dump(),
-        "session_token": session_token
+        "access_token": session_token,
+        "token_type": "bearer",
+        "user": user.model_dump(exclude={'password_hash'})
     }
+
+@api_router.get("/auth/google")
+async def google_login(request: Request):
+    """Initiate Google OAuth login"""
+    redirect_uri = GOOGLE_REDIRECT_URI
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+@api_router.get("/auth/google/callback")
+async def google_callback(request: Request):
+    """Google OAuth callback"""
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        user_info = token.get('userinfo')
+        
+        if not user_info:
+            raise HTTPException(status_code=400, detail="No se pudo obtener información del usuario")
+        
+        email = user_info.get('email')
+        name = user_info.get('name', email.split('@')[0])
+        picture = user_info.get('picture')
+        
+        # Check if user exists
+        user_doc = await db.users.find_one({"email": email}, {"_id": 0})
+        
+        if user_doc:
+            user = User(**user_doc)
+        else:
+            # Create new user
+            new_user = User(
+                email=email,
+                name=name,
+                picture=picture,
+                is_verified=True,  # OAuth users are pre-verified
+                oauth_provider="google",
+                password_hash=None
+            )
+            
+            user_dict = new_user.model_dump()
+            user_dict['created_at'] = user_dict['created_at'].isoformat()
+            await db.users.insert_one(user_dict)
+            user = new_user
+        
+        # Create session
+        session_token = create_access_token(user.id)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
+        
+        session = UserSession(
+            user_id=user.id,
+            session_token=session_token,
+            expires_at=expires_at
+        )
+        
+        session_dict = session.model_dump()
+        session_dict['expires_at'] = session_dict['expires_at'].isoformat()
+        session_dict['last_activity'] = session_dict['last_activity'].isoformat()
+        session_dict['created_at'] = session_dict['created_at'].isoformat()
+        
+        await db.user_sessions.insert_one(session_dict)
+        
+        # Redirect to frontend with token
+        frontend_url = str(request.base_url).rstrip('/')
+        return RedirectResponse(url=f"{frontend_url}/auth-success?token={session_token}")
+        
+    except Exception as e:
+        logger.error(f"Google OAuth error: {str(e)}")
+        raise HTTPException(status_code=400, detail="Error en autenticación con Google")
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest, req: Request):
+    """Request password reset"""
+    user_doc = await db.users.find_one({"email": request.email})
+    
+    # Always return success (don't reveal if email exists)
+    if not user_doc:
+        return {"message": "Si el correo existe, recibirás un enlace para restablecer tu contraseña"}
+    
+    user = User(**user_doc)
+    
+    # Check if user registered with OAuth
+    if user.oauth_provider:
+        return {"message": "Esta cuenta fue creada con OAuth. No puedes restablecer la contraseña."}
+    
+    # Generate reset token
+    reset_token = generate_password_reset_token(request.email)
+    
+    # Send reset email
+    base_url = str(req.base_url).rstrip('/')
+    email_sent = await send_password_reset_email(request.email, reset_token, base_url)
+    
+    if not email_sent:
+        logger.error(f"Failed to send password reset email to {request.email}")
+    
+    return {"message": "Si el correo existe, recibirás un enlace para restablecer tu contraseña"}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(request: ResetPasswordRequest):
+    """Reset password with token"""
+    email = verify_password_reset_token(request.token)
+    if not email:
+        raise HTTPException(status_code=400, detail="Token inválido o expirado")
+    
+    # Hash new password
+    new_password_hash = hash_password(request.new_password)
+    
+    # Update password
+    result = await db.users.update_one(
+        {"email": email},
+        {"$set": {"password_hash": new_password_hash}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    # Invalidate all existing sessions
+    await db.user_sessions.delete_many({"user_id": {"$exists": True}})
+    
+    return {"message": "Contraseña actualizada exitosamente. Por favor inicia sesión con tu nueva contraseña."}
 
 @api_router.get("/auth/me")
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information"""
-    return current_user
+    return current_user.model_dump(exclude={'password_hash'})
 
 @api_router.post("/auth/logout")
 async def logout(current_user: User = Depends(get_current_user), authorization: Optional[str] = Header(None)):
     """Logout user by deleting session"""
-    token = None
     if authorization and authorization.startswith("Bearer "):
         token = authorization.replace("Bearer ", "")
-    
-    if token:
         await db.user_sessions.delete_one({"session_token": token})
     
     return {"message": "Logged out successfully"}
@@ -254,8 +455,11 @@ async def logout(current_user: User = Depends(get_current_user), authorization: 
 # ==================== VIDEO ROUTES ====================
 
 @api_router.get("/videos", response_model=List[Video360])
-async def get_videos(category: Optional[str] = None, current_user: Optional[User] = None):
-    """Get videos (filter by subscription level)"""
+async def get_videos(category: Optional[str] = None, current_user: Optional[User] = Depends(get_current_user_optional)):
+    """Get videos - REQUIRES AUTHENTICATION"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Autenticación requerida para ver videos")
+    
     query = {}
     if category:
         query['category'] = category
@@ -263,28 +467,27 @@ async def get_videos(category: Optional[str] = None, current_user: Optional[User
     videos = await db.videos.find(query, {"_id": 0}).to_list(1000)
     
     # Filter premium videos for non-premium users
-    if current_user is None or current_user.subscription_plan != "premium":
+    if current_user.subscription_plan != "premium":
         videos = [v for v in videos if not v.get('is_premium', False)]
     
     return videos
 
 @api_router.get("/videos/{video_id}", response_model=Video360)
-async def get_video(video_id: str, current_user: Optional[User] = None):
-    """Get single video details"""
+async def get_video(video_id: str, current_user: User = Depends(get_current_user)):
+    """Get single video details - REQUIRES AUTHENTICATION"""
     video = await db.videos.find_one({"id": video_id}, {"_id": 0})
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
     
     # Check if user can access premium video
     if video.get('is_premium', False):
-        if current_user is None or current_user.subscription_plan != "premium":
+        if current_user.subscription_plan != "premium":
             raise HTTPException(status_code=403, detail="Premium subscription required")
     
     return video
 
 # ==================== SUBSCRIPTION ROUTES ====================
 
-# Subscription packages
 SUBSCRIPTION_PACKAGES = {
     "premium": {"amount": 29.99, "currency": "usd", "name": "Premium Plan"}
 }
@@ -301,12 +504,10 @@ async def create_subscription_checkout(
     
     package = SUBSCRIPTION_PACKAGES[request.plan_type]
     
-    # Initialize Stripe checkout
     host_url = request.origin_url
     webhook_url = f"{str(req.base_url).rstrip('/')}/api/webhook/stripe"
     stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
     
-    # Create checkout session
     success_url = f"{host_url}/subscription/success?session_id={{{{CHECKOUT_SESSION_ID}}}}"
     cancel_url = f"{host_url}/subscription"
     
@@ -324,7 +525,6 @@ async def create_subscription_checkout(
     
     session = await stripe_checkout.create_checkout_session(checkout_request)
     
-    # Create payment transaction record
     transaction = PaymentTransaction(
         user_id=current_user.id,
         session_id=session.session_id,
@@ -341,7 +541,6 @@ async def create_subscription_checkout(
     transaction_dict['created_at'] = transaction_dict['created_at'].isoformat()
     await db.payment_transactions.insert_one(transaction_dict)
     
-    # Create subscription record
     subscription = Subscription(
         user_id=current_user.id,
         plan_type=request.plan_type,
@@ -367,31 +566,25 @@ async def get_subscription_status(
     req: Request = None
 ):
     """Check subscription payment status"""
-    # Check if already processed
     transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
     
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
     
-    # If already paid, return immediately
     if transaction['payment_status'] == "paid":
         return {"status": "paid", "message": "Subscription activated"}
     
-    # Poll Stripe for status
     webhook_url = f"{str(req.base_url).rstrip('/')}/api/webhook/stripe"
     stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
     
     checkout_status = await stripe_checkout.get_checkout_status(session_id)
     
-    # Update transaction
     if checkout_status.payment_status == "paid" and transaction['payment_status'] != "paid":
-        # Update payment transaction
         await db.payment_transactions.update_one(
             {"session_id": session_id},
             {"$set": {"payment_status": "paid"}}
         )
         
-        # Update subscription
         start_date = datetime.now(timezone.utc)
         end_date = start_date + timedelta(days=365)
         
@@ -404,7 +597,6 @@ async def get_subscription_status(
             }}
         )
         
-        # Update user subscription plan
         plan_type = transaction['metadata'].get('plan_type', 'premium')
         await db.users.update_one(
             {"id": current_user.id},
@@ -447,13 +639,11 @@ async def stripe_webhook(request: Request):
         if webhook_response.event_type == "checkout.session.completed":
             session_id = webhook_response.session_id
             
-            # Update transaction
             await db.payment_transactions.update_one(
                 {"session_id": session_id},
                 {"$set": {"payment_status": "paid"}}
             )
             
-            # Update subscription
             transaction = await db.payment_transactions.find_one({"session_id": session_id})
             if transaction:
                 start_date = datetime.now(timezone.utc)
@@ -468,7 +658,6 @@ async def stripe_webhook(request: Request):
                     }}
                 )
                 
-                # Update user
                 user_id = transaction['user_id']
                 plan_type = transaction['metadata'].get('plan_type', 'premium')
                 await db.users.update_one(
@@ -484,9 +673,8 @@ async def stripe_webhook(request: Request):
 # ==================== RESERVATION ROUTES ====================
 
 @api_router.get("/reservations/available")
-async def get_available_slots(date: str):
-    """Get available time slots for a date"""
-    # Get existing reservations for date
+async def get_available_slots(date: str, current_user: User = Depends(get_current_user)):
+    """Get available time slots for a date - REQUIRES AUTHENTICATION"""
     reservations = await db.reservations.find(
         {"reservation_date": date, "status": {"$ne": "cancelled"}},
         {"_id": 0}
@@ -494,7 +682,6 @@ async def get_available_slots(date: str):
     
     booked_slots = [r['time_slot'] for r in reservations]
     
-    # All possible slots (9 AM to 6 PM, 1-hour slots)
     all_slots = [
         "09:00-10:00", "10:00-11:00", "11:00-12:00",
         "12:00-13:00", "13:00-14:00", "14:00-15:00",
@@ -510,8 +697,7 @@ async def create_reservation(
     reservation: ReservationCreate,
     current_user: User = Depends(get_current_user)
 ):
-    """Create a cabin reservation"""
-    # Check if slot is available
+    """Create a cabin reservation - REQUIRES AUTHENTICATION"""
     existing = await db.reservations.find_one({
         "reservation_date": reservation.reservation_date,
         "time_slot": reservation.time_slot,
@@ -521,7 +707,6 @@ async def create_reservation(
     if existing:
         raise HTTPException(status_code=400, detail="Time slot already booked")
     
-    # Create reservation
     new_reservation = CabinReservation(
         user_id=current_user.id,
         user_name=current_user.name,
@@ -571,7 +756,7 @@ async def update_reservation(
 @api_router.get("/admin/users")
 async def get_all_users(admin: User = Depends(require_admin)):
     """Get all users (admin only)"""
-    users = await db.users.find({}, {"_id": 0}).to_list(1000)
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
     return users
 
 @api_router.get("/admin/subscriptions")
@@ -594,7 +779,6 @@ async def get_admin_metrics(admin: User = Depends(require_admin)):
     total_reservations = await db.reservations.count_documents({})
     total_videos = await db.videos.count_documents({})
     
-    # Revenue calculation
     paid_transactions = await db.payment_transactions.find(
         {"payment_status": "paid"},
         {"_id": 0}
@@ -668,10 +852,8 @@ async def shutdown_db_client():
 @app.on_event("startup")
 async def startup_db():
     """Initialize database with sample videos"""
-    # Check if videos already exist
     count = await db.videos.count_documents({})
     if count == 0:
-        # Add sample videos
         sample_videos = [
             {
                 "id": str(uuid.uuid4()),
