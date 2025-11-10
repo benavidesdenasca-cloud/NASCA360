@@ -116,9 +116,10 @@ class CabinReservation(BaseModel):
     user_name: str
     user_email: str
     reservation_date: str  # "2025-01-15"
-    time_slot: str  # "10:00-11:00"
+    time_slot: str  # "09:00-09:20" (20 minutes)
     status: str = "pending"  # pending, confirmed, cancelled
     qr_code: str = ""
+    stripe_session_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class PaymentTransaction(BaseModel):
