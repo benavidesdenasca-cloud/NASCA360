@@ -838,6 +838,13 @@ async def health_check():
 # Include the router in the main app
 app.include_router(api_router)
 
+# Add SessionMiddleware for OAuth (must be added before CORS)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get('JWT_SECRET_KEY', 'nazca360_super_secret_key_2025'),
+    max_age=3600
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
