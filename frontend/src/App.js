@@ -22,6 +22,7 @@ import VideoPlayer from '@/pages/VideoPlayer';
 import Subscription from '@/pages/Subscription';
 import SubscriptionSuccess from '@/pages/SubscriptionSuccess';
 import Reservations from '@/pages/Reservations';
+import ReservationSuccess from '@/pages/ReservationSuccess';
 import Dashboard from '@/pages/Dashboard';
 import AdminPanel from '@/pages/AdminPanel';
 
