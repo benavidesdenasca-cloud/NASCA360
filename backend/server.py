@@ -171,7 +171,8 @@ async def auth_login(request: Request):
     redirect_url = f"{origin}/dashboard"
     
     # Redirect to Emergent Auth
-    auth_url = f"https://auth.emergentagent.com/?redirect={redirect_url}"
+    emergent_auth_url = os.environ.get('EMERGENT_AUTH_URL', 'https://auth.emergentagent.com')
+    auth_url = f"{emergent_auth_url}/?redirect={redirect_url}"
     return RedirectResponse(url=auth_url)
 
 @api_router.get("/auth/session")
