@@ -149,6 +149,13 @@ const LandingPage = () => {
       {/* Footer */}
       <footer className="bg-gradient-to-r from-amber-900 to-orange-900 text-white py-12 px-4">
         <div className="max-w-7xl mx-auto text-center">
+          <div className="mb-4 flex justify-center">
+            <img 
+              src="/logo.jpg" 
+              alt="Nazca360 Logo" 
+              className="h-16 w-auto object-contain opacity-90"
+            />
+          </div>
           <h3 className="text-2xl font-bold mb-4">Nazca360</h3>
           <p className="text-amber-200 mb-4">
             Preservando y compartiendo el patrimonio cultural del Perú
