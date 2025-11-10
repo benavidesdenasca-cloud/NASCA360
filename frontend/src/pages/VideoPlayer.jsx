@@ -128,10 +128,14 @@ const VideoPlayer = () => {
                 <h1 className="text-4xl font-bold text-amber-900 mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
                   {video.title}
                 </h1>
-                {video.is_premium && (
-                  <div className="inline-flex items-center bg-gradient-to-r from-amber-600 to-yellow-500 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                {video.is_demo ? (
+                  <div className="inline-flex items-center bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-full text-sm font-semibold">
                     <Lock className="w-4 h-4 mr-2" />
-                    Contenido Premium
+                    Video Demo (Baja Calidad)
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                    ✓ Calidad Premium
                   </div>
                 )}
               </div>
