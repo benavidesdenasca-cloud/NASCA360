@@ -15,7 +15,7 @@ const API = `${BACKEND_URL}/api`;
 
 const Reservations = () => {
   const navigate = useNavigate();
-  const { user, token, login } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const [selectedDate, setSelectedDate] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
