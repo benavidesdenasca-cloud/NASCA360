@@ -96,25 +96,23 @@ def verify_password_reset_token(token: str, max_age: int = 3600) -> Optional[str
 
 
 async def send_email(to_email: str, subject: str, html_content: str) -> bool:
-    """Send email using Gmail SMTP"""
+    """Send email using SendGrid"""
     try:
-        message = MIMEMultipart('alternative')
-        message['Subject'] = subject
-        message['From'] = f'{FROM_NAME} <{FROM_EMAIL}>'
-        message['To'] = to_email
-        
-        html_part = MIMEText(html_content, 'html')
-        message.attach(html_part)
-        
-        await aiosmtplib.send(
-            message,
-            hostname=SMTP_SERVER,
-            port=SMTP_PORT,
-            username=SMTP_EMAIL,
-            password=SMTP_PASSWORD,
-            use_tls=True
+        message = Mail(
+            from_email=Email(FROM_EMAIL, FROM_NAME),
+            to_emails=To(to_email),
+            subject=subject,
+            html_content=Content("text/html", html_content)
         )
-        return True
+        
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        
+        if response.status_code in [200, 201, 202]:
+            return True
+        else:
+            print(f"SendGrid error: Status {response.status_code}")
+            return False
     except Exception as e:
         print(f"Error sending email: {str(e)}")
         return False
