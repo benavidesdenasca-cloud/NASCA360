@@ -13,7 +13,7 @@ const API = `${BACKEND_URL}/api`;
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-  const { user, sessionToken } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const [metrics, setMetrics] = useState(null);
   const [users, setUsers] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
@@ -32,7 +32,7 @@ const AdminPanel = () => {
     try {
       setLoading(true);
       
-      const headers = { 'Authorization': `Bearer ${sessionToken}` };
+      const headers = { 'Authorization': `Bearer ${token}` };
 
       const [metricsRes, usersRes, subsRes, resRes] = await Promise.all([
         axios.get(`${API}/admin/metrics`, { headers }),

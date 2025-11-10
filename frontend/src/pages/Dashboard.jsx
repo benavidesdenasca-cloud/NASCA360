@@ -13,7 +13,7 @@ const API = `${BACKEND_URL}/api`;
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, sessionToken, logout } = useContext(AuthContext);
+  const { user, token, logout } = useContext(AuthContext);
   const [subscription, setSubscription] = useState(null);
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,13 +32,13 @@ const Dashboard = () => {
       
       // Fetch subscription
       const subResponse = await axios.get(`${API}/subscriptions/me`, {
-        headers: { 'Authorization': `Bearer ${sessionToken}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       setSubscription(subResponse.data);
 
       // Fetch reservations
       const resResponse = await axios.get(`${API}/reservations/me`, {
-        headers: { 'Authorization': `Bearer ${sessionToken}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       setReservations(resResponse.data.filter(r => r.status !== 'cancelled'));
 

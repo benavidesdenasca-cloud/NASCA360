@@ -15,7 +15,7 @@ const API = `${BACKEND_URL}/api`;
 
 const Reservations = () => {
   const navigate = useNavigate();
-  const { user, sessionToken, login } = useContext(AuthContext);
+  const { user, token, login } = useContext(AuthContext);
   const [selectedDate, setSelectedDate] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -51,7 +51,7 @@ const Reservations = () => {
     try {
       const response = await axios.get(`${API}/reservations/me`, {
         headers: {
-          'Authorization': `Bearer ${sessionToken}`
+          'Authorization': `Bearer ${token}`
         }
       });
       setMyReservations(response.data);
@@ -84,7 +84,7 @@ const Reservations = () => {
         },
         {
           headers: {
-            'Authorization': `Bearer ${sessionToken}`
+            'Authorization': `Bearer ${token}`
           }
         }
       );
@@ -108,7 +108,7 @@ const Reservations = () => {
         {},
         {
           headers: {
-            'Authorization': `Bearer ${sessionToken}`
+            'Authorization': `Bearer ${token}`
           }
         }
       );

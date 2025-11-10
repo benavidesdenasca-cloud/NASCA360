@@ -13,7 +13,7 @@ const API = `${BACKEND_URL}/api`;
 const SubscriptionSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { sessionToken } = useContext(AuthContext);
+  const { token } = useContext(AuthContext);
   const [status, setStatus] = useState('checking'); // checking, success, failed
   const [attempts, setAttempts] = useState(0);
 
@@ -43,7 +43,7 @@ const SubscriptionSuccess = () => {
         `${API}/subscriptions/status/${sessionId}`,
         {
           headers: {
-            'Authorization': `Bearer ${sessionToken}`
+            'Authorization': `Bearer ${token}`
           }
         }
       );

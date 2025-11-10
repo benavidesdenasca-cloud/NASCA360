@@ -12,7 +12,7 @@ const API = `${BACKEND_URL}/api`;
 
 const Subscription = () => {
   const navigate = useNavigate();
-  const { user, sessionToken, login } = useContext(AuthContext);
+  const { user, token, login } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
 
   const handleSubscribe = async (plan) => {
@@ -40,7 +40,7 @@ const Subscription = () => {
         },
         {
           headers: {
-            'Authorization': `Bearer ${sessionToken}`
+            'Authorization': `Bearer ${token}`
           }
         }
       );
