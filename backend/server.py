@@ -835,16 +835,7 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-# Include the router in the main app
-app.include_router(api_router)
-
-# Add SessionMiddleware for OAuth (must be added before CORS)
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=os.environ.get('JWT_SECRET_KEY', 'nazca360_super_secret_key_2025'),
-    max_age=3600
-)
-
+# Add middlewares BEFORE including routers
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -852,6 +843,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get('JWT_SECRET_KEY', 'nazca360_super_secret_key_2025'),
+    max_age=3600
+)
+
+# Include the router in the main app
+app.include_router(api_router)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
