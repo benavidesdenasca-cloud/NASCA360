@@ -139,11 +139,7 @@ function App() {
             />
             <Route 
               path="/subscription" 
-              element={
-                <ProtectedRoute>
-                  <Subscription />
-                </ProtectedRoute>
-              } 
+              element={<Subscription />} 
             />
             <Route 
               path="/subscription/success" 
