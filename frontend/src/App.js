@@ -159,6 +159,14 @@ function App() {
               } 
             />
             <Route 
+              path="/reservations/success" 
+              element={
+                <ProtectedRoute>
+                  <ReservationSuccess />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/dashboard" 
               element={
                 <ProtectedRoute>
