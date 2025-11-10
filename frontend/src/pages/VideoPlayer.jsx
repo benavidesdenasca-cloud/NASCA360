@@ -13,7 +13,7 @@ const API = `${BACKEND_URL}/api`;
 const VideoPlayer = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, sessionToken } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
 
