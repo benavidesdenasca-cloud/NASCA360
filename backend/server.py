@@ -760,15 +760,13 @@ async def stripe_webhook(request: Request):
 # ==================== RESERVATION ROUTES ====================
 
 @api_router.get("/reservations/available")
-async def get_available_slots(date: str, current_user: User = Depends(get_current_user)):
-    """Get available time slots for a date - REQUIRES AUTHENTICATION"""
-    reservations = await db.reservations.find(
-        {"reservation_date": date, "status": {"$ne": "cancelled"}},
-        {"_id": 0}
-    ).to_list(100)
+async def get_available_slots(date: str, cabin_number: Optional[int] = None, current_user: User = Depends(get_current_user)):
+    """Get available time slots for a date and cabin - REQUIRES AUTHENTICATION
     
-    booked_slots = [r['time_slot'] for r in reservations]
-    
+    Returns slots with cabin availability:
+    - If cabin_number specified: returns available slots for that cabin
+    - If no cabin_number: returns all slots with cabin availability count
+    """
     # Generate 20-minute slots from 9 AM to 6 PM
     all_slots = []
     for hour in range(9, 18):
@@ -782,9 +780,52 @@ async def get_available_slots(date: str, current_user: User = Depends(get_curren
             end_time = f"{end_hour:02d}:{end_minute:02d}"
             all_slots.append(f"{start_time}-{end_time}")
     
-    available_slots = [slot for slot in all_slots if slot not in booked_slots]
-    
-    return {"date": date, "available_slots": available_slots}
+    if cabin_number:
+        # Get booked slots for specific cabin
+        reservations = await db.reservations.find(
+            {
+                "reservation_date": date, 
+                "cabin_number": cabin_number,
+                "status": {"$ne": "cancelled"}
+            },
+            {"_id": 0}
+        ).to_list(100)
+        
+        booked_slots = [r['time_slot'] for r in reservations]
+        available_slots = [slot for slot in all_slots if slot not in booked_slots]
+        
+        return {
+            "date": date,
+            "cabin_number": cabin_number,
+            "available_slots": available_slots
+        }
+    else:
+        # Get all reservations for the date
+        reservations = await db.reservations.find(
+            {"reservation_date": date, "status": {"$ne": "cancelled"}},
+            {"_id": 0}
+        ).to_list(1000)
+        
+        # Count cabins available per slot
+        slots_with_availability = []
+        for slot in all_slots:
+            # Count how many cabins are booked for this slot
+            booked_cabins = [r['cabin_number'] for r in reservations if r['time_slot'] == slot]
+            available_cabins_count = 3 - len(booked_cabins)
+            available_cabin_numbers = [i for i in [1, 2, 3] if i not in booked_cabins]
+            
+            if available_cabins_count > 0:
+                slots_with_availability.append({
+                    "time_slot": slot,
+                    "available_cabins_count": available_cabins_count,
+                    "available_cabin_numbers": available_cabin_numbers
+                })
+        
+        return {
+            "date": date,
+            "total_cabins": 3,
+            "slots": slots_with_availability
+        }
 
 @api_router.post("/reservations/checkout")
 async def create_reservation_checkout(
