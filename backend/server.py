@@ -610,8 +610,11 @@ async def get_subscription_status(
             {"$set": {"payment_status": "paid"}}
         )
         
+        plan_type = transaction['metadata'].get('plan_type', 'monthly')
+        plan_config = SUBSCRIPTION_PACKAGES.get(plan_type, SUBSCRIPTION_PACKAGES['monthly'])
+        
         start_date = datetime.now(timezone.utc)
-        end_date = start_date + timedelta(days=365)
+        end_date = start_date + timedelta(days=plan_config['duration_days'])
         
         await db.subscriptions.update_one(
             {"stripe_session_id": session_id},
@@ -622,7 +625,6 @@ async def get_subscription_status(
             }}
         )
         
-        plan_type = transaction['metadata'].get('plan_type', 'premium')
         await db.users.update_one(
             {"id": current_user.id},
             {"$set": {"subscription_plan": plan_type}}
