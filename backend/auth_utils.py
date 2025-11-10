@@ -5,9 +5,8 @@ import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from itsdangerous import URLSafeTimedSerializer
-import aiosmtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, Email, To, Content
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -19,11 +18,8 @@ JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
 JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM', 'HS256')
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get('ACCESS_TOKEN_EXPIRE_MINUTES', 30))
 
-# Email configuration
-SMTP_SERVER = os.environ.get('SMTP_SERVER')
-SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
-SMTP_EMAIL = os.environ.get('SMTP_EMAIL')
-SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
+# Email configuration (SendGrid)
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
 FROM_EMAIL = os.environ.get('FROM_EMAIL')
 FROM_NAME = os.environ.get('FROM_NAME', 'Nazca360')
 
