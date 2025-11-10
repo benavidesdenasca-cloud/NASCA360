@@ -18,7 +18,7 @@ const Subscription = () => {
   const handleSubscribe = async (plan) => {
     if (!user) {
       toast.error('Debes iniciar sesión para suscribirte');
-      login();
+      navigate('/auth/login');
       return;
     }
 
