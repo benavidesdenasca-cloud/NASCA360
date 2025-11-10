@@ -59,7 +59,7 @@ const LandingPage = () => {
             {!user && (
               <Button
                 data-testid="login-button"
-                onClick={login}
+                onClick={() => navigate('/auth/login')}
                 variant="outline"
                 className="text-lg px-8 py-6 rounded-full bg-white/90 hover:bg-white border-2 border-amber-700 text-amber-900 hover:scale-105"
               >
