@@ -27,6 +27,13 @@ const LandingPage = () => {
         <div className="absolute inset-0 hero-gradient"></div>
         
         <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
+          <div className="mb-8 flex justify-center">
+            <img 
+              src="/logo.jpg" 
+              alt="Nazca360 Logo" 
+              className="h-32 sm:h-40 lg:h-48 w-auto object-contain drop-shadow-2xl"
+            />
+          </div>
           <h1 
             data-testid="hero-title"
             className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 drop-shadow-2xl"
