@@ -82,7 +82,7 @@ const VideoPlayer = () => {
           </Button>
 
           {/* Video Player */}
-          <div data-testid="video-player-container" className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-8">
+          <div data-testid="video-player-container" className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-8 relative">
             <div className="video-container bg-black">
               <video
                 data-testid="video-element"
@@ -94,6 +94,31 @@ const VideoPlayer = () => {
                 Tu navegador no soporta el reproductor de video.
               </video>
             </div>
+            
+            {/* Demo Overlay */}
+            {video.is_demo && (
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end justify-center pb-12 pointer-events-none">
+                <div className="glass p-6 rounded-2xl max-w-2xl mx-4 pointer-events-auto">
+                  <div className="text-center">
+                    <div className="bg-yellow-500 text-black px-4 py-2 rounded-full inline-block mb-4 font-bold">
+                      VIDEO DEMO - BAJA CALIDAD
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">
+                      Esto es solo una vista previa
+                    </h3>
+                    <p className="text-white/90 mb-4">
+                      Suscríbete para ver este video en alta calidad y acceder a todo el contenido exclusivo
+                    </p>
+                    <Button
+                      onClick={() => navigate('/subscription')}
+                      className="btn-peru px-8 py-4 rounded-full"
+                    >
+                      Ver Planes de Suscripción
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Video Info */}
