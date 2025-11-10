@@ -484,15 +484,26 @@ async def get_videos(category: Optional[str] = None, current_user: User = Depend
 
 @api_router.get("/videos/{video_id}", response_model=Video360)
 async def get_video(video_id: str, current_user: User = Depends(get_current_user)):
-    """Get single video details - REQUIRES AUTHENTICATION"""
+    """Get single video details - REQUIRES ACTIVE SUBSCRIPTION"""
+    # Check if user has active subscription
+    if not current_user.subscription_plan or current_user.subscription_plan == "basic":
+        raise HTTPException(status_code=403, detail="Suscripción requerida para acceder al contenido")
+    
+    # Verify subscription is not expired
+    subscription = await db.subscriptions.find_one(
+        {"user_id": current_user.id, "payment_status": "paid"},
+        {"_id": 0},
+        sort=[("created_at", -1)]
+    )
+    
+    if subscription and subscription.get('end_date'):
+        end_date = datetime.fromisoformat(subscription['end_date']) if isinstance(subscription['end_date'], str) else subscription['end_date']
+        if datetime.now(timezone.utc) > end_date:
+            raise HTTPException(status_code=403, detail="Tu suscripción ha expirado. Por favor renueva tu plan.")
+    
     video = await db.videos.find_one({"id": video_id}, {"_id": 0})
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
-    
-    # Check if user can access premium video
-    if video.get('is_premium', False):
-        if current_user.subscription_plan != "premium":
-            raise HTTPException(status_code=403, detail="Premium subscription required")
     
     return video
 
