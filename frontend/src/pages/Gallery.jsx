@@ -12,7 +12,7 @@ const API = `${BACKEND_URL}/api`;
 
 const Gallery = () => {
   const navigate = useNavigate();
-  const { user, sessionToken } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
