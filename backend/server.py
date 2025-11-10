@@ -731,11 +731,18 @@ async def get_available_slots(date: str, current_user: User = Depends(get_curren
     
     booked_slots = [r['time_slot'] for r in reservations]
     
-    all_slots = [
-        "09:00-10:00", "10:00-11:00", "11:00-12:00",
-        "12:00-13:00", "13:00-14:00", "14:00-15:00",
-        "15:00-16:00", "16:00-17:00", "17:00-18:00"
-    ]
+    # Generate 20-minute slots from 9 AM to 6 PM
+    all_slots = []
+    for hour in range(9, 18):
+        for minute in [0, 20, 40]:
+            start_time = f"{hour:02d}:{minute:02d}"
+            end_minute = minute + 20
+            end_hour = hour
+            if end_minute >= 60:
+                end_minute -= 60
+                end_hour += 1
+            end_time = f"{end_hour:02d}:{end_minute:02d}"
+            all_slots.append(f"{start_time}-{end_time}")
     
     available_slots = [slot for slot in all_slots if slot not in booked_slots]
     
