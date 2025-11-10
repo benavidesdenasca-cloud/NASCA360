@@ -76,8 +76,8 @@ const Reservations = () => {
       setLoading(true);
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       
-      await axios.post(
-        `${API}/reservations`,
+      const response = await axios.post(
+        `${API}/reservations/checkout`,
         {
           reservation_date: dateStr,
           time_slot: selectedSlot
@@ -89,14 +89,11 @@ const Reservations = () => {
         }
       );
 
-      toast.success('¡Reserva confirmada exitosamente!');
-      setSelectedDate(null);
-      setSelectedSlot(null);
-      fetchMyReservations();
-      setLoading(false);
+      // Redirect to Stripe checkout
+      window.location.href = response.data.url;
     } catch (error) {
       console.error('Reservation error:', error);
-      toast.error(error.response?.data?.detail || 'Error al crear la reserva');
+      toast.error(error.response?.data?.detail || 'Error al procesar la reserva');
       setLoading(false);
     }
   };
