@@ -7,7 +7,7 @@ import Navbar from '@/components/Navbar';
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const { user, login } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
