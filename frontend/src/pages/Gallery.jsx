@@ -109,11 +109,18 @@ const Gallery = () => {
                       className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
                     />
                     
-                    {/* Premium Badge */}
-                    {video.is_premium && (
-                      <div className="absolute top-4 right-4 bg-gradient-to-r from-amber-600 to-yellow-500 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center">
+                    {/* Demo Badge */}
+                    {video.is_demo && (
+                      <div className="absolute top-4 right-4 bg-gradient-to-r from-gray-600 to-gray-700 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center">
                         <Lock className="w-3 h-3 mr-1" />
-                        Premium
+                        Demo
+                      </div>
+                    )}
+
+                    {/* Quality Badge */}
+                    {video.is_demo && (
+                      <div className="absolute top-4 left-4 bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
+                        BAJA CALIDAD
                       </div>
                     )}
 
