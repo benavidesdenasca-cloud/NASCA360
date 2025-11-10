@@ -63,7 +63,7 @@ const Reservations = () => {
   const handleReservation = async () => {
     if (!user) {
       toast.error('Debes iniciar sesión para hacer una reserva');
-      login();
+      navigate('/auth/login');
       return;
     }
 
