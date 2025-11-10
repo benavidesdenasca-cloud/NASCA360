@@ -24,7 +24,7 @@ const VideoPlayer = () => {
   const fetchVideo = async () => {
     try {
       setLoading(true);
-      const headers = sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {};
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
       const response = await axios.get(`${API}/videos/${id}`, { headers });
       setVideo(response.data);
