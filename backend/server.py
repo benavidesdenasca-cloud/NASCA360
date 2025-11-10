@@ -489,8 +489,32 @@ async def get_video(video_id: str, current_user: User = Depends(get_current_user
 
 # ==================== SUBSCRIPTION ROUTES ====================
 
+# Subscription packages - NO FREE PLAN
 SUBSCRIPTION_PACKAGES = {
-    "premium": {"amount": 29.99, "currency": "usd", "name": "Premium Plan"}
+    "daily": {
+        "amount": 20.00,
+        "currency": "usd",
+        "name": "Plan Diario",
+        "duration_days": 1
+    },
+    "weekly": {
+        "amount": 100.00,
+        "currency": "usd",
+        "name": "Plan Semanal",
+        "duration_days": 7
+    },
+    "monthly": {
+        "amount": 200.00,
+        "currency": "usd",
+        "name": "Plan Mensual",
+        "duration_days": 30
+    },
+    "annual": {
+        "amount": 500.00,
+        "currency": "usd",
+        "name": "Plan Anual",
+        "duration_days": 365
+    }
 }
 
 @api_router.post("/subscriptions/checkout")
