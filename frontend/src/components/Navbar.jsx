@@ -36,11 +36,13 @@ const Navbar = () => {
           <Link 
             to="/" 
             data-testid="nav-logo"
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-3"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-xl">N</span>
-            </div>
+            <img 
+              src="/logo.jpg" 
+              alt="Nazca360 Logo" 
+              className="h-12 w-auto object-contain"
+            />
             <span className="text-xl font-bold text-amber-900" style={{ fontFamily: 'Playfair Display, serif' }}>
               Nazca360
             </span>
