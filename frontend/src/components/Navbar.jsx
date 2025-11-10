@@ -114,7 +114,7 @@ const Navbar = () => {
             ) : (
               <Button
                 data-testid="nav-login-button"
-                onClick={login}
+                onClick={() => navigate('/auth/login')}
                 className="btn-peru rounded-full"
               >
                 Iniciar Sesión
