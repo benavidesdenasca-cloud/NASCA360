@@ -94,10 +94,10 @@ const SubscriptionSuccess = () => {
               <>
                 <CheckCircle data-testid="success-icon" className="w-20 h-20 text-green-600 mx-auto mb-6" />
                 <h1 className="text-4xl font-bold text-amber-900 mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
-                  ¡Bienvenido a Premium!
+                  ¡Gracias por suscribirte a Nazca360!
                 </h1>
                 <p className="text-xl text-gray-700 mb-8">
-                  Tu suscripción ha sido activada exitosamente. Ahora tienes acceso completo a todo el contenido de Nazca360.
+                  Tu experiencia inmersiva está lista para comenzar. Ahora tienes acceso completo a todo el contenido de Nazca360.
                 </p>
                 <div className="space-y-4">
                   <Button
