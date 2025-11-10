@@ -189,7 +189,7 @@ const Navbar = () => {
             ) : (
               <button
                 onClick={() => {
-                  login();
+                  navigate('/auth/login');
                   setMobileMenuOpen(false);
                 }}
                 className="block w-full text-left px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-700 text-white rounded font-medium"
