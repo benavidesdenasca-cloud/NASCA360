@@ -748,12 +748,14 @@ async def get_available_slots(date: str, current_user: User = Depends(get_curren
     
     return {"date": date, "available_slots": available_slots}
 
-@api_router.post("/reservations")
-async def create_reservation(
+@api_router.post("/reservations/checkout")
+async def create_reservation_checkout(
     reservation: ReservationCreate,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    req: Request = None
 ):
-    """Create a cabin reservation - REQUIRES AUTHENTICATION"""
+    """Create Stripe checkout session for cabin reservation - PRICE: $10 USD"""
+    # Check if slot is available
     existing = await db.reservations.find_one({
         "reservation_date": reservation.reservation_date,
         "time_slot": reservation.time_slot,
@@ -763,21 +765,104 @@ async def create_reservation(
     if existing:
         raise HTTPException(status_code=400, detail="Time slot already booked")
     
+    # Create Stripe checkout session
+    host_url = str(req.base_url).rstrip('/')
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    success_url = f"{host_url}/reservations/success?session_id={{{{CHECKOUT_SESSION_ID}}}}"
+    cancel_url = f"{host_url}/reservations"
+    
+    checkout_request = CheckoutSessionRequest(
+        amount=10.00,  # $10 USD for all users
+        currency="usd",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata={
+            "user_id": current_user.id,
+            "reservation_date": reservation.reservation_date,
+            "time_slot": reservation.time_slot,
+            "user_name": current_user.name,
+            "user_email": current_user.email,
+            "type": "reservation"
+        }
+    )
+    
+    session = await stripe_checkout.create_checkout_session(checkout_request)
+    
+    # Create pending reservation
     new_reservation = CabinReservation(
         user_id=current_user.id,
         user_name=current_user.name,
         user_email=current_user.email,
         reservation_date=reservation.reservation_date,
         time_slot=reservation.time_slot,
-        status="confirmed",
+        status="pending",
         qr_code=f"QR-{str(uuid.uuid4())[:8].upper()}"
     )
     
     reservation_dict = new_reservation.model_dump()
     reservation_dict['created_at'] = reservation_dict['created_at'].isoformat()
+    reservation_dict['stripe_session_id'] = session.session_id
     await db.reservations.insert_one(reservation_dict)
     
-    return new_reservation
+    # Create payment transaction
+    transaction = PaymentTransaction(
+        user_id=current_user.id,
+        session_id=session.session_id,
+        amount=10.00,
+        currency="usd",
+        metadata={
+            "type": "reservation",
+            "reservation_date": reservation.reservation_date,
+            "time_slot": reservation.time_slot
+        },
+        payment_status="initiated"
+    )
+    
+    transaction_dict = transaction.model_dump()
+    transaction_dict['created_at'] = transaction_dict['created_at'].isoformat()
+    await db.payment_transactions.insert_one(transaction_dict)
+    
+    return {"url": session.url, "session_id": session.session_id}
+
+@api_router.get("/reservations/status/{session_id}")
+async def get_reservation_status(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    req: Request = None
+):
+    """Check reservation payment status"""
+    transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+    
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if transaction['payment_status'] == "paid":
+        return {"status": "paid", "message": "Reserva confirmada"}
+    
+    webhook_url = f"{str(req.base_url).rstrip('/')}/api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    checkout_status = await stripe_checkout.get_checkout_status(session_id)
+    
+    if checkout_status.payment_status == "paid" and transaction['payment_status'] != "paid":
+        await db.payment_transactions.update_one(
+            {"session_id": session_id},
+            {"$set": {"payment_status": "paid"}}
+        )
+        
+        await db.reservations.update_one(
+            {"stripe_session_id": session_id},
+            {"$set": {"status": "confirmed"}}
+        )
+        
+        return {"status": "paid", "message": "Reserva confirmada exitosamente"}
+    
+    return {
+        "status": checkout_status.payment_status,
+        "message": "Payment pending"
+    }
 
 @api_router.get("/reservations/me")
 async def get_my_reservations(current_user: User = Depends(get_current_user)):
