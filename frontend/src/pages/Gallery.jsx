@@ -25,7 +25,7 @@ const Gallery = () => {
     try {
       setLoading(true);
       const params = selectedCategory !== 'all' ? `?category=${selectedCategory}` : '';
-      const headers = sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {};
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
       const response = await axios.get(`${API}/videos${params}`, { headers });
       setVideos(response.data);
