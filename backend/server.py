@@ -456,20 +456,29 @@ async def logout(current_user: User = Depends(get_current_user), authorization: 
 # ==================== VIDEO ROUTES ====================
 
 @api_router.get("/videos", response_model=List[Video360])
-async def get_videos(category: Optional[str] = None, current_user: Optional[User] = Depends(get_current_user_optional)):
-    """Get videos - REQUIRES AUTHENTICATION"""
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Autenticación requerida para ver videos")
+async def get_videos(category: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """Get videos - REQUIRES ACTIVE SUBSCRIPTION"""
+    # Check if user has active subscription
+    if not current_user.subscription_plan or current_user.subscription_plan == "basic":
+        raise HTTPException(status_code=403, detail="Suscripción requerida para acceder al contenido")
+    
+    # Verify subscription is not expired
+    subscription = await db.subscriptions.find_one(
+        {"user_id": current_user.id, "payment_status": "paid"},
+        {"_id": 0},
+        sort=[("created_at", -1)]
+    )
+    
+    if subscription and subscription.get('end_date'):
+        end_date = datetime.fromisoformat(subscription['end_date']) if isinstance(subscription['end_date'], str) else subscription['end_date']
+        if datetime.now(timezone.utc) > end_date:
+            raise HTTPException(status_code=403, detail="Tu suscripción ha expirado. Por favor renueva tu plan.")
     
     query = {}
     if category:
         query['category'] = category
     
     videos = await db.videos.find(query, {"_id": 0}).to_list(1000)
-    
-    # Filter premium videos for non-premium users
-    if current_user.subscription_plan != "premium":
-        videos = [v for v in videos if not v.get('is_premium', False)]
     
     return videos
 
