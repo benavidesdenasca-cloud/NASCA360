@@ -835,15 +835,20 @@ async def create_reservation_checkout(
     req: Request = None
 ):
     """Create Stripe checkout session for cabin reservation - PRICE: $10 USD"""
-    # Check if slot is available
+    # Validate cabin number
+    if reservation.cabin_number not in [1, 2, 3]:
+        raise HTTPException(status_code=400, detail="Invalid cabin number. Must be 1, 2, or 3")
+    
+    # Check if slot is available for this specific cabin
     existing = await db.reservations.find_one({
         "reservation_date": reservation.reservation_date,
         "time_slot": reservation.time_slot,
+        "cabin_number": reservation.cabin_number,
         "status": {"$ne": "cancelled"}
     })
     
     if existing:
-        raise HTTPException(status_code=400, detail="Time slot already booked")
+        raise HTTPException(status_code=400, detail=f"Cabina {reservation.cabin_number} ya está reservada para este horario")
     
     # Create Stripe checkout session
     host_url = str(req.base_url).rstrip('/')
