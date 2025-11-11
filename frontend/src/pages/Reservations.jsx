@@ -36,15 +36,23 @@ const Reservations = () => {
   }, [selectedDate]);
 
   const fetchAvailableSlots = async () => {
-    if (!selectedDate) return;
+    if (!selectedDate || !selectedCabin) return;
     
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const response = await axios.get(`${API}/reservations/available?date=${dateStr}`);
-      setAvailableSlots(response.data.available_slots);
+      const response = await axios.get(
+        `${API}/reservations/available?date=${dateStr}&cabin_number=${selectedCabin}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      setAvailableSlots(response.data.available_slots || []);
     } catch (error) {
       console.error('Error fetching slots:', error);
       toast.error('Error al cargar horarios disponibles');
+      setAvailableSlots([]);
     }
   };
 
