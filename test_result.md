@@ -224,3 +224,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Starting implementation of multi-cabin reservation system. Will fix backend checkout endpoint first, then update frontend to add cabin selection UI and update API calls."
+  - agent: "main"
+    message: "Implementation complete. Backend now saves cabin_number in reservations. Frontend shows cabin selection UI (step 1), then calendar (step 2), then time slots (step 3). All API calls updated to pass cabin_number. Ready for backend testing."
