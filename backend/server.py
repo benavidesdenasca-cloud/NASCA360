@@ -162,6 +162,7 @@ class SubscriptionCheckoutRequest(BaseModel):
 class ReservationCreate(BaseModel):
     reservation_date: str
     time_slot: str
+    cabin_number: int  # 1, 2, or 3
 
 class VideoCreate(BaseModel):
     title: str
