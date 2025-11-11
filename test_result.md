@@ -153,11 +153,11 @@ backend:
 frontend:
   - task: "Add cabin selection UI before calendar"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/Reservations.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
@@ -165,14 +165,17 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Added cabin selection UI with 3 buttons (Cabina 1, 2, 3). Calendar only shows after cabin selection. Ready for testing."
+      - working: true
+        agent: "main"
+        comment: "TESTED: Cabin selection UI working perfectly. Shows 3 cabin buttons with Meta Quest 2 labels. Selected cabin is highlighted in orange. Calendar appears only after cabin selection (Step 2)."
 
   - task: "Update available slots API call to include cabin_number"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/Reservations.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
@@ -180,14 +183,17 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Updated fetchAvailableSlots to pass cabin_number parameter to API. Ready for testing."
+      - working: true
+        agent: "main"
+        comment: "TESTED: API call working correctly. When Cabina 3 and date 20/11/2025 selected, all 27 time slots displayed (09:00-09:20 through 17:40-18:00). Step 3 header shows 'Horarios disponibles para Cabina 3'."
 
   - task: "Update checkout request to include cabin_number"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/Reservations.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
@@ -195,14 +201,17 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Updated handleReservation to include cabin_number in checkout request. Ready for testing."
+      - working: true
+        agent: "main"
+        comment: "TESTED: Checkout flow working. Confirm button shows 'Confirmar Reserva - $10 USD'. Validated via backend that cabin_number is passed correctly in checkout request."
 
   - task: "Display cabin_number in user reservations list"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/Reservations.jsx"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
@@ -210,6 +219,9 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Added cabin_number display in reservation cards. Ready for testing."
+      - working: true
+        agent: "main"
+        comment: "TESTED: My Reservations section correctly displays cabin numbers. Shows 'Cabina 1' and 'Cabina 2' for test reservations with all details (date, time, QR code)."
 
 metadata:
   created_by: "main_agent"
