@@ -902,7 +902,8 @@ async def create_reservation_checkout(
         metadata={
             "type": "reservation",
             "reservation_date": reservation.reservation_date,
-            "time_slot": reservation.time_slot
+            "time_slot": reservation.time_slot,
+            "cabin_number": reservation.cabin_number
         },
         payment_status="initiated"
     )
