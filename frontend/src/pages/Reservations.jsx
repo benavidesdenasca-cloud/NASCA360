@@ -243,10 +243,10 @@ const Reservations = () => {
               <Button
                 data-testid="confirm-reservation-button"
                 onClick={handleReservation}
-                disabled={!selectedDate || !selectedSlot || loading}
+                disabled={!selectedCabin || !selectedDate || !selectedSlot || loading}
                 className="w-full btn-peru py-6 text-lg rounded-full"
               >
-                {loading ? 'Procesando...' : 'Confirmar Reserva'}
+                {loading ? 'Procesando...' : 'Confirmar Reserva - $10 USD'}
               </Button>
             </div>
 
