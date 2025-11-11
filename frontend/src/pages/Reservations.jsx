@@ -76,6 +76,11 @@ const Reservations = () => {
       return;
     }
 
+    if (!selectedCabin) {
+      toast.error('Por favor selecciona una cabina');
+      return;
+    }
+
     if (!selectedDate || !selectedSlot) {
       toast.error('Por favor selecciona una fecha y horario');
       return;
@@ -89,7 +94,8 @@ const Reservations = () => {
         `${API}/reservations/checkout`,
         {
           reservation_date: dateStr,
-          time_slot: selectedSlot
+          time_slot: selectedSlot,
+          cabin_number: selectedCabin
         },
         {
           headers: {
