@@ -130,8 +130,8 @@ backend:
         comment: "Endpoint exists but frontend is not calling it with cabin_number parameter"
 
   - task: "Fix /api/reservations/checkout to save cabin_number"
-    implemented: false
-    working: false
+    implemented: true
+    working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
@@ -140,6 +140,9 @@ backend:
       - working: false
         agent: "main"
         comment: "Checkout endpoint is missing cabin_number in the reservation creation (line 879-892). Need to add cabin_number field"
+      - working: "NA"
+        agent: "main"
+        comment: "Updated checkout endpoint to include cabin_number in CabinReservation creation and metadata. Ready for testing."
 
 frontend:
   - task: "Add cabin selection UI before calendar"
