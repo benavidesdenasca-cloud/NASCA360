@@ -312,6 +312,9 @@ const Reservations = () => {
                       </span>
                     </div>
                     <div className="space-y-2 mb-4">
+                      <p className="text-sm font-semibold text-amber-900">
+                        Cabina {reservation.cabin_number}
+                      </p>
                       <p className="text-sm text-gray-600">
                         <CalendarIcon className="w-4 h-4 inline mr-2" />
                         {reservation.reservation_date}
