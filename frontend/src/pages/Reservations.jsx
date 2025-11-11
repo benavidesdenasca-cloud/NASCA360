@@ -154,26 +154,59 @@ const Reservations = () => {
             <div data-testid="booking-form" className="glass rounded-2xl p-8">
               <h2 className="text-2xl font-bold text-amber-900 mb-6">Nueva Reserva</h2>
               
-              {/* Calendar */}
+              {/* Cabin Selection */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Selecciona una fecha
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  1. Selecciona una cabina
                 </label>
-                <div className="flex justify-center">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    disabled={(date) => {
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      return date < today;
-                    }}
-                    locale={es}
-                    className="rounded-md border"
-                  />
+                <div className="grid grid-cols-3 gap-3">
+                  {[1, 2, 3].map((cabinNum) => (
+                    <button
+                      key={cabinNum}
+                      data-testid={`cabin-${cabinNum}`}
+                      onClick={() => {
+                        setSelectedCabin(cabinNum);
+                        setSelectedDate(null);
+                        setSelectedSlot(null);
+                        setAvailableSlots([]);
+                      }}
+                      className={`p-4 rounded-lg border-2 font-medium transition-all ${
+                        selectedCabin === cabinNum
+                          ? 'bg-gradient-to-r from-amber-600 to-orange-700 text-white border-amber-700 shadow-lg'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-amber-500 hover:shadow-md'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-lg font-bold">Cabina {cabinNum}</div>
+                        <div className="text-xs mt-1 opacity-80">Meta Quest 2</div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
+
+              {/* Calendar */}
+              {selectedCabin && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    2. Selecciona una fecha
+                  </label>
+                  <div className="flex justify-center">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return date < today;
+                      }}
+                      locale={es}
+                      className="rounded-md border"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Time Slots */}
               {selectedDate && (
