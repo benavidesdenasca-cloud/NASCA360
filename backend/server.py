@@ -867,6 +867,7 @@ async def create_reservation_checkout(
             "user_id": current_user.id,
             "reservation_date": reservation.reservation_date,
             "time_slot": reservation.time_slot,
+            "cabin_number": str(reservation.cabin_number),
             "user_name": current_user.name,
             "user_email": current_user.email,
             "type": "reservation"
@@ -882,6 +883,7 @@ async def create_reservation_checkout(
         user_email=current_user.email,
         reservation_date=reservation.reservation_date,
         time_slot=reservation.time_slot,
+        cabin_number=reservation.cabin_number,
         status="pending",
         qr_code=f"QR-{str(uuid.uuid4())[:8].upper()}"
     )
