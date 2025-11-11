@@ -253,7 +253,8 @@ const Reservations = () => {
             {/* Info */}
             <div className="space-y-6">
               <div className="glass rounded-2xl p-8">
-                <h3 className="text-xl font-bold text-amber-900 mb-4">Información de la Cabina</h3>
+                <h3 className="text-xl font-bold text-amber-900 mb-4">Información de las Cabinas</h3>
+                <p className="text-sm text-gray-600 mb-4">3 cabinas independientes disponibles</p>
                 <ul className="space-y-3 text-gray-700">
                   <li className="flex items-start">
                     <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
