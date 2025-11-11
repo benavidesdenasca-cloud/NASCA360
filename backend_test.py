@@ -140,37 +140,156 @@ class Nazca360APITester:
                      data=checkout_data, headers=headers)
 
     def test_reservation_endpoints(self):
-        """Test reservation endpoints"""
+        """Test multi-cabin reservation endpoints"""
         print("\n" + "="*50)
-        print("TESTING RESERVATION ENDPOINTS")
+        print("TESTING MULTI-CABIN RESERVATION ENDPOINTS")
         print("="*50)
         
-        # Test get available slots (public endpoint)
-        tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
-        self.run_test("Get Available Slots", "GET", f"reservations/available?date={tomorrow}", 200)
-        
         if not self.session_token:
-            print("⚠️  Skipping authenticated reservation tests - no auth token")
+            print("⚠️  Skipping reservation tests - no auth token")
             return
             
         headers = {'Authorization': f'Bearer {self.session_token}'}
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
         
-        # Test get my reservations
-        self.run_test("Get My Reservations", "GET", "reservations/me", 200, headers=headers)
+        # Test 1: GET /api/reservations/available with cabin_number parameter
+        print("\n🔍 Testing cabin-specific available slots...")
         
-        # Test create reservation
-        reservation_data = {
+        # Test each cabin individually
+        for cabin_num in [1, 2, 3]:
+            success, response = self.run_test(
+                f"Get Available Slots - Cabina {cabin_num}", 
+                "GET", 
+                f"reservations/available?date={tomorrow}&cabin_number={cabin_num}", 
+                200, 
+                headers=headers
+            )
+            
+            if success:
+                # Verify response structure
+                if 'available_slots' in response and 'cabin_number' in response:
+                    print(f"   ✅ Cabina {cabin_num}: {len(response['available_slots'])} slots available")
+                else:
+                    print(f"   ❌ Cabina {cabin_num}: Invalid response structure")
+        
+        # Test 2: GET /api/reservations/available without cabin_number (should show all cabins)
+        success, response = self.run_test(
+            "Get Available Slots - All Cabins", 
+            "GET", 
+            f"reservations/available?date={tomorrow}", 
+            200, 
+            headers=headers
+        )
+        
+        if success and 'slots' in response:
+            print(f"   ✅ All cabins view: {len(response['slots'])} time slots with availability")
+        
+        # Test 3: POST /api/reservations/checkout with cabin_number
+        print("\n🔍 Testing cabin-specific reservations...")
+        
+        test_slot = "10:00-10:20"
+        
+        # Test booking same slot for different cabins (should succeed)
+        cabin1_data = {
             "reservation_date": tomorrow,
-            "time_slot": "10:00-11:00"
+            "time_slot": test_slot,
+            "cabin_number": 1
         }
-        success, response = self.run_test("Create Reservation", "POST", "reservations", 201, 
-                                        data=reservation_data, headers=headers)
         
-        # If reservation was created, test cancellation
-        if success and 'id' in response:
-            reservation_id = response['id']
-            self.run_test("Cancel Reservation", "PUT", f"reservations/{reservation_id}?status=cancelled", 200, 
-                         headers=headers)
+        cabin2_data = {
+            "reservation_date": tomorrow,
+            "time_slot": test_slot,
+            "cabin_number": 2
+        }
+        
+        # Book slot for Cabina 1
+        success1, response1 = self.run_test(
+            "Create Reservation - Cabina 1", 
+            "POST", 
+            "reservations/checkout", 
+            200, 
+            data=cabin1_data, 
+            headers=headers
+        )
+        
+        if success1:
+            if 'url' in response1 and 'session_id' in response1:
+                print(f"   ✅ Cabina 1 checkout created: session_id={response1['session_id']}")
+            else:
+                print(f"   ❌ Cabina 1 checkout missing required fields")
+        
+        # Book same slot for Cabina 2 (should succeed - cabins are independent)
+        success2, response2 = self.run_test(
+            "Create Reservation - Cabina 2 (Same Slot)", 
+            "POST", 
+            "reservations/checkout", 
+            200, 
+            data=cabin2_data, 
+            headers=headers
+        )
+        
+        if success2:
+            if 'url' in response2 and 'session_id' in response2:
+                print(f"   ✅ Cabina 2 checkout created: session_id={response2['session_id']}")
+                print(f"   ✅ Cabin independence verified: same slot booked for different cabins")
+            else:
+                print(f"   ❌ Cabina 2 checkout missing required fields")
+        
+        # Try to book same slot for Cabina 1 again (should fail - already booked)
+        success3, response3 = self.run_test(
+            "Create Reservation - Cabina 1 (Duplicate Slot)", 
+            "POST", 
+            "reservations/checkout", 
+            400, 
+            data=cabin1_data, 
+            headers=headers
+        )
+        
+        if success3:
+            print(f"   ✅ Duplicate booking correctly rejected for Cabina 1")
+        
+        # Test 4: GET /api/reservations/me - verify cabin_number is included
+        print("\n🔍 Testing user reservations with cabin_number...")
+        
+        success, response = self.run_test(
+            "Get My Reservations", 
+            "GET", 
+            "reservations/me", 
+            200, 
+            headers=headers
+        )
+        
+        if success and isinstance(response, list):
+            cabin_numbers_found = []
+            for reservation in response:
+                if 'cabin_number' in reservation:
+                    cabin_numbers_found.append(reservation['cabin_number'])
+            
+            if cabin_numbers_found:
+                print(f"   ✅ Reservations include cabin_number: {cabin_numbers_found}")
+            else:
+                print(f"   ❌ No cabin_number found in reservations")
+        
+        # Test 5: Invalid cabin_number validation
+        print("\n🔍 Testing invalid cabin_number validation...")
+        
+        invalid_cabin_data = {
+            "reservation_date": tomorrow,
+            "time_slot": "11:00-11:20",
+            "cabin_number": 4  # Invalid - should be 1, 2, or 3
+        }
+        
+        success, response = self.run_test(
+            "Create Reservation - Invalid Cabin Number", 
+            "POST", 
+            "reservations/checkout", 
+            400, 
+            data=invalid_cabin_data, 
+            headers=headers
+        )
+        
+        if success:
+            print(f"   ✅ Invalid cabin number correctly rejected")
 
     def test_admin_endpoints(self):
         """Test admin endpoints"""
