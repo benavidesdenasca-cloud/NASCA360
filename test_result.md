@@ -146,8 +146,8 @@ backend:
 
 frontend:
   - task: "Add cabin selection UI before calendar"
-    implemented: false
-    working: false
+    implemented: true
+    working: "NA"
     file: "/app/frontend/src/pages/Reservations.jsx"
     stuck_count: 0
     priority: "high"
@@ -156,10 +156,13 @@ frontend:
       - working: false
         agent: "main"
         comment: "Frontend currently shows no cabin selection. Need to add cabin selection cards/buttons before calendar display"
+      - working: "NA"
+        agent: "main"
+        comment: "Added cabin selection UI with 3 buttons (Cabina 1, 2, 3). Calendar only shows after cabin selection. Ready for testing."
 
   - task: "Update available slots API call to include cabin_number"
-    implemented: false
-    working: false
+    implemented: true
+    working: "NA"
     file: "/app/frontend/src/pages/Reservations.jsx"
     stuck_count: 0
     priority: "high"
@@ -168,10 +171,13 @@ frontend:
       - working: false
         agent: "main"
         comment: "Frontend currently calls /reservations/available without cabin_number. Need to pass selected cabin"
+      - working: "NA"
+        agent: "main"
+        comment: "Updated fetchAvailableSlots to pass cabin_number parameter to API. Ready for testing."
 
   - task: "Update checkout request to include cabin_number"
-    implemented: false
-    working: false
+    implemented: true
+    working: "NA"
     file: "/app/frontend/src/pages/Reservations.jsx"
     stuck_count: 0
     priority: "high"
@@ -180,10 +186,13 @@ frontend:
       - working: false
         agent: "main"
         comment: "Checkout POST request missing cabin_number field (line 79-90)"
+      - working: "NA"
+        agent: "main"
+        comment: "Updated handleReservation to include cabin_number in checkout request. Ready for testing."
 
   - task: "Display cabin_number in user reservations list"
-    implemented: false
-    working: false
+    implemented: true
+    working: "NA"
     file: "/app/frontend/src/pages/Reservations.jsx"
     stuck_count: 0
     priority: "medium"
@@ -192,6 +201,9 @@ frontend:
       - working: false
         agent: "main"
         comment: "My Reservations section should show which cabin was reserved"
+      - working: "NA"
+        agent: "main"
+        comment: "Added cabin_number display in reservation cards. Ready for testing."
 
 metadata:
   created_by: "main_agent"
