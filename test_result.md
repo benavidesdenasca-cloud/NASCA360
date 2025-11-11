@@ -119,23 +119,26 @@ backend:
 
   - task: "Fix /api/reservations/available endpoint to support cabin_number parameter"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Endpoint exists but frontend is not calling it with cabin_number parameter"
+      - working: true
+        agent: "main"
+        comment: "TESTED: GET /api/reservations/available?date=2025-02-01&cabin_number=1 returns 27 available slots correctly"
 
   - task: "Fix /api/reservations/checkout to save cabin_number"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
@@ -143,6 +146,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "Updated checkout endpoint to include cabin_number in CabinReservation creation and metadata. Ready for testing."
+      - working: true
+        agent: "main"
+        comment: "TESTED: POST /api/reservations/checkout creates reservation with cabin_number correctly. Verified in DB: cabin_number field is saved. Cabins operate independently (same slot can be booked for different cabins). Duplicate bookings for same cabin are blocked correctly."
 
 frontend:
   - task: "Add cabin selection UI before calendar"
