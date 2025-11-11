@@ -101,3 +101,111 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Implement multi-cabin reservation system with 3 independent cabins (Cabina 1, 2, 3). Users must select a specific cabin before viewing available time slots. Each cabin costs $10 USD for 20-minute sessions. All cabins share the same schedule (9 AM - 6 PM, 20-minute cycles)."
+
+backend:
+  - task: "Update CabinReservation model with cabin_number field"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Model already includes cabin_number field (line 123)"
+
+  - task: "Fix /api/reservations/available endpoint to support cabin_number parameter"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint exists but frontend is not calling it with cabin_number parameter"
+
+  - task: "Fix /api/reservations/checkout to save cabin_number"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Checkout endpoint is missing cabin_number in the reservation creation (line 879-892). Need to add cabin_number field"
+
+frontend:
+  - task: "Add cabin selection UI before calendar"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/pages/Reservations.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Frontend currently shows no cabin selection. Need to add cabin selection cards/buttons before calendar display"
+
+  - task: "Update available slots API call to include cabin_number"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/pages/Reservations.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Frontend currently calls /reservations/available without cabin_number. Need to pass selected cabin"
+
+  - task: "Update checkout request to include cabin_number"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/pages/Reservations.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Checkout POST request missing cabin_number field (line 79-90)"
+
+  - task: "Display cabin_number in user reservations list"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/pages/Reservations.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "My Reservations section should show which cabin was reserved"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 0
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Fix /api/reservations/checkout to save cabin_number"
+    - "Add cabin selection UI before calendar"
+    - "Update available slots API call to include cabin_number"
+    - "Update checkout request to include cabin_number"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Starting implementation of multi-cabin reservation system. Will fix backend checkout endpoint first, then update frontend to add cabin selection UI and update API calls."
