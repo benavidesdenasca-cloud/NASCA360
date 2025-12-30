@@ -826,7 +826,7 @@ async def stripe_webhook(request: Request):
                     
                     user_id = transaction['user_id']
                     await db.users.update_one(
-                        {"id": user_id},
+                        {"user_id": user_id},
                         {"$set": {"subscription_plan": plan_type}}
                     )
         
