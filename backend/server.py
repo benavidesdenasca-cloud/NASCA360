@@ -551,7 +551,7 @@ async def get_videos(category: Optional[str] = None, current_user: User = Depend
     has_subscription = False
     if current_user.subscription_plan and current_user.subscription_plan != "basic":
         subscription = await db.subscriptions.find_one(
-            {"user_id": current_user.id, "payment_status": "paid"},
+            {"user_id": current_user.user_id, "payment_status": "paid"},
             {"_id": 0},
             sort=[("created_at", -1)]
         )
@@ -588,7 +588,7 @@ async def get_video(video_id: str, current_user: User = Depends(get_current_user
     has_subscription = False
     if current_user.subscription_plan and current_user.subscription_plan != "basic":
         subscription = await db.subscriptions.find_one(
-            {"user_id": current_user.id, "payment_status": "paid"},
+            {"user_id": current_user.user_id, "payment_status": "paid"},
             {"_id": 0},
             sort=[("created_at", -1)]
         )
@@ -668,7 +668,7 @@ async def create_subscription_checkout(
         success_url=success_url,
         cancel_url=cancel_url,
         metadata={
-            "user_id": current_user.id,
+            "user_id": current_user.user_id,
             "plan_type": request.plan_type,
             "user_email": current_user.email
         }
@@ -677,7 +677,7 @@ async def create_subscription_checkout(
     session = await stripe_checkout.create_checkout_session(checkout_request)
     
     transaction = PaymentTransaction(
-        user_id=current_user.id,
+        user_id=current_user.user_id,
         session_id=session.session_id,
         amount=package['amount'],
         currency=package['currency'],
@@ -693,7 +693,7 @@ async def create_subscription_checkout(
     await db.payment_transactions.insert_one(transaction_dict)
     
     subscription = Subscription(
-        user_id=current_user.id,
+        user_id=current_user.user_id,
         plan_type=request.plan_type,
         stripe_session_id=session.session_id,
         payment_status="initiated"
@@ -752,7 +752,7 @@ async def get_subscription_status(
         )
         
         await db.users.update_one(
-            {"id": current_user.id},
+            {"id": current_user.user_id},
             {"$set": {"subscription_plan": plan_type}}
         )
         
@@ -767,7 +767,7 @@ async def get_subscription_status(
 async def get_my_subscription(current_user: User = Depends(get_current_user)):
     """Get current user's subscription"""
     subscription = await db.subscriptions.find_one(
-        {"user_id": current_user.id, "payment_status": "paid"},
+        {"user_id": current_user.user_id, "payment_status": "paid"},
         {"_id": 0},
         sort=[("created_at", -1)]
     )
@@ -941,7 +941,7 @@ async def create_reservation_checkout(
         success_url=success_url,
         cancel_url=cancel_url,
         metadata={
-            "user_id": current_user.id,
+            "user_id": current_user.user_id,
             "reservation_date": reservation.reservation_date,
             "time_slot": reservation.time_slot,
             "cabin_number": str(reservation.cabin_number),
@@ -955,7 +955,7 @@ async def create_reservation_checkout(
     
     # Create pending reservation
     new_reservation = CabinReservation(
-        user_id=current_user.id,
+        user_id=current_user.user_id,
         user_name=current_user.name,
         user_email=current_user.email,
         reservation_date=reservation.reservation_date,
@@ -972,7 +972,7 @@ async def create_reservation_checkout(
     
     # Create payment transaction
     transaction = PaymentTransaction(
-        user_id=current_user.id,
+        user_id=current_user.user_id,
         session_id=session.session_id,
         amount=10.00,
         currency="usd",
@@ -1033,7 +1033,7 @@ async def get_reservation_status(
 async def get_my_reservations(current_user: User = Depends(get_current_user)):
     """Get current user's reservations"""
     reservations = await db.reservations.find(
-        {"user_id": current_user.id},
+        {"user_id": current_user.user_id},
         {"_id": 0}
     ).sort("created_at", -1).to_list(100)
     
@@ -1046,7 +1046,7 @@ async def update_reservation(
     current_user: User = Depends(get_current_user)
 ):
     """Update reservation status (cancel)"""
-    reservation = await db.reservations.find_one({"id": reservation_id, "user_id": current_user.id})
+    reservation = await db.reservations.find_one({"id": reservation_id, "user_id": current_user.user_id})
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservation not found")
     
