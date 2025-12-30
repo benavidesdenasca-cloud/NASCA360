@@ -65,7 +65,7 @@ logger = logging.getLogger(__name__)
 
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str = Field(default_factory=lambda: f"user_{uuid.uuid4().hex[:12]}")
     email: str
     name: str
     password_hash: Optional[str] = None  # None for OAuth users
