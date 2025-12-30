@@ -370,11 +370,11 @@ async def google_callback(request: Request):
             user = new_user
         
         # Create session
-        session_token = create_access_token(user.id)
+        session_token = create_access_token(user.user_id)
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
         
         session = UserSession(
-            user_id=user.id,
+            user_id=user.user_id,
             session_token=session_token,
             expires_at=expires_at
         )
