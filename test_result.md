@@ -163,6 +163,18 @@ backend:
         comment: "TESTED: POST /api/reservations/checkout creates reservation with cabin_number correctly. Verified in DB: cabin_number field is saved. Cabins operate independently (same slot can be booked for different cabins). Duplicate bookings for same cabin are blocked correctly."
 
 frontend:
+  - task: "Replace Google OAuth button with Emergent Auth"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/auth/Login.jsx, /app/frontend/src/pages/auth/AuthCallback.jsx, /app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Updated Login.jsx to redirect to Emergent Auth. Created AuthCallback.jsx to process session_id from URL fragment. Updated App.js to detect session_id synchronously during render and show AuthCallback component."
+
   - task: "Add cabin selection UI before calendar"
     implemented: true
     working: true
