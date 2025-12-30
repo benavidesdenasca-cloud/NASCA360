@@ -205,7 +205,7 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
     )
     
     # Get user
-    user_doc = await db.users.find_one({"id": user_id}, {"_id": 0})
+    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
     if not user_doc:
         raise HTTPException(status_code=401, detail="User not found")
     
