@@ -305,12 +305,12 @@ async def login(request: LoginRequest):
         raise HTTPException(status_code=403, detail="Por favor verifica tu correo electrónico antes de iniciar sesión")
     
     # Create session token
-    session_token = create_access_token(user.id)
+    session_token = create_access_token(user.user_id)
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
     
     # Save session
     session = UserSession(
-        user_id=user.id,
+        user_id=user.user_id,
         session_token=session_token,
         expires_at=expires_at
     )
