@@ -471,6 +471,55 @@ async def process_emergent_session(request: Request):
         logger.error(f"Emergent Auth error: {str(e)}")
         raise HTTPException(status_code=400, detail="Error en autenticación")
 
+@api_router.get("/auth/me")
+async def get_me(request: Request):
+    """Get current user from session cookie or Authorization header"""
+    # REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+    session_token = None
+    
+    # Try to get session_token from cookie first
+    session_token = request.cookies.get("session_token")
+    
+    # Fallback to Authorization header
+    if not session_token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            session_token = auth_header.replace("Bearer ", "")
+    
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Find session
+    session = await db.user_sessions.find_one({"session_token": session_token}, {"_id": 0})
+    if not session:
+        raise HTTPException(status_code=401, detail="Session not found")
+    
+    # Check session expiration (7 days for Emergent Auth, 30 mins for email/password)
+    expires_at = session['expires_at']
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    
+    if expires_at < datetime.now(timezone.utc):
+        await db.user_sessions.delete_one({"session_token": session_token})
+        raise HTTPException(status_code=401, detail="Session expired")
+    
+    # Update last activity
+    await db.user_sessions.update_one(
+        {"session_token": session_token},
+        {"$set": {"last_activity": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Get user
+    user_id = session['user_id']
+    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not user_doc:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    user = User(**user_doc)
+    return user.model_dump(exclude={'password_hash'})
+
 @api_router.post("/auth/forgot-password")
 async def forgot_password(request: ForgotPasswordRequest, req: Request):
     """Request password reset"""
