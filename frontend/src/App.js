@@ -106,87 +106,101 @@ function App() {
     );
   }
 
+  // AppRouter component to detect session_id synchronously
+  const AppRouter = () => {
+    const location = useLocation();
+    
+    // Check for session_id in URL hash (synchronous check during render)
+    if (location.hash && location.hash.includes('session_id=')) {
+      return <AuthCallback />;
+    }
+    
+    return (
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<LandingPage />} />
+        
+        {/* Auth Routes */}
+        <Route path="/auth/login" element={<Login />} />
+        <Route path="/auth/register" element={<Register />} />
+        <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/auth-success" element={<AuthSuccess />} />
+        
+        {/* Protected Routes */}
+        <Route 
+          path="/gallery" 
+          element={
+            <ProtectedRoute>
+              <Gallery />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/video/:id" 
+          element={
+            <ProtectedRoute>
+              <VideoPlayer />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/subscription" 
+          element={<Subscription />} 
+        />
+        <Route 
+          path="/subscription/success" 
+          element={
+            <ProtectedRoute>
+              <SubscriptionSuccess />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/reservations" 
+          element={
+            <ProtectedRoute>
+              <Reservations />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/reservations/success" 
+          element={
+            <ProtectedRoute>
+              <ReservationSuccess />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin" 
+          element={
+            <ProtectedRoute>
+              <AdminPanel />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Catch all - redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  };
+
   return (
     <AuthContext.Provider value={{ user, token, setUser, setToken, logout, fetchCurrentUser }}>
       <div className="App">
         <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<LandingPage />} />
-            
-            {/* Auth Routes */}
-            <Route path="/auth/login" element={<Login />} />
-            <Route path="/auth/register" element={<Register />} />
-            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/auth-success" element={<AuthSuccess />} />
-            
-            {/* Protected Routes */}
-            <Route 
-              path="/gallery" 
-              element={
-                <ProtectedRoute>
-                  <Gallery />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/video/:id" 
-              element={
-                <ProtectedRoute>
-                  <VideoPlayer />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/subscription" 
-              element={<Subscription />} 
-            />
-            <Route 
-              path="/subscription/success" 
-              element={
-                <ProtectedRoute>
-                  <SubscriptionSuccess />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/reservations" 
-              element={
-                <ProtectedRoute>
-                  <Reservations />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/reservations/success" 
-              element={
-                <ProtectedRoute>
-                  <ReservationSuccess />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin" 
-              element={
-                <ProtectedRoute>
-                  <AdminPanel />
-                </ProtectedRoute>
-              } 
-            />
-
-            {/* Catch all - redirect to home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <AppRouter />
         </BrowserRouter>
         <Toaster position="top-right" />
       </div>
