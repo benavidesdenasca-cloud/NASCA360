@@ -30,10 +30,10 @@ const Reservations = () => {
   }, [user]);
 
   useEffect(() => {
-    if (selectedDate && selectedCabin) {
+    if (selectedDate && selectedCabin && token) {
       fetchAvailableSlots();
     }
-  }, [selectedDate, selectedCabin]);
+  }, [selectedDate, selectedCabin, token]);
 
   const fetchAvailableSlots = async () => {
     if (!selectedDate || !selectedCabin) return;
