@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Implement multi-cabin reservation system with 3 independent cabins (Cabina 1, 2, 3). Users must select a specific cabin before viewing available time slots. Each cabin costs $10 USD for 20-minute sessions. All cabins share the same schedule (9 AM - 6 PM, 20-minute cycles)."
+user_problem_statement: "Implement multi-cabin reservation system with 3 independent cabins (Cabina 1, 2, 3). Users must select a specific cabin before viewing available time slots. Each cabin costs $10 USD for 20-minute sessions. All cabins share the same schedule (9 AM - 6 PM, 20-minute cycles). ALSO: Google OAuth login was broken (redirect_uri_mismatch error). Replaced custom Google OAuth with Emergent Google Auth pre-configured integration."
 
 backend:
   - task: "Update CabinReservation model with cabin_number field"
