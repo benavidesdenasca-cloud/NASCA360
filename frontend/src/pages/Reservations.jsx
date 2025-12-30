@@ -23,6 +23,12 @@ const Reservations = () => {
   const [loading, setLoading] = useState(false);
   const [myReservations, setMyReservations] = useState([]);
 
+  // Debug: Log token on mount and when it changes
+  useEffect(() => {
+    console.log('Reservations component - token:', token ? 'present' : 'missing');
+    console.log('Reservations component - user:', user ? user.email : 'missing');
+  }, [token, user]);
+
   useEffect(() => {
     if (user) {
       fetchMyReservations();
