@@ -7,14 +7,14 @@ use('test_database');
 var userId = 'test-user-' + Date.now();
 var sessionToken = 'test_session_' + Date.now();
 db.users.insertOne({
-  id: userId,
+  user_id: userId,  // Custom UUID field (MongoDB's _id is separate/internal)
   email: 'test.user.' + Date.now() + '@example.com',
   name: 'Test User',
   picture: 'https://via.placeholder.com/150',
   created_at: new Date()
 });
 db.user_sessions.insertOne({
-  user_id: userId,
+  user_id: userId,  // Must match user.user_id exactly
   session_token: sessionToken,
   expires_at: new Date(Date.now() + 7*24*60*60*1000),
   created_at: new Date()
@@ -33,6 +33,11 @@ curl -X GET "https://your-app.com/api/auth/me" \
 # Test protected endpoints
 curl -X GET "https://your-app.com/api/habits" \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN"
+
+curl -X POST "https://your-app.com/api/habits" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -d '{"name": "Test Habit", "color": "#3B82F6"}'
 ```
 
 ## Step 3: Browser Testing
@@ -50,17 +55,6 @@ await page.context.add_cookies([{
 await page.goto("https://your-app.com");
 ```
 
-## Critical Fix: ID Schema
-MongoDB + Pydantic ID Mapping:
-
-```python
-# Pydantic Model (uses 'id')
-class User(BaseModel):
-    id: str
-    email: str
-    name: str
-```
-
 ## Quick Debug
 ```bash
 # Check data format
@@ -69,13 +63,21 @@ use('test_database');
 db.users.find().limit(2).pretty();
 db.user_sessions.find().limit(2).pretty();
 "
+
+# Clean test data
+mongosh --eval "
+use('test_database');
+db.users.deleteMany({email: /test\.user\./});
+db.user_sessions.deleteMany({session_token: /test_session/});
+"
 ```
 
 ## Checklist
-- [ ] User document has id field
-- [ ] Session user_id matches user's id value exactly
-- [ ] Both use string IDs (not ObjectId)
-- [ ] API returns user data (not 401/404)
+- [ ] User document has user_id field (custom UUID, MongoDB's _id is separate)
+- [ ] Session user_id matches user's user_id exactly
+- [ ] All queries use `{"_id": 0}` projection to exclude MongoDB's _id
+- [ ] Backend queries use user_id (not _id or id)
+- [ ] API returns user data with user_id field (not 401/404)
 - [ ] Browser loads dashboard (not login page)
 
 ## Success Indicators
