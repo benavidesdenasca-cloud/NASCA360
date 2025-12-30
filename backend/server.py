@@ -752,7 +752,7 @@ async def get_subscription_status(
         )
         
         await db.users.update_one(
-            {"id": current_user.user_id},
+            {"user_id": current_user.user_id},
             {"$set": {"subscription_plan": plan_type}}
         )
         
