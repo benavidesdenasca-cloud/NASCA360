@@ -29,13 +29,7 @@ const Reservations = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (selectedDate && selectedCabin && token) {
-      fetchAvailableSlots();
-    }
-  }, [selectedDate, selectedCabin, token]);
-
-  const fetchAvailableSlots = async () => {
+  const fetchAvailableSlots = useCallback(async () => {
     if (!selectedDate || !selectedCabin) {
       console.log('fetchAvailableSlots: Missing date or cabin', { selectedDate, selectedCabin });
       return;
@@ -66,7 +60,13 @@ const Reservations = () => {
       toast.error('Error al cargar horarios disponibles');
       setAvailableSlots([]);
     }
-  };
+  }, [selectedDate, selectedCabin, token]);
+
+  useEffect(() => {
+    if (selectedDate && selectedCabin && token) {
+      fetchAvailableSlots();
+    }
+  }, [selectedDate, selectedCabin, token, fetchAvailableSlots]);
 
   const fetchMyReservations = async () => {
     try {
