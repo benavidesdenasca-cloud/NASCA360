@@ -188,15 +188,20 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     
     # Find session
-    session = await db.user_sessions.find_one({"session_token": token})
+    session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=401, detail="Session not found")
     
-    # Check session expiration (30 minutes of inactivity)
-    last_activity = datetime.fromisoformat(session['last_activity']) if isinstance(session['last_activity'], str) else session['last_activity']
-    if datetime.now(timezone.utc) - last_activity > timedelta(minutes=30):
+    # Check session expiration using expires_at field
+    expires_at = session['expires_at']
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    
+    if expires_at < datetime.now(timezone.utc):
         await db.user_sessions.delete_one({"session_token": token})
-        raise HTTPException(status_code=401, detail="Session expired due to inactivity")
+        raise HTTPException(status_code=401, detail="Session expired")
     
     # Update last activity
     await db.user_sessions.update_one(
