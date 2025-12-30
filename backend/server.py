@@ -394,6 +394,83 @@ async def google_callback(request: Request):
         logger.error(f"Google OAuth error: {str(e)}")
         raise HTTPException(status_code=400, detail="Error en autenticación con Google")
 
+@api_router.post("/auth/session")
+async def process_emergent_session(request: Request):
+    """Process Emergent Auth session_id and create user session"""
+    try:
+        body = await request.json()
+        session_id = body.get('session_id')
+        
+        if not session_id:
+            raise HTTPException(status_code=400, detail="session_id is required")
+        
+        # Call Emergent Auth API to get user data
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+                headers={"X-Session-ID": session_id},
+                timeout=10.0
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=400, detail="Invalid session_id")
+            
+            user_data = response.json()
+        
+        # Extract user info
+        email = user_data.get('email')
+        name = user_data.get('name')
+        picture = user_data.get('picture')
+        emergent_session_token = user_data.get('session_token')
+        
+        # Check if user exists
+        user_doc = await db.users.find_one({"email": email}, {"_id": 0})
+        
+        if user_doc:
+            user = User(**user_doc)
+        else:
+            # Create new user
+            new_user = User(
+                email=email,
+                name=name,
+                picture=picture,
+                is_verified=True,  # Emergent Auth users are pre-verified
+                oauth_provider="emergent_google",
+                password_hash=None
+            )
+            
+            user_dict = new_user.model_dump()
+            user_dict['created_at'] = user_dict['created_at'].isoformat()
+            await db.users.insert_one(user_dict)
+            user = new_user
+        
+        # Create session with 7-day expiry
+        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+        
+        session = UserSession(
+            user_id=user.user_id,
+            session_token=emergent_session_token,
+            expires_at=expires_at
+        )
+        
+        session_dict = session.model_dump()
+        session_dict['expires_at'] = session_dict['expires_at'].isoformat()
+        session_dict['last_activity'] = session_dict['last_activity'].isoformat()
+        session_dict['created_at'] = session_dict['created_at'].isoformat()
+        
+        await db.user_sessions.insert_one(session_dict)
+        
+        return {
+            "session_token": emergent_session_token,
+            "user": user.model_dump()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Emergent Auth error: {str(e)}")
+        raise HTTPException(status_code=400, detail="Error en autenticación")
+
 @api_router.post("/auth/forgot-password")
 async def forgot_password(request: ForgotPasswordRequest, req: Request):
     """Request password reset"""
