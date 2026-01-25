@@ -18,17 +18,6 @@ const VideoPlayer = () => {
   const [loading, setLoading] = useState(true);
   const [videoUrl, setVideoUrl] = useState(null);
 
-  useEffect(() => {
-    fetchVideo();
-    
-    // Cleanup blob URL on unmount
-    return () => {
-      if (videoUrl) {
-        URL.revokeObjectURL(videoUrl);
-      }
-    };
-  }, [fetchVideo, videoUrl]);
-
   const loadAuthenticatedVideo = useCallback(async (videoSrc) => {
     try {
       // Fetch video with authentication
@@ -120,6 +109,17 @@ const VideoPlayer = () => {
       navigate('/gallery');
     }
   }, [id, token, navigate, loadAuthenticatedVideo]);
+
+  useEffect(() => {
+    fetchVideo();
+    
+    // Cleanup blob URL on unmount
+    return () => {
+      if (videoUrl) {
+        URL.revokeObjectURL(videoUrl);
+      }
+    };
+  }, [fetchVideo, videoUrl]);
 
   if (loading) {
     return (
