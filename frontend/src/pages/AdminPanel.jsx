@@ -121,20 +121,7 @@ const AdminPanel = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching admin data:', error);
-      
-      // Extract error message safely
-      let errorMessage = 'Error al cargar datos administrativos';
-      if (error.response && error.response.data) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (error.response.data.detail && typeof error.response.data.detail === 'string') {
-          errorMessage = error.response.data.detail;
-        }
-      } else if (error.message && typeof error.message === 'string') {
-        errorMessage = error.message;
-      }
-      
-      toast.error(errorMessage);
+      toast.error(getErrorMessage(error, 'Error al cargar datos administrativos'));
       setLoading(false);
       
       // If unauthorized, redirect to login
@@ -153,9 +140,7 @@ const AdminPanel = () => {
       toast.success(isBlocked ? 'Usuario desbloqueado' : 'Usuario bloqueado');
       fetchAdminData();
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 
-                          (typeof error.response?.data === 'string' ? error.response.data : 'Error al cambiar estado del usuario');
-      toast.error(errorMessage);
+      toast.error(getErrorMessage(error, 'Error al cambiar estado del usuario'));
     }
   };
 
@@ -168,9 +153,7 @@ const AdminPanel = () => {
       setEditUserModal(null);
       fetchAdminData();
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 
-                          (typeof error.response?.data === 'string' ? error.response.data : 'Error al actualizar usuario');
-      toast.error(errorMessage);
+      toast.error(getErrorMessage(error, 'Error al actualizar usuario'));
     }
   };
 
@@ -184,9 +167,7 @@ const AdminPanel = () => {
       toast.success('Video eliminado');
       fetchAdminData();
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 
-                          (typeof error.response?.data === 'string' ? error.response.data : 'Error al eliminar video');
-      toast.error(errorMessage);
+      toast.error(getErrorMessage(error, 'Error al eliminar video'));
     }
   };
 
@@ -208,9 +189,7 @@ const AdminPanel = () => {
       setVideoModal(null);
       fetchAdminData();
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 
-                          (typeof error.response?.data === 'string' ? error.response.data : 'Error al guardar video');
-      toast.error(errorMessage);
+      toast.error(getErrorMessage(error, 'Error al guardar video'));
     }
   };
 
