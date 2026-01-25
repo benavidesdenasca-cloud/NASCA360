@@ -215,7 +215,14 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
     if not user_doc:
         raise HTTPException(status_code=401, detail="User not found")
     
-    return User(**user_doc)
+    user = User(**user_doc)
+    
+    # Check if account is blocked
+    if user.is_blocked:
+        await db.user_sessions.delete_many({"user_id": user_id})
+        raise HTTPException(status_code=403, detail="Tu cuenta ha sido bloqueada")
+    
+    return user
 
 async def get_current_user_optional(authorization: Optional[str] = Header(None)) -> Optional[User]:
     """Get current user if authenticated, None otherwise"""
