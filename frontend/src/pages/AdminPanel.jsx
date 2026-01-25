@@ -642,7 +642,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
       // Update the URL field with the uploaded file URL
       setFormData(prev => ({
         ...prev,
-        [fieldName === 'video' ? 'url' : fieldName === 'demo' ? 'demo_url' : 'thumbnail_url']: response.data.url
+        [fieldName === 'video' ? 'url' : 'thumbnail_url']: response.data.url
       }));
       
       toast.success('Archivo subido correctamente');
