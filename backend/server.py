@@ -171,7 +171,6 @@ class VideoCreate(BaseModel):
     description: str
     duration: str
     url: str
-    demo_url: Optional[str] = None
     category: str
     cultural_tags: List[str] = []
     thumbnail_url: Optional[str] = None
