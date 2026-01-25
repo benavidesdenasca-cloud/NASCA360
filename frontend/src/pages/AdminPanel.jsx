@@ -76,7 +76,20 @@ const AdminPanel = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching admin data:', error);
-      toast.error(error.response?.data?.detail || 'Error al cargar datos administrativos');
+      
+      // Extract error message safely
+      let errorMessage = 'Error al cargar datos administrativos';
+      if (error.response && error.response.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.detail && typeof error.response.data.detail === 'string') {
+          errorMessage = error.response.data.detail;
+        }
+      } else if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
       setLoading(false);
       
       // If unauthorized, redirect to login
