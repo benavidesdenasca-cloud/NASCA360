@@ -27,7 +27,7 @@ const VideoPlayer = () => {
         URL.revokeObjectURL(videoUrl);
       }
     };
-  }, [id, token]); // Added token as dependency since it's used in fetchVideo
+  }, [fetchVideo, videoUrl]);
 
   const loadAuthenticatedVideo = useCallback(async (videoSrc) => {
     try {
