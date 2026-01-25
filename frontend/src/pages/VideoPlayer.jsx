@@ -103,7 +103,12 @@ const VideoPlayer = () => {
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
         <Navbar />
         <div className="flex items-center justify-center min-h-screen">
-          <p className="text-xl text-gray-600">Video no encontrado</p>
+          <div className="text-center">
+            <p className="text-amber-800 text-xl mb-4">Video no encontrado</p>
+            <Button onClick={() => navigate('/gallery')}>
+              Volver a la Galería
+            </Button>
+          </div>
         </div>
       </div>
     );
