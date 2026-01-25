@@ -105,13 +105,10 @@ class Video360(BaseModel):
     description: str
     duration: str  # "5:30"
     url: str
-    url_demo: Optional[str] = None  # Low quality demo URL
     category: str  # nasca, palpa, museum
-    tags: List[str] = []
-    thumbnail_url: str
-    is_premium: bool = False
-    is_demo: bool = False  # Flag to indicate if this is demo version
-    quality: str = "high"  # "low" or "high"
+    cultural_tags: List[str] = []
+    thumbnail_url: Optional[str] = None
+    is_premium: bool = True  # All content is premium by default
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class CabinReservation(BaseModel):
