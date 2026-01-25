@@ -557,6 +557,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
 
 // Video Modal Component
 const VideoModal = ({ video, onClose, onSave }) => {
+  const { token } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     id: video.id || null,
     title: video.title || '',
@@ -569,8 +570,55 @@ const VideoModal = ({ video, onClose, onSave }) => {
     cultural_tags: video.cultural_tags?.join(', ') || '',
     is_premium: video.is_premium ?? true
   });
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({
+    video: 0,
+    demo: 0,
+    thumbnail: 0
+  });
+
+  const handleFileUpload = async (file, fieldName) => {
+    if (!file) return;
+    
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post(`${API}/upload`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(prev => ({ ...prev, [fieldName]: percentCompleted }));
+        }
+      });
+
+      // Update the URL field with the uploaded file URL
+      setFormData(prev => ({
+        ...prev,
+        [fieldName === 'video' ? 'url' : fieldName === 'demo' ? 'demo_url' : 'thumbnail_url']: response.data.url
+      }));
+      
+      toast.success('Archivo subido correctamente');
+      setUploading(false);
+      setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Error al subir archivo');
+      setUploading(false);
+      setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+    }
+  };
 
   const handleSubmit = () => {
+    if (!formData.title || !formData.description || !formData.url) {
+      toast.error('Por favor completa los campos obligatorios');
+      return;
+    }
+
     const dataToSave = {
       ...formData,
       cultural_tags: formData.cultural_tags.split(',').map(t => t.trim()).filter(t => t)
@@ -613,38 +661,76 @@ const VideoModal = ({ video, onClose, onSave }) => {
             />
           </div>
 
+          {/* Video Original Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">URL Video Original*</label>
-            <input
-              type="url"
-              value={formData.url}
-              onChange={(e) => setFormData({...formData, url: e.target.value})}
-              placeholder="https://..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-              required
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Video Original (Alta Calidad)*
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="file"
+                accept="video/mp4,video/webm"
+                onChange={(e) => handleFileUpload(e.target.files[0], 'video')}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                disabled={uploading}
+              />
+              {uploadProgress.video > 0 && uploadProgress.video < 100 && (
+                <div className="flex items-center">
+                  <span className="text-sm text-amber-600">{uploadProgress.video}%</span>
+                </div>
+              )}
+            </div>
+            {formData.url && (
+              <p className="text-xs text-green-600 mt-1">✓ Archivo subido: {formData.url.split('/').pop()}</p>
+            )}
           </div>
 
+          {/* Demo Video Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">URL Video Demo (baja calidad)</label>
-            <input
-              type="url"
-              value={formData.demo_url}
-              onChange={(e) => setFormData({...formData, demo_url: e.target.value})}
-              placeholder="https://..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Video Demo (Baja Calidad - Opcional)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="file"
+                accept="video/mp4,video/webm"
+                onChange={(e) => handleFileUpload(e.target.files[0], 'demo')}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                disabled={uploading}
+              />
+              {uploadProgress.demo > 0 && uploadProgress.demo < 100 && (
+                <div className="flex items-center">
+                  <span className="text-sm text-amber-600">{uploadProgress.demo}%</span>
+                </div>
+              )}
+            </div>
+            {formData.demo_url && (
+              <p className="text-xs text-green-600 mt-1">✓ Archivo subido: {formData.demo_url.split('/').pop()}</p>
+            )}
           </div>
 
+          {/* Thumbnail Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">URL Miniatura</label>
-            <input
-              type="url"
-              value={formData.thumbnail_url}
-              onChange={(e) => setFormData({...formData, thumbnail_url: e.target.value})}
-              placeholder="https://..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Miniatura (Imagen - Opcional)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileUpload(e.target.files[0], 'thumbnail')}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                disabled={uploading}
+              />
+              {uploadProgress.thumbnail > 0 && uploadProgress.thumbnail < 100 && (
+                <div className="flex items-center">
+                  <span className="text-sm text-amber-600">{uploadProgress.thumbnail}%</span>
+                </div>
+              )}
+            </div>
+            {formData.thumbnail_url && (
+              <p className="text-xs text-green-600 mt-1">✓ Archivo subido: {formData.thumbnail_url.split('/').pop()}</p>
+            )}
           </div>
 
           <div>
@@ -696,15 +782,15 @@ const VideoModal = ({ video, onClose, onSave }) => {
           </div>
 
           <div className="flex gap-3 mt-6 pt-6 border-t">
-            <Button onClick={onClose} variant="outline" className="flex-1">
+            <Button onClick={onClose} variant="outline" className="flex-1" disabled={uploading}>
               Cancelar
             </Button>
             <Button
               onClick={handleSubmit}
               className="flex-1 btn-peru"
-              disabled={!formData.title || !formData.description || !formData.url}
+              disabled={!formData.title || !formData.description || !formData.url || uploading}
             >
-              {video.id ? 'Actualizar' : 'Crear'}
+              {uploading ? 'Subiendo...' : (video.id ? 'Actualizar' : 'Crear')}
             </Button>
           </div>
         </div>
