@@ -140,7 +140,7 @@ async def send_verification_email(email: str, token: str, base_url: str) -> bool
     <body>
         <div class="container">
             <div class="logo">
-                <img src="https://nazca360-vr.preview.emergentagent.com/logo.jpg" alt="Nazca360">
+                <img src="https://nazca360-admin.preview.emergentagent.com/logo.jpg" alt="Nazca360">
             </div>
             <h1>¡Bienvenido a Nazca360!</h1>
             <p>Gracias por registrarte en Nazca360, la plataforma inmersiva de turismo virtual de las Líneas de Nasca.</p>
@@ -185,7 +185,7 @@ async def send_password_reset_email(email: str, token: str, base_url: str) -> bo
     <body>
         <div class="container">
             <div class="logo">
-                <img src="https://nazca360-vr.preview.emergentagent.com/logo.jpg" alt="Nazca360">
+                <img src="https://nazca360-admin.preview.emergentagent.com/logo.jpg" alt="Nazca360">
             </div>
             <h1>Restablecer contraseña</h1>
             <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en Nazca360.</p>
