@@ -73,6 +73,7 @@ class User(BaseModel):
     role: str = "user"  # user or admin
     subscription_plan: str = "basic"  # basic or premium
     is_verified: bool = False  # Email verification status
+    is_blocked: bool = False  # Account blocked status
     oauth_provider: Optional[str] = None  # google, None for email/password
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
