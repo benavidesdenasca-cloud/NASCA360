@@ -171,10 +171,11 @@ class VideoCreate(BaseModel):
     description: str
     duration: str
     url: str
+    demo_url: Optional[str] = None
     category: str
-    tags: List[str]
-    thumbnail_url: str
-    is_premium: bool
+    cultural_tags: List[str] = []
+    thumbnail_url: Optional[str] = None
+    is_premium: bool = True
 
 # ==================== AUTHENTICATION ====================
 
