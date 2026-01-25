@@ -14,6 +14,7 @@ from datetime import datetime, timezone, timedelta
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 import httpx
 from authlib.integrations.starlette_client import OAuth
+import aiofiles
 
 # Import custom auth utilities
 from auth_utils import (
