@@ -123,15 +123,25 @@ const VideoPlayer = () => {
           {/* Video Player */}
           <div data-testid="video-player-container" className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-8 relative">
             <div className="video-container bg-black">
-              <video
-                data-testid="video-element"
-                controls
-                className="w-full h-full"
-                poster={video.thumbnail_url}
-              >
-                <source src={videoUrl || video.url} type="video/mp4" />
-                Tu navegador no soporta el reproductor de video.
-              </video>
+              {videoUrl ? (
+                <video
+                  data-testid="video-element"
+                  controls
+                  className="w-full h-full"
+                  poster={video.thumbnail_url}
+                  key={videoUrl}
+                >
+                  <source src={videoUrl} type="video/mp4" />
+                  Tu navegador no soporta el reproductor de video.
+                </video>
+              ) : (
+                <div className="flex items-center justify-center h-96 text-white">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+                    <p>Cargando video seguro...</p>
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* Demo Overlay */}
