@@ -787,17 +787,10 @@ const VideoModal = ({ video, onClose, onSave }) => {
             />
           </div>
 
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="is_premium"
-              checked={formData.is_premium}
-              onChange={(e) => setFormData({...formData, is_premium: e.target.checked})}
-              className="w-4 h-4 text-amber-600"
-            />
-            <label htmlFor="is_premium" className="text-sm font-medium text-gray-700">
-              Contenido Premium (requiere suscripción)
-            </label>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <p className="text-sm text-amber-900">
+              <strong>Nota:</strong> Todo el contenido requiere suscripción activa para ser visualizado (modelo Netflix).
+            </p>
           </div>
 
           <div className="flex gap-3 mt-6 pt-6 border-t">
