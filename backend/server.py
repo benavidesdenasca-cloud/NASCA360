@@ -295,7 +295,7 @@ async def verify_email(token: str):
 
 @api_router.post("/auth/login")
 async def login(request: LoginRequest):
-    """Login with email and password"""
+    """Login with email and password - requires active subscription"""
     # Find user
     user_doc = await db.users.find_one({"email": request.email}, {"_id": 0})
     if not user_doc:
@@ -318,6 +318,13 @@ async def login(request: LoginRequest):
     # Check if email is verified
     if not user.is_verified:
         raise HTTPException(status_code=403, detail="Por favor verifica tu correo electrónico antes de iniciar sesión")
+    
+    # NETFLIX MODEL: Check if user has active subscription (except admin)
+    if user.role != 'admin' and user.subscription_plan == 'basic':
+        raise HTTPException(
+            status_code=403, 
+            detail="Necesitas una suscripción activa para acceder. Por favor suscríbete para continuar."
+        )
     
     # Create session token
     session_token = create_access_token(user.user_id)
