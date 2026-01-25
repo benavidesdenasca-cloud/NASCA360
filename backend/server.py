@@ -1298,13 +1298,40 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
     }
 
 @api_router.get("/files/{filename}")
-async def get_file(filename: str):
-    """Serve uploaded files"""
+async def get_file(filename: str, current_user: User = Depends(get_current_user)):
+    """Serve uploaded files - requires authentication"""
     file_path = Path("uploads") / filename
     
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     
+    # Check if this is a video file (not thumbnail)
+    if filename.endswith(('.mp4', '.webm', '.mov', '.avi')):
+        # Find the video that uses this file
+        video = await db.videos.find_one({
+            "$or": [
+                {"url": f"/api/files/{filename}"},
+                {"demo_url": f"/api/files/{filename}"}
+            ]
+        }, {"_id": 0})
+        
+        if video:
+            # If it's a premium video, check subscription
+            if video.get('is_premium', True):
+                # Check if user has premium subscription
+                if current_user.subscription_plan == 'basic':
+                    # Only allow demo version for basic users
+                    if video.get('demo_url') == f"/api/files/{filename}":
+                        # This is the demo, allow it
+                        return FileResponse(file_path)
+                    else:
+                        # This is premium content, deny access
+                        raise HTTPException(
+                            status_code=403, 
+                            detail="Este contenido requiere suscripción premium"
+                        )
+    
+    # Allow access for premium users, thumbnails, or non-premium videos
     return FileResponse(file_path)
 
 # Add middlewares BEFORE including routers
