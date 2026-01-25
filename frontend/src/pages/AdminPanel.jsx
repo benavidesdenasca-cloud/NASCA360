@@ -14,7 +14,13 @@ const API = `${BACKEND_URL}/api`;
 const AdminPanel = () => {
   const navigate = useNavigate();
   const { user, token } = useContext(AuthContext);
-  const [metrics, setMetrics] = useState(null);
+  const [metrics, setMetrics] = useState({
+    total_users: 0,
+    premium_users: 0,
+    total_reservations: 0,
+    total_videos: 0,
+    total_revenue: 0
+  });
   const [users, setUsers] = useState([]);
   const [videos, setVideos] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
