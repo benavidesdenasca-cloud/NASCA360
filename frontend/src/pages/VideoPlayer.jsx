@@ -68,7 +68,8 @@ const VideoPlayer = () => {
       setVideoUrl(blobUrl);
     } catch (error) {
       console.error('Error loading authenticated video:', error);
-      toast.error('Error al cargar el video protegido');
+      const errorMessage = error.message || 'Error al cargar el video protegido';
+      toast.error(errorMessage);
     }
   }, [token]);
 
