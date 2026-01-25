@@ -36,8 +36,10 @@ const AdminPanel = () => {
       navigate('/');
       return;
     }
-    fetchAdminData();
-  }, [user]);
+    if (token) {
+      fetchAdminData();
+    }
+  }, [user, token]);
 
   const fetchAdminData = async () => {
     try {
