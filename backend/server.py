@@ -1270,6 +1270,43 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+# ==================== FILE UPLOAD ROUTES ====================
+
+@api_router.post("/upload")
+async def upload_file(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    """Upload a file (authenticated users only)"""
+    # Create uploads directory if it doesn't exist
+    upload_dir = Path("uploads")
+    upload_dir.mkdir(exist_ok=True)
+    
+    # Generate unique filename
+    file_extension = Path(file.filename).suffix if file.filename else ""
+    unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+    file_path = upload_dir / unique_filename
+    
+    # Save file
+    async with aiofiles.open(file_path, 'wb') as f:
+        content = await file.read()
+        await f.write(content)
+    
+    return {
+        "filename": unique_filename,
+        "original_filename": file.filename,
+        "size": len(content),
+        "content_type": file.content_type,
+        "url": f"/api/files/{unique_filename}"
+    }
+
+@api_router.get("/files/{filename}")
+async def get_file(filename: str):
+    """Serve uploaded files"""
+    file_path = Path("uploads") / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(file_path)
+
 # Add middlewares BEFORE including routers
 app.add_middleware(
     CORSMiddleware,
