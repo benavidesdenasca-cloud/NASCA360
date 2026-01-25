@@ -298,6 +298,10 @@ async def login(request: LoginRequest):
     
     user = User(**user_doc)
     
+    # Check if account is blocked
+    if user.is_blocked:
+        raise HTTPException(status_code=403, detail="Tu cuenta ha sido bloqueada. Contacta al administrador.")
+    
     # Check if user registered with OAuth
     if user.oauth_provider:
         raise HTTPException(status_code=400, detail=f"Esta cuenta fue creada con {user.oauth_provider}. Por favor inicia sesión con {user.oauth_provider}.")
