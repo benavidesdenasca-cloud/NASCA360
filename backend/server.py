@@ -1303,7 +1303,7 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
 
 @api_router.get("/files/{filename}")
 async def get_file(filename: str, current_user: User = Depends(get_current_user)):
-    """Serve uploaded files - requires authentication"""
+    """Serve uploaded files - requires authentication and active subscription"""
     file_path = Path("uploads") / filename
     
     if not file_path.exists():
@@ -1311,31 +1311,14 @@ async def get_file(filename: str, current_user: User = Depends(get_current_user)
     
     # Check if this is a video file (not thumbnail)
     if filename.endswith(('.mp4', '.webm', '.mov', '.avi')):
-        # Find the video that uses this file
-        video = await db.videos.find_one({
-            "$or": [
-                {"url": f"/api/files/{filename}"},
-                {"demo_url": f"/api/files/{filename}"}
-            ]
-        }, {"_id": 0})
-        
-        if video:
-            # If it's a premium video, check subscription
-            if video.get('is_premium', True):
-                # Check if user has premium subscription
-                if current_user.subscription_plan == 'basic':
-                    # Only allow demo version for basic users
-                    if video.get('demo_url') == f"/api/files/{filename}":
-                        # This is the demo, allow it
-                        return FileResponse(file_path)
-                    else:
-                        # This is premium content, deny access
-                        raise HTTPException(
-                            status_code=403, 
-                            detail="Este contenido requiere suscripción premium"
-                        )
+        # NETFLIX MODEL: Only allow premium users and admins
+        if current_user.role != 'admin' and current_user.subscription_plan == 'basic':
+            raise HTTPException(
+                status_code=403, 
+                detail="Necesitas una suscripción activa para ver contenido"
+            )
     
-    # Allow access for premium users, thumbnails, or non-premium videos
+    # Allow access for premium users, admins, or thumbnails
     return FileResponse(file_path)
 
 # Add middlewares BEFORE including routers
