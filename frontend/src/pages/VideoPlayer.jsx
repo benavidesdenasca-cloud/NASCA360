@@ -244,7 +244,7 @@ const VideoPlayer = () => {
 
             {/* Tags */}
             <div className="flex flex-wrap gap-2 mb-6">
-              {video.tags.map((tag, index) => (
+              {video.cultural_tags?.map((tag, index) => (
                 <span
                   key={index}
                   className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium"
