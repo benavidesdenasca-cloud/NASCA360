@@ -1184,6 +1184,69 @@ async def delete_video(video_id: str, admin: User = Depends(require_admin)):
         raise HTTPException(status_code=404, detail="Video not found")
     return {"message": "Video deleted"}
 
+# ==================== ADMIN USER MANAGEMENT ====================
+
+@api_router.put("/admin/users/{user_id}/block")
+async def block_user(user_id: str, admin: User = Depends(require_admin)):
+    """Block a user account (admin only)"""
+    # Don't allow blocking yourself
+    if user_id == admin.user_id:
+        raise HTTPException(status_code=400, detail="Cannot block yourself")
+    
+    result = await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"is_blocked": True}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Delete all active sessions for this user
+    await db.user_sessions.delete_many({"user_id": user_id})
+    
+    return {"message": "User blocked successfully"}
+
+@api_router.put("/admin/users/{user_id}/unblock")
+async def unblock_user(user_id: str, admin: User = Depends(require_admin)):
+    """Unblock a user account (admin only)"""
+    result = await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"is_blocked": False}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User unblocked successfully"}
+
+@api_router.put("/admin/users/{user_id}")
+async def update_user(
+    user_id: str,
+    update_data: dict,
+    admin: User = Depends(require_admin)
+):
+    """Update user details (admin only)"""
+    # Don't allow changing your own role
+    if user_id == admin.user_id and "role" in update_data:
+        raise HTTPException(status_code=400, detail="Cannot change your own role")
+    
+    # Allowed fields to update
+    allowed_fields = ["name", "email", "role", "subscription_plan", "is_verified"]
+    update_dict = {k: v for k, v in update_data.items() if k in allowed_fields}
+    
+    if not update_dict:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    result = await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": update_dict}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User updated successfully"}
+
 # ==================== BASIC ROUTES ====================
 
 @api_router.get("/")
