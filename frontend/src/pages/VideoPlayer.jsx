@@ -39,7 +39,10 @@ const VideoPlayer = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load video');
+        const errorData = await response.json().catch(() => ({ detail: 'Error al cargar video' }));
+        console.error('Video load error:', errorData);
+        toast.error(errorData.detail || 'No tienes acceso a este video');
+        return;
       }
 
       // Convert to blob
