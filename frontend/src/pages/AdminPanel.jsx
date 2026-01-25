@@ -11,6 +11,51 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Helper function to safely extract error messages
+const getErrorMessage = (error, defaultMessage = 'Ha ocurrido un error') => {
+  if (!error) return defaultMessage;
+  
+  // Try to get from response.data
+  if (error.response && error.response.data) {
+    const data = error.response.data;
+    
+    // If data is a string, return it
+    if (typeof data === 'string') {
+      return data;
+    }
+    
+    // If data has detail and it's a string, return it
+    if (data.detail) {
+      if (typeof data.detail === 'string') {
+        return data.detail;
+      }
+      // If detail is an array (FastAPI validation errors)
+      if (Array.isArray(data.detail)) {
+        return data.detail
+          .map(err => {
+            if (typeof err === 'string') return err;
+            if (err.msg) return err.msg;
+            return 'Error de validación';
+          })
+          .join(', ');
+      }
+    }
+    
+    // If data has message and it's a string, return it
+    if (data.message && typeof data.message === 'string') {
+      return data.message;
+    }
+  }
+  
+  // Try to get from error.message
+  if (error.message && typeof error.message === 'string') {
+    return error.message;
+  }
+  
+  // Return default message
+  return defaultMessage;
+};
+
 const AdminPanel = () => {
   const navigate = useNavigate();
   const { user, token } = useContext(AuthContext);
