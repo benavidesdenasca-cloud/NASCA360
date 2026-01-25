@@ -36,6 +36,12 @@ const VideoPlayer = () => {
       
       const response = await axios.get(`${API}/videos/${id}`, { headers });
       setVideo(response.data);
+      
+      // Fetch the video file with authentication and create blob URL
+      if (response.data.url) {
+        await loadAuthenticatedVideo(response.data.url);
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching video:', error);
@@ -47,6 +53,31 @@ const VideoPlayer = () => {
         navigate('/gallery');
       }
       setLoading(false);
+    }
+  };
+
+  const loadAuthenticatedVideo = async (videoSrc) => {
+    try {
+      // Fetch video with authentication
+      const response = await fetch(`${BACKEND_URL}${videoSrc}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load video');
+      }
+
+      // Convert to blob
+      const blob = await response.blob();
+      
+      // Create blob URL
+      const blobUrl = URL.createObjectURL(blob);
+      setVideoUrl(blobUrl);
+    } catch (error) {
+      console.error('Error loading authenticated video:', error);
+      toast.error('Error al cargar el video protegido');
     }
   };
 
