@@ -39,9 +39,24 @@ const VideoPlayer = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Error al cargar video' }));
-        console.error('Video load error:', errorData);
-        toast.error(errorData.detail || 'No tienes acceso a este video');
+        let errorMessage = 'No tienes acceso a este video';
+        
+        try {
+          const errorData = await response.json();
+          if (typeof errorData === 'string') {
+            errorMessage = errorData;
+          } else if (errorData.detail && typeof errorData.detail === 'string') {
+            errorMessage = errorData.detail;
+          } else if (errorData.message && typeof errorData.message === 'string') {
+            errorMessage = errorData.message;
+          }
+        } catch (e) {
+          // If JSON parsing fails, use default message
+          console.error('Error parsing error response:', e);
+        }
+        
+        console.error('Video load error:', errorMessage);
+        toast.error(errorMessage);
         return;
       }
 
