@@ -607,7 +607,30 @@ const VideoModal = ({ video, onClose, onSave }) => {
       setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Error al subir archivo');
+      
+      // Extract error message safely
+      let errorMessage = 'Error al subir archivo';
+      
+      if (error.response && error.response.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.detail) {
+          if (typeof error.response.data.detail === 'string') {
+            errorMessage = error.response.data.detail;
+          } else if (Array.isArray(error.response.data.detail)) {
+            // FastAPI validation errors are arrays
+            errorMessage = error.response.data.detail.map(err => 
+              typeof err === 'string' ? err : err.msg || 'Error de validación'
+            ).join(', ');
+          }
+        } else if (error.response.data.message && typeof error.response.data.message === 'string') {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
       setUploading(false);
       setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
     }
