@@ -73,14 +73,35 @@ const VideoPlayer = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching video:', error);
-      if (error.response?.status === 403) {
-        toast.error('Necesitas una suscripción Premium para acceder a este contenido');
-        navigate('/subscription');
-      } else {
-        toast.error('Error al cargar el video');
-        navigate('/gallery');
-      }
       setLoading(false);
+      
+      // Extract error message safely
+      let errorMessage = 'Error al cargar el video';
+      
+      if (error.response) {
+        if (error.response.status === 403) {
+          errorMessage = 'Necesitas una suscripción Premium para acceder a este contenido';
+          toast.error(errorMessage);
+          navigate('/subscription');
+          return;
+        } else if (error.response.data) {
+          // Handle different error formats
+          if (typeof error.response.data === 'string') {
+            errorMessage = error.response.data;
+          } else if (error.response.data.detail) {
+            errorMessage = typeof error.response.data.detail === 'string' 
+              ? error.response.data.detail 
+              : 'Error al cargar el video';
+          } else if (error.response.data.message) {
+            errorMessage = error.response.data.message;
+          }
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
+      navigate('/gallery');
     }
   }, [id, token, navigate, loadAuthenticatedVideo]);
 
