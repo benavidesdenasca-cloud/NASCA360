@@ -57,7 +57,7 @@ const AdminPanel = () => {
       const [metricsRes, usersRes, videosRes, subsRes, resRes] = await Promise.all([
         axios.get(`${API}/admin/metrics`, { headers }),
         axios.get(`${API}/admin/users`, { headers }),
-        axios.get(`${API}/videos/all`, { headers }),
+        axios.get(`${API}/videos`, { headers }),
         axios.get(`${API}/admin/subscriptions`, { headers }),
         axios.get(`${API}/admin/reservations`, { headers })
       ]);
