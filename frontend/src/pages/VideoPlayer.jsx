@@ -16,9 +16,17 @@ const VideoPlayer = () => {
   const { user, token } = useContext(AuthContext);
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [videoUrl, setVideoUrl] = useState(null);
 
   useEffect(() => {
     fetchVideo();
+    
+    // Cleanup blob URL on unmount
+    return () => {
+      if (videoUrl) {
+        URL.revokeObjectURL(videoUrl);
+      }
+    };
   }, [id]);
 
   const fetchVideo = async () => {
