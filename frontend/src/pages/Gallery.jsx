@@ -149,7 +149,7 @@ const Gallery = () => {
                     
                     {/* Tags */}
                     <div className="flex flex-wrap gap-2">
-                      {video.tags.slice(0, 3).map((tag, index) => (
+                      {video.cultural_tags?.slice(0, 3).map((tag, index) => (
                         <span
                           key={index}
                           className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium"
