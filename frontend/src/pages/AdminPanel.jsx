@@ -728,30 +728,6 @@ const VideoModal = ({ video, onClose, onSave }) => {
             )}
           </div>
 
-          {/* Demo Video Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Video Demo (Baja Calidad - Opcional)
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="file"
-                accept="video/mp4,video/webm"
-                onChange={(e) => handleFileUpload(e.target.files[0], 'demo')}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-                disabled={uploading}
-              />
-              {uploadProgress.demo > 0 && uploadProgress.demo < 100 && (
-                <div className="flex items-center">
-                  <span className="text-sm text-amber-600">{uploadProgress.demo}%</span>
-                </div>
-              )}
-            </div>
-            {formData.demo_url && (
-              <p className="text-xs text-green-600 mt-1">✓ Archivo subido: {formData.demo_url.split('/').pop()}</p>
-            )}
-          </div>
-
           {/* Thumbnail Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
