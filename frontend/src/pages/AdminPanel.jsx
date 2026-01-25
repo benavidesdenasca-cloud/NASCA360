@@ -608,7 +608,6 @@ const VideoModal = ({ video, onClose, onSave }) => {
     title: video.title || '',
     description: video.description || '',
     url: video.url || '',
-    demo_url: video.demo_url || '',
     thumbnail_url: video.thumbnail_url || '',
     category: video.category || 'nasca',
     duration: video.duration || '',
@@ -618,7 +617,6 @@ const VideoModal = ({ video, onClose, onSave }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({
     video: 0,
-    demo: 0,
     thumbnail: 0
   });
 
