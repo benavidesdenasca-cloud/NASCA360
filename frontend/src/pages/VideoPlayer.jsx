@@ -29,7 +29,32 @@ const VideoPlayer = () => {
     };
   }, [id, token]); // Added token as dependency since it's used in fetchVideo
 
-  const fetchVideo = async () => {
+  const loadAuthenticatedVideo = useCallback(async (videoSrc) => {
+    try {
+      // Fetch video with authentication
+      const response = await fetch(`${BACKEND_URL}${videoSrc}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load video');
+      }
+
+      // Convert to blob
+      const blob = await response.blob();
+      
+      // Create blob URL
+      const blobUrl = URL.createObjectURL(blob);
+      setVideoUrl(blobUrl);
+    } catch (error) {
+      console.error('Error loading authenticated video:', error);
+      toast.error('Error al cargar el video protegido');
+    }
+  }, [token]);
+
+  const fetchVideo = useCallback(async () => {
     try {
       setLoading(true);
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -54,32 +79,7 @@ const VideoPlayer = () => {
       }
       setLoading(false);
     }
-  };
-
-  const loadAuthenticatedVideo = async (videoSrc) => {
-    try {
-      // Fetch video with authentication
-      const response = await fetch(`${BACKEND_URL}${videoSrc}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load video');
-      }
-
-      // Convert to blob
-      const blob = await response.blob();
-      
-      // Create blob URL
-      const blobUrl = URL.createObjectURL(blob);
-      setVideoUrl(blobUrl);
-    } catch (error) {
-      console.error('Error loading authenticated video:', error);
-      toast.error('Error al cargar el video protegido');
-    }
-  };
+  }, [id, token, navigate, loadAuthenticatedVideo]);
 
   if (loading) {
     return (
