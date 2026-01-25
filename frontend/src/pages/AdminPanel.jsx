@@ -43,6 +43,13 @@ const AdminPanel = () => {
     try {
       setLoading(true);
       
+      if (!token) {
+        console.error('No token available');
+        toast.error('Error de autenticación');
+        navigate('/auth/login');
+        return;
+      }
+      
       const headers = { 'Authorization': `Bearer ${token}` };
 
       const [metricsRes, usersRes, videosRes, subsRes, resRes] = await Promise.all([
@@ -53,16 +60,27 @@ const AdminPanel = () => {
         axios.get(`${API}/admin/reservations`, { headers })
       ]);
 
-      setMetrics(metricsRes.data);
-      setUsers(usersRes.data);
-      setVideos(videosRes.data);
-      setSubscriptions(subsRes.data);
-      setReservations(resRes.data);
+      setMetrics(metricsRes.data || {
+        total_users: 0,
+        premium_users: 0,
+        total_reservations: 0,
+        total_videos: 0,
+        total_revenue: 0
+      });
+      setUsers(usersRes.data || []);
+      setVideos(videosRes.data || []);
+      setSubscriptions(subsRes.data || []);
+      setReservations(resRes.data || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching admin data:', error);
-      toast.error('Error al cargar datos administrativos');
+      toast.error(error.response?.data?.detail || 'Error al cargar datos administrativos');
       setLoading(false);
+      
+      // If unauthorized, redirect to login
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        navigate('/auth/login');
+      }
     }
   };
 
