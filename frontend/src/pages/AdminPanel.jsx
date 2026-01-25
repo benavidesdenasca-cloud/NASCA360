@@ -95,7 +95,9 @@ const AdminPanel = () => {
       toast.success(isBlocked ? 'Usuario desbloqueado' : 'Usuario bloqueado');
       fetchAdminData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Error al cambiar estado del usuario');
+      const errorMessage = error.response?.data?.detail || 
+                          (typeof error.response?.data === 'string' ? error.response.data : 'Error al cambiar estado del usuario');
+      toast.error(errorMessage);
     }
   };
 
@@ -108,7 +110,9 @@ const AdminPanel = () => {
       setEditUserModal(null);
       fetchAdminData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Error al actualizar usuario');
+      const errorMessage = error.response?.data?.detail || 
+                          (typeof error.response?.data === 'string' ? error.response.data : 'Error al actualizar usuario');
+      toast.error(errorMessage);
     }
   };
 
@@ -122,7 +126,9 @@ const AdminPanel = () => {
       toast.success('Video eliminado');
       fetchAdminData();
     } catch (error) {
-      toast.error('Error al eliminar video');
+      const errorMessage = error.response?.data?.detail || 
+                          (typeof error.response?.data === 'string' ? error.response.data : 'Error al eliminar video');
+      toast.error(errorMessage);
     }
   };
 
@@ -144,7 +150,9 @@ const AdminPanel = () => {
       setVideoModal(null);
       fetchAdminData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Error al guardar video');
+      const errorMessage = error.response?.data?.detail || 
+                          (typeof error.response?.data === 'string' ? error.response.data : 'Error al guardar video');
+      toast.error(errorMessage);
     }
   };
 
