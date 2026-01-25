@@ -129,7 +129,7 @@ const VideoPlayer = () => {
                 className="w-full h-full"
                 poster={video.thumbnail_url}
               >
-                <source src={video.url} type="video/mp4" />
+                <source src={videoUrl || video.url} type="video/mp4" />
                 Tu navegador no soporta el reproductor de video.
               </video>
             </div>
