@@ -1302,23 +1302,48 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
     }
 
 @api_router.get("/files/{filename}")
-async def get_file(filename: str, current_user: User = Depends(get_current_user)):
-    """Serve uploaded files - requires authentication and active subscription"""
+async def get_file(
+    filename: str, 
+    request: Request,
+    authorization: str = Header(None)
+):
+    """Serve uploaded files - thumbnails are public, videos require authentication"""
     file_path = Path("uploads") / filename
     
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     
-    # Check if this is a video file (not thumbnail)
-    if filename.endswith(('.mp4', '.webm', '.mov', '.avi')):
-        # NETFLIX MODEL: Only allow premium users and admins
-        if current_user.role != 'admin' and current_user.subscription_plan == 'basic':
-            raise HTTPException(
-                status_code=403, 
-                detail="Necesitas una suscripción activa para ver contenido"
-            )
+    # Check if this is a video file (requires auth) or image (public)
+    is_video = filename.endswith(('.mp4', '.webm', '.mov', '.avi'))
     
-    # Allow access for premium users, admins, or thumbnails
+    if is_video:
+        # Videos require authentication
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Se requiere autenticación")
+        
+        token = authorization.split(" ")[1]
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            user_id = payload.get("sub")
+            if not user_id:
+                raise HTTPException(status_code=401, detail="Token inválido")
+            
+            user_data = await db.users.find_one({"user_id": user_id})
+            if not user_data:
+                raise HTTPException(status_code=401, detail="Usuario no encontrado")
+            
+            # NETFLIX MODEL: Only allow premium users and admins
+            if user_data.get("role") != 'admin' and user_data.get("subscription_plan") == 'basic':
+                raise HTTPException(
+                    status_code=403, 
+                    detail="Necesitas una suscripción activa para ver contenido"
+                )
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Token expirado")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Token inválido")
+    
+    # Allow access for images (thumbnails) without auth, or authenticated video requests
     return FileResponse(file_path)
 
 # Add middlewares BEFORE including routers
