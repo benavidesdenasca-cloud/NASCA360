@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '@/App';
 import Navbar from '@/components/Navbar';
 import Video360Player from '@/components/Video360Player';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Play, Clock, Tag, Lock } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -18,7 +18,6 @@ const VideoPlayer = () => {
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [streamUrl, setStreamUrl] = useState(null);
-  const videoRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
