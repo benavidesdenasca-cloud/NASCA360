@@ -649,55 +649,78 @@ const VideoModal = ({ video, onClose, onSave }) => {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        const { upload_id, s3_key, part_size, num_parts, s3_url } = initResponse.data;
+        const { upload_id, s3_key, part_size, num_parts } = initResponse.data;
         const uploadedParts = [];
         
-        // Step 2: Upload each part
+        // Step 2: Upload each part with retry logic
         for (let partNumber = 1; partNumber <= num_parts; partNumber++) {
           const start = (partNumber - 1) * part_size;
           const end = Math.min(start + part_size, file.size);
           const chunk = file.slice(start, end);
           
-          // Get presigned URL for this part
-          const presignResponse = await axios.post(`${API}/s3/multipart/presign-part`, null, {
-            params: {
-              upload_id: upload_id,
-              s3_key: s3_key,
-              part_number: partNumber
-            },
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
+          let retries = 3;
+          let success = false;
           
-          // Upload the part
-          const partResponse = await new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            
-            xhr.upload.addEventListener('progress', (event) => {
-              if (event.lengthComputable) {
-                const partProgress = (event.loaded / event.total);
-                const overallProgress = ((partNumber - 1 + partProgress) / num_parts) * 95 + 2;
-                setUploadProgress(prev => ({ ...prev, [fieldName]: Math.round(overallProgress) }));
+          while (retries > 0 && !success) {
+            try {
+              // Get presigned URL for this part
+              const presignResponse = await axios.post(`${API}/s3/multipart/presign-part`, null, {
+                params: {
+                  upload_id: upload_id,
+                  s3_key: s3_key,
+                  part_number: partNumber
+                },
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              
+              // Upload the part
+              const partResponse = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.addEventListener('progress', (event) => {
+                  if (event.lengthComputable) {
+                    const partProgress = event.loaded / event.total;
+                    // Calculate overall progress: completed parts + current part progress
+                    const completedPartsProgress = ((partNumber - 1) / num_parts) * 100;
+                    const currentPartContribution = (partProgress / num_parts) * 100;
+                    const overallProgress = Math.min(Math.round(completedPartsProgress + currentPartContribution), 99);
+                    setUploadProgress(prev => ({ ...prev, [fieldName]: overallProgress }));
+                  }
+                });
+                
+                xhr.addEventListener('load', () => {
+                  if (xhr.status >= 200 && xhr.status < 300) {
+                    const etag = xhr.getResponseHeader('ETag');
+                    resolve({ etag: etag });
+                  } else {
+                    reject(new Error(`Part ${partNumber} failed: ${xhr.status}`));
+                  }
+                });
+                
+                xhr.addEventListener('error', () => reject(new Error(`Network error on part ${partNumber}`)));
+                xhr.addEventListener('timeout', () => reject(new Error(`Timeout on part ${partNumber}`)));
+                xhr.timeout = 600000; // 10 minutes per part
+                xhr.open('PUT', presignResponse.data.presigned_url);
+                xhr.send(chunk);
+              });
+              
+              uploadedParts.push({
+                part_number: partNumber,
+                etag: partResponse.etag.replace(/"/g, '')
+              });
+              
+              success = true;
+              
+            } catch (partError) {
+              retries--;
+              console.warn(`Part ${partNumber} failed, ${retries} retries left:`, partError.message);
+              if (retries === 0) {
+                throw new Error(`Failed to upload part ${partNumber} after 3 attempts`);
               }
-            });
-            
-            xhr.addEventListener('load', () => {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                const etag = xhr.getResponseHeader('ETag');
-                resolve({ etag: etag });
-              } else {
-                reject(new Error(`Part ${partNumber} failed with status ${xhr.status}`));
-              }
-            });
-            
-            xhr.addEventListener('error', () => reject(new Error(`Network error on part ${partNumber}`)));
-            xhr.open('PUT', presignResponse.data.presigned_url);
-            xhr.send(chunk);
-          });
-          
-          uploadedParts.push({
-            part_number: partNumber,
-            etag: partResponse.etag.replace(/"/g, '')
-          });
+              // Wait before retry
+              await new Promise(r => setTimeout(r, 2000));
+            }
+          }
         }
         
         // Step 3: Complete multipart upload
@@ -758,7 +781,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
           xhr.upload.addEventListener('progress', (event) => {
             if (event.lengthComputable) {
               const percentCompleted = Math.round((event.loaded * 100) / event.total);
-              const scaledProgress = 5 + Math.round(percentCompleted * 0.9);
+              const scaledProgress = Math.min(5 + Math.round(percentCompleted * 0.94), 99);
               setUploadProgress(prev => ({ ...prev, [fieldName]: scaledProgress }));
             }
           });
