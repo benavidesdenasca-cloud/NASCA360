@@ -1304,49 +1304,145 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
         "url": f"/api/files/{unique_filename}"
     }
 
+@api_router.get("/stream/{filename}")
+async def stream_video(
+    filename: str, 
+    request: Request,
+    authorization: str = Header(None)
+):
+    """
+    Stream video files with Range support - prevents direct download.
+    Only authenticated premium users can access videos.
+    """
+    file_path = Path("uploads") / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    
+    # Only allow video files through this endpoint
+    if not filename.endswith(('.mp4', '.webm', '.mov', '.avi')):
+        raise HTTPException(status_code=400, detail="Este endpoint es solo para videos")
+    
+    # Require authentication for all video streaming
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Se requiere autenticación")
+    
+    token = authorization.split(" ")[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Token inválido")
+        
+        user_data = await db.users.find_one({"user_id": user_id})
+        if not user_data:
+            raise HTTPException(status_code=401, detail="Usuario no encontrado")
+        
+        # NETFLIX MODEL: Only allow premium users and admins
+        if user_data.get("role") != 'admin' and user_data.get("subscription_plan") == 'basic':
+            raise HTTPException(
+                status_code=403, 
+                detail="Necesitas una suscripción activa para ver contenido"
+            )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expirado")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+    
+    # Get file size
+    file_size = file_path.stat().st_size
+    
+    # Parse Range header for streaming
+    range_header = request.headers.get("range")
+    
+    if range_header:
+        # Parse range header: "bytes=start-end"
+        range_match = range_header.replace("bytes=", "").split("-")
+        start = int(range_match[0]) if range_match[0] else 0
+        end = int(range_match[1]) if range_match[1] else file_size - 1
+        
+        # Limit chunk size to 1MB for streaming
+        chunk_size = min(1024 * 1024, end - start + 1)
+        end = min(start + chunk_size - 1, file_size - 1)
+        
+        content_length = end - start + 1
+        
+        # Read the specific range
+        def iterfile():
+            with open(file_path, "rb") as f:
+                f.seek(start)
+                remaining = content_length
+                while remaining > 0:
+                    chunk = f.read(min(8192, remaining))
+                    if not chunk:
+                        break
+                    remaining -= len(chunk)
+                    yield chunk
+        
+        headers = {
+            "Content-Range": f"bytes {start}-{end}/{file_size}",
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(content_length),
+            "Content-Type": "video/mp4",
+            # Security headers to prevent download
+            "Content-Disposition": "inline",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store, no-cache, must-revalidate, private",
+            "Pragma": "no-cache",
+        }
+        
+        from starlette.responses import StreamingResponse
+        return StreamingResponse(
+            iterfile(),
+            status_code=206,
+            headers=headers,
+            media_type="video/mp4"
+        )
+    else:
+        # No range header - return full file info but encourage range requests
+        headers = {
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(file_size),
+            "Content-Type": "video/mp4",
+            "Content-Disposition": "inline",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store, no-cache, must-revalidate, private",
+        }
+        
+        def iterfile():
+            with open(file_path, "rb") as f:
+                while chunk := f.read(8192):
+                    yield chunk
+        
+        from starlette.responses import StreamingResponse
+        return StreamingResponse(
+            iterfile(),
+            headers=headers,
+            media_type="video/mp4"
+        )
+
 @api_router.get("/files/{filename}")
 async def get_file(
     filename: str, 
     request: Request,
     authorization: str = Header(None)
 ):
-    """Serve uploaded files - thumbnails are public, videos require authentication"""
+    """Serve uploaded files - only thumbnails/images allowed, videos must use /stream endpoint"""
     file_path = Path("uploads") / filename
     
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     
-    # Check if this is a video file (requires auth) or image (public)
+    # Block direct video file access - must use streaming endpoint
     is_video = filename.endswith(('.mp4', '.webm', '.mov', '.avi'))
     
     if is_video:
-        # Videos require authentication
-        if not authorization or not authorization.startswith("Bearer "):
-            raise HTTPException(status_code=401, detail="Se requiere autenticación")
-        
-        token = authorization.split(" ")[1]
-        try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-            user_id = payload.get("sub")
-            if not user_id:
-                raise HTTPException(status_code=401, detail="Token inválido")
-            
-            user_data = await db.users.find_one({"user_id": user_id})
-            if not user_data:
-                raise HTTPException(status_code=401, detail="Usuario no encontrado")
-            
-            # NETFLIX MODEL: Only allow premium users and admins
-            if user_data.get("role") != 'admin' and user_data.get("subscription_plan") == 'basic':
-                raise HTTPException(
-                    status_code=403, 
-                    detail="Necesitas una suscripción activa para ver contenido"
-                )
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="Token expirado")
-        except jwt.InvalidTokenError:
-            raise HTTPException(status_code=401, detail="Token inválido")
+        raise HTTPException(
+            status_code=403, 
+            detail="Los videos solo están disponibles via streaming. Use /api/stream/{filename}"
+        )
     
-    # Allow access for images (thumbnails) without auth, or authenticated video requests
+    # Allow access for images (thumbnails) without auth
     return FileResponse(file_path)
 
 # Add middlewares BEFORE including routers
