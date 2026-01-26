@@ -40,10 +40,12 @@ const VideoPlayer = () => {
           // S3 video - get presigned URL for viewing
           const s3Key = videoUrl.replace('s3://', '');
           try {
+            // Don't double-encode - the key already has the correct format
             const presignedResponse = await axios.get(
-              `${API}/s3/presigned-view/${encodeURIComponent(s3Key)}`,
+              `${API}/s3/presigned-view/${s3Key}`,
               { headers }
             );
+            console.log('S3 presigned URL obtained:', presignedResponse.data.presigned_url.substring(0, 100));
             setStreamUrl(presignedResponse.data.presigned_url);
           } catch (err) {
             console.error('Error getting S3 presigned URL:', err);
