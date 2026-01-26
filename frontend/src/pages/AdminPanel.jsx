@@ -629,14 +629,20 @@ const VideoModal = ({ video, onClose, onSave }) => {
   const handleFileUpload = async (file, fieldName) => {
     if (!file) return;
     
-    const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+    const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks (smaller for better reliability)
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
     
-    // Use chunked upload for files > 50MB, regular upload for smaller files
-    if (file.size > 50 * 1024 * 1024) {
+    // Warning for very large files
+    if (file.size > 500 * 1024 * 1024) { // > 500MB
+      toast.warning(`Archivo grande detectado (${fileSizeMB}MB). La subida puede tomar varios minutos.`);
+    }
+    
+    // For files > 10MB, use chunked upload
+    if (file.size > 10 * 1024 * 1024) {
       try {
         setUploading(true);
-        setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 1 }));
         
         // Step 1: Initialize upload
         const initResponse = await axios.post(`${API}/upload/init`, null, {
@@ -645,12 +651,13 @@ const VideoModal = ({ video, onClose, onSave }) => {
             total_size: file.size,
             total_chunks: totalChunks
           },
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` },
+          timeout: 30000
         });
         
         const uploadId = initResponse.data.upload_id;
         
-        // Step 2: Upload chunks
+        // Step 2: Upload chunks with retry logic
         for (let i = 0; i < totalChunks; i++) {
           const start = i * CHUNK_SIZE;
           const end = Math.min(start + CHUNK_SIZE, file.size);
@@ -659,39 +666,55 @@ const VideoModal = ({ video, onClose, onSave }) => {
           const chunkFormData = new FormData();
           chunkFormData.append('file', chunk);
           
-          await axios.post(`${API}/upload/chunk/${uploadId}/${i}`, chunkFormData, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data'
+          // Retry logic for each chunk
+          let retries = 3;
+          while (retries > 0) {
+            try {
+              await axios.post(`${API}/upload/chunk/${uploadId}/${i}`, chunkFormData, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'multipart/form-data'
+                },
+                timeout: 60000 // 60 second timeout per chunk
+              });
+              break; // Success, exit retry loop
+            } catch (err) {
+              retries--;
+              if (retries === 0) throw err;
+              await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
             }
-          });
+          }
           
-          const progress = Math.round(((i + 1) / totalChunks) * 100);
+          const progress = Math.round(((i + 1) / totalChunks) * 95); // Reserve 5% for completion
           setUploadProgress(prev => ({ ...prev, [fieldName]: progress }));
         }
         
         // Step 3: Complete upload
         const completeResponse = await axios.post(`${API}/upload/complete/${uploadId}`, null, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` },
+          timeout: 120000 // 2 minutes for file assembly
         });
+        
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
         
         setFormData(prev => ({
           ...prev,
           [fieldName === 'video' ? 'url' : 'thumbnail_url']: completeResponse.data.url
         }));
         
-        toast.success('Archivo subido correctamente');
+        toast.success(`Archivo subido correctamente (${fileSizeMB}MB)`);
         setUploading(false);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
         
       } catch (error) {
         console.error('Chunked upload error:', error);
-        toast.error(getErrorMessage(error, 'Error al subir archivo grande'));
+        const errorMsg = error.response?.data?.detail || error.message || 'Error al subir archivo';
+        toast.error(`Error: ${errorMsg}`);
         setUploading(false);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
       }
     } else {
-      // Regular upload for smaller files
+      // Regular upload for smaller files (< 10MB)
       try {
         setUploading(true);
         const formData = new FormData();
@@ -702,6 +725,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'multipart/form-data'
           },
+          timeout: 120000,
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             setUploadProgress(prev => ({ ...prev, [fieldName]: percentCompleted }));
