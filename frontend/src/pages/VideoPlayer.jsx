@@ -129,7 +129,9 @@ const VideoPlayer = () => {
               if (typeof errorData?.detail === 'string') {
                 errorMessage = errorData.detail;
               }
-            } catch (e) {}
+            } catch (e) {
+              // Ignore JSON parse errors
+            }
             toast.error(errorMessage);
             return;
           }
