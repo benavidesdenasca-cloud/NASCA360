@@ -1,212 +1,241 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import * as THREE from 'three';
 
 const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const containerRef = useRef(null);
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+  const rendererRef = useRef(null);
+  const sceneRef = useRef(null);
+  const cameraRef = useRef(null);
+  const animationRef = useRef(null);
+  const isInitializedRef = useRef(false);
+  
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
-  const [rotation, setRotation] = useState({ lon: 0, lat: 0 });
-  const lastMousePos = useRef({ x: 0, y: 0 });
+  
+  const rotationRef = useRef({ lon: 0, lat: 0 });
+  const lastMouseRef = useRef({ x: 0, y: 0 });
 
-  // Initialize Three.js scene for 360 video
-  useEffect(() => {
-    if (!containerRef.current || !videoUrl) return;
+  // Initialize scene only once
+  const initScene = useCallback(() => {
+    if (isInitializedRef.current || !containerRef.current) return;
+    
+    const container = containerRef.current;
+    const width = container.clientWidth;
+    const height = container.clientHeight;
 
-    let scene, camera, renderer, sphere, animationId;
-    let THREE;
+    // Scene
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
 
-    const init = async () => {
-      // Dynamically import Three.js
-      THREE = await import('three');
-      
-      const container = containerRef.current;
-      const width = container.clientWidth;
-      const height = container.clientHeight;
+    // Camera
+    const camera = new THREE.PerspectiveCamera(75, width / height, 1, 1100);
+    camera.target = new THREE.Vector3(0, 0, 0);
+    cameraRef.current = camera;
 
-      // Create scene
-      scene = new THREE.Scene();
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(width, height);
+    container.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
 
-      // Create camera
-      camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-      camera.position.set(0, 0, 0.1);
+    // Video element
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.playsInline = true;
+    video.preload = 'auto';
+    video.src = videoUrl;
+    videoRef.current = video;
 
-      // Create renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(width, height);
-      renderer.setPixelRatio(window.devicePixelRatio);
-      container.appendChild(renderer.domElement);
+    // Video texture
+    const texture = new THREE.VideoTexture(video);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.format = THREE.RGBAFormat;
 
-      // Create video element
-      const video = document.createElement('video');
-      video.crossOrigin = 'anonymous';
-      video.playsInline = true;
-      video.loop = false;
-      video.src = videoUrl;
-      videoRef.current = video;
+    // Sphere geometry (inverted for 360 view)
+    const geometry = new THREE.SphereGeometry(500, 60, 40);
+    geometry.scale(-1, 1, 1);
 
-      video.addEventListener('loadedmetadata', () => {
-        setDuration(video.duration);
-        setIsLoading(false);
-      });
+    // Material
+    const material = new THREE.MeshBasicMaterial({ map: texture });
 
-      video.addEventListener('timeupdate', () => {
-        setCurrentTime(video.currentTime);
-      });
+    // Mesh
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
 
-      video.addEventListener('ended', () => {
-        setIsPlaying(false);
-      });
+    // Video event listeners
+    video.addEventListener('loadedmetadata', () => {
+      setDuration(video.duration);
+      setIsLoading(false);
+    });
 
-      video.addEventListener('canplay', () => {
-        setIsLoading(false);
-      });
+    video.addEventListener('canplay', () => {
+      setIsLoading(false);
+    });
 
-      // Create video texture
-      const texture = new THREE.VideoTexture(video);
-      texture.minFilter = THREE.LinearFilter;
-      texture.magFilter = THREE.LinearFilter;
+    video.addEventListener('waiting', () => {
+      setIsLoading(true);
+    });
 
-      // Create sphere geometry (inside-out)
-      const geometry = new THREE.SphereGeometry(500, 60, 40);
-      geometry.scale(-1, 1, 1); // Invert the sphere
+    video.addEventListener('playing', () => {
+      setIsLoading(false);
+    });
 
-      // Create material with video texture
-      const material = new THREE.MeshBasicMaterial({ map: texture });
+    isInitializedRef.current = true;
 
-      // Create mesh
-      sphere = new THREE.Mesh(geometry, material);
-      scene.add(sphere);
-
-      // Animation loop
-      const animate = () => {
-        animationId = requestAnimationFrame(animate);
-        
-        // Update camera rotation based on user input
-        const lat = Math.max(-85, Math.min(85, rotation.lat));
-        const phi = THREE.MathUtils.degToRad(90 - lat);
-        const theta = THREE.MathUtils.degToRad(rotation.lon);
-
-        camera.lookAt(
-          500 * Math.sin(phi) * Math.cos(theta),
-          500 * Math.cos(phi),
-          500 * Math.sin(phi) * Math.sin(theta)
-        );
-
-        renderer.render(scene, camera);
-      };
-
-      animate();
-
-      // Handle resize
-      const handleResize = () => {
-        const newWidth = container.clientWidth;
-        const newHeight = container.clientHeight;
-        camera.aspect = newWidth / newHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(newWidth, newHeight);
-      };
-
-      window.addEventListener('resize', handleResize);
-
-      // Store cleanup references
-      canvasRef.current = {
-        renderer,
-        video,
-        animationId,
-        handleResize
-      };
+    // Handle resize
+    const handleResize = () => {
+      if (!containerRef.current || !cameraRef.current || !rendererRef.current) return;
+      const w = containerRef.current.clientWidth;
+      const h = containerRef.current.clientHeight;
+      cameraRef.current.aspect = w / h;
+      cameraRef.current.updateProjectionMatrix();
+      rendererRef.current.setSize(w, h);
     };
 
-    init();
+    window.addEventListener('resize', handleResize);
 
     return () => {
-      if (canvasRef.current) {
-        const { renderer, video, animationId, handleResize } = canvasRef.current;
-        cancelAnimationFrame(animationId);
-        window.removeEventListener('resize', handleResize);
-        if (renderer && containerRef.current) {
-          containerRef.current.removeChild(renderer.domElement);
-          renderer.dispose();
-        }
-        if (video) {
-          video.pause();
-          video.src = '';
-        }
-      }
+      window.removeEventListener('resize', handleResize);
     };
   }, [videoUrl]);
 
-  // Update rotation in animation loop
-  useEffect(() => {
-    if (canvasRef.current) {
-      // Rotation is already being used in the animation loop
-    }
-  }, [rotation]);
+  // Animation loop - runs only when playing
+  const animate = useCallback(() => {
+    if (!sceneRef.current || !cameraRef.current || !rendererRef.current) return;
 
-  // Mouse/touch handlers for looking around
+    const camera = cameraRef.current;
+    const lat = Math.max(-85, Math.min(85, rotationRef.current.lat));
+    const phi = THREE.MathUtils.degToRad(90 - lat);
+    const theta = THREE.MathUtils.degToRad(rotationRef.current.lon);
+
+    camera.target.x = 500 * Math.sin(phi) * Math.cos(theta);
+    camera.target.y = 500 * Math.cos(phi);
+    camera.target.z = 500 * Math.sin(phi) * Math.sin(theta);
+    camera.lookAt(camera.target);
+
+    rendererRef.current.render(sceneRef.current, camera);
+    
+    // Update time display
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+    }
+
+    animationRef.current = requestAnimationFrame(animate);
+  }, []);
+
+  // Start/stop animation based on playing state
+  useEffect(() => {
+    if (isPlaying || isDragging) {
+      animate();
+    } else {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      // Render one frame when stopped
+      if (sceneRef.current && cameraRef.current && rendererRef.current) {
+        const camera = cameraRef.current;
+        const lat = Math.max(-85, Math.min(85, rotationRef.current.lat));
+        const phi = THREE.MathUtils.degToRad(90 - lat);
+        const theta = THREE.MathUtils.degToRad(rotationRef.current.lon);
+        camera.target.x = 500 * Math.sin(phi) * Math.cos(theta);
+        camera.target.y = 500 * Math.cos(phi);
+        camera.target.z = 500 * Math.sin(phi) * Math.sin(theta);
+        camera.lookAt(camera.target);
+        rendererRef.current.render(sceneRef.current, camera);
+      }
+    }
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [isPlaying, isDragging, animate]);
+
+  // Initialize on mount
+  useEffect(() => {
+    initScene();
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.src = '';
+      }
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        if (containerRef.current && rendererRef.current.domElement) {
+          containerRef.current.removeChild(rendererRef.current.domElement);
+        }
+      }
+    };
+  }, [initScene]);
+
+  // Mouse handlers
   const handleMouseDown = (e) => {
+    e.preventDefault();
     setIsDragging(true);
-    lastMousePos.current = { x: e.clientX, y: e.clientY };
+    lastMouseRef.current = { x: e.clientX, y: e.clientY };
   };
 
   const handleMouseMove = (e) => {
     if (!isDragging) return;
     
-    const deltaX = e.clientX - lastMousePos.current.x;
-    const deltaY = e.clientY - lastMousePos.current.y;
+    const deltaX = e.clientX - lastMouseRef.current.x;
+    const deltaY = e.clientY - lastMouseRef.current.y;
     
-    setRotation(prev => ({
-      lon: prev.lon - deltaX * 0.3,
-      lat: prev.lat + deltaY * 0.3
-    }));
+    rotationRef.current.lon -= deltaX * 0.2;
+    rotationRef.current.lat += deltaY * 0.2;
     
-    lastMousePos.current = { x: e.clientX, y: e.clientY };
+    lastMouseRef.current = { x: e.clientX, y: e.clientY };
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
   };
 
+  // Touch handlers
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
       setIsDragging(true);
-      lastMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      lastMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
   };
 
   const handleTouchMove = (e) => {
     if (!isDragging || e.touches.length !== 1) return;
     
-    const deltaX = e.touches[0].clientX - lastMousePos.current.x;
-    const deltaY = e.touches[0].clientY - lastMousePos.current.y;
+    const deltaX = e.touches[0].clientX - lastMouseRef.current.x;
+    const deltaY = e.touches[0].clientY - lastMouseRef.current.y;
     
-    setRotation(prev => ({
-      lon: prev.lon - deltaX * 0.3,
-      lat: prev.lat + deltaY * 0.3
-    }));
+    rotationRef.current.lon -= deltaX * 0.2;
+    rotationRef.current.lat += deltaY * 0.2;
     
-    lastMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    lastMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
 
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-  };
-
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (!videoRef.current) return;
     
-    if (isPlaying) {
-      videoRef.current.pause();
-    } else {
-      videoRef.current.play().catch(err => {
-        console.error('Error playing video:', err);
-      });
+    try {
+      if (isPlaying) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        await videoRef.current.play();
+        setIsPlaying(true);
+      }
+    } catch (err) {
+      console.error('Error toggling play:', err);
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleSeek = (e) => {
@@ -215,6 +244,7 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     const x = e.clientX - rect.left;
     const percentage = x / rect.width;
     videoRef.current.currentTime = percentage * duration;
+    setCurrentTime(percentage * duration);
   };
 
   const formatTime = (seconds) => {
@@ -236,7 +266,7 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
   };
 
   return (
-    <div className="relative w-full" style={{ height: '500px' }}>
+    <div className="relative w-full bg-black rounded-xl overflow-hidden" style={{ height: '500px' }}>
       {/* Three.js container */}
       <div
         ref={containerRef}
@@ -247,80 +277,76 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
         onMouseLeave={handleMouseUp}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{ background: '#000' }}
+        onTouchEnd={() => setIsDragging(false)}
       />
 
       {/* Loading overlay */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 pointer-events-none">
           <div className="text-center text-white">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-            <p>Cargando video 360°...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
+            <p>Cargando...</p>
           </div>
         </div>
       )}
 
-      {/* Controls Overlay */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+      {/* Controls */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 pt-12">
         {/* Progress bar */}
         <div 
-          className="w-full h-2 bg-white/30 rounded-full cursor-pointer mb-3 hover:h-3 transition-all"
+          className="w-full h-1.5 bg-white/20 rounded-full cursor-pointer mb-4 group"
           onClick={handleSeek}
         >
           <div 
-            className="h-full bg-amber-500 rounded-full"
+            className="h-full bg-amber-500 rounded-full relative"
             style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-          />
+          >
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
         </div>
 
         {/* Controls row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* Play/Pause */}
             <button
               onClick={togglePlay}
-              className="w-12 h-12 bg-amber-500 hover:bg-amber-600 rounded-full flex items-center justify-center text-white transition-colors"
+              className="w-11 h-11 bg-amber-500 hover:bg-amber-600 rounded-full flex items-center justify-center text-white transition-colors"
             >
               {isPlaying ? (
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
                 </svg>
               ) : (
-                <svg className="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z"/>
                 </svg>
               )}
             </button>
 
-            {/* Time */}
-            <span className="text-white text-sm font-medium">
+            <span className="text-white text-sm font-medium tabular-nums">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* 360 indicator */}
-            <span className="text-white text-xs bg-amber-600 px-3 py-1 rounded-full font-bold">
+          <div className="flex items-center gap-2">
+            <span className="text-white text-xs bg-amber-600/90 px-2.5 py-1 rounded-full font-semibold">
               360°
             </span>
 
-            {/* Fullscreen */}
             <button
               onClick={toggleFullscreen}
-              className="text-white hover:text-amber-400 transition-colors p-2"
+              className="text-white/80 hover:text-white transition-colors p-2"
               title="Pantalla completa"
             >
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
               </svg>
             </button>
           </div>
         </div>
 
-        {/* Instructions */}
-        <p className="text-white/60 text-xs text-center mt-2">
-          🖱️ Arrastra para mirar alrededor en 360°
+        <p className="text-white/50 text-xs text-center mt-2">
+          Arrastra para mirar alrededor en 360°
         </p>
       </div>
     </div>
