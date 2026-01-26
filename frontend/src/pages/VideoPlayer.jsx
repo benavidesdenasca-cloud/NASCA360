@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '@/App';
@@ -17,109 +17,97 @@ const VideoPlayer = () => {
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [videoUrl, setVideoUrl] = useState(null);
+  const blobUrlRef = useRef(null);
 
-  const loadAuthenticatedVideo = useCallback(async (videoSrc) => {
-    try {
-      // Fetch video with authentication
-      const response = await fetch(`${BACKEND_URL}${videoSrc}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        let errorMessage = 'No tienes acceso a este video';
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchVideoData = async () => {
+      try {
+        setLoading(true);
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         
-        try {
-          const errorData = await response.json();
-          if (typeof errorData === 'string') {
-            errorMessage = errorData;
-          } else if (errorData.detail && typeof errorData.detail === 'string') {
-            errorMessage = errorData.detail;
-          } else if (errorData.message && typeof errorData.message === 'string') {
-            errorMessage = errorData.message;
+        const response = await axios.get(`${API}/videos/${id}`, { headers });
+        
+        if (!isMounted) return;
+        
+        setVideo(response.data);
+        
+        // If video has a local URL, fetch it with authentication
+        if (response.data.url && response.data.url.startsWith('/api')) {
+          const videoResponse = await fetch(`${BACKEND_URL}${response.data.url}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (!isMounted) return;
+          
+          if (!videoResponse.ok) {
+            let errorMessage = 'No tienes acceso a este video';
+            try {
+              const errorData = await videoResponse.json();
+              if (typeof errorData?.detail === 'string') {
+                errorMessage = errorData.detail;
+              }
+            } catch (e) {}
+            toast.error(errorMessage);
+            setLoading(false);
+            return;
           }
-        } catch (e) {
-          // If JSON parsing fails, use default message
-          console.error('Error parsing error response:', e);
+          
+          const blob = await videoResponse.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          
+          // Store ref for cleanup
+          blobUrlRef.current = blobUrl;
+          
+          if (isMounted) {
+            setVideoUrl(blobUrl);
+          }
+        } else if (response.data.url) {
+          // External URL
+          setVideoUrl(response.data.url);
         }
         
-        console.error('Video load error:', errorMessage);
-        toast.error(errorMessage);
-        return;
-      }
-
-      // Convert to blob
-      const blob = await response.blob();
-      
-      // Create blob URL
-      const blobUrl = URL.createObjectURL(blob);
-      setVideoUrl(blobUrl);
-    } catch (error) {
-      console.error('Error loading authenticated video:', error);
-      const errorMessage = error.message || 'Error al cargar el video protegido';
-      toast.error(errorMessage);
-    }
-  }, [token]);
-
-  const fetchVideo = useCallback(async () => {
-    try {
-      setLoading(true);
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      const response = await axios.get(`${API}/videos/${id}`, { headers });
-      setVideo(response.data);
-      
-      // Fetch the video file with authentication and create blob URL
-      if (response.data.url) {
-        await loadAuthenticatedVideo(response.data.url);
-      }
-      
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching video:', error);
-      setLoading(false);
-      
-      // Extract error message safely
-      let errorMessage = 'Error al cargar el video';
-      
-      if (error.response) {
-        if (error.response.status === 403) {
+        if (isMounted) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error fetching video:', error);
+        if (!isMounted) return;
+        
+        setLoading(false);
+        
+        let errorMessage = 'Error al cargar el video';
+        if (error.response?.status === 403) {
           errorMessage = 'Necesitas una suscripción Premium para acceder a este contenido';
           toast.error(errorMessage);
           navigate('/subscription');
           return;
-        } else if (error.response.data) {
-          // Handle different error formats
-          if (typeof error.response.data === 'string') {
-            errorMessage = error.response.data;
-          } else if (error.response.data.detail) {
-            errorMessage = typeof error.response.data.detail === 'string' 
-              ? error.response.data.detail 
-              : 'Error al cargar el video';
-          } else if (error.response.data.message) {
-            errorMessage = error.response.data.message;
-          }
         }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      toast.error(errorMessage);
-      navigate('/gallery');
-    }
-  }, [id, token, navigate, loadAuthenticatedVideo]);
-
-  useEffect(() => {
-    fetchVideo();
-    
-    // Cleanup blob URL on unmount
-    return () => {
-      if (videoUrl) {
-        URL.revokeObjectURL(videoUrl);
+        
+        if (error.response?.data?.detail) {
+          errorMessage = typeof error.response.data.detail === 'string' 
+            ? error.response.data.detail 
+            : errorMessage;
+        }
+        
+        toast.error(errorMessage);
+        navigate('/gallery');
       }
     };
-  }, [fetchVideo]);  // Removed videoUrl from dependencies to prevent infinite loop
+    
+    fetchVideoData();
+    
+    // Cleanup
+    return () => {
+      isMounted = false;
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
+    };
+  }, [id, token, navigate]);
 
   if (loading) {
     return (
