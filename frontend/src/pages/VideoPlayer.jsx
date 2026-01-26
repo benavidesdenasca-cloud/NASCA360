@@ -240,32 +240,6 @@ const VideoPlayer = () => {
               </div>
             )}
           </div>
-            
-            {/* Demo Overlay */}
-            {video.is_demo && (
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end justify-center pb-12 pointer-events-none">
-                <div className="glass p-6 rounded-2xl max-w-2xl mx-4 pointer-events-auto">
-                  <div className="text-center">
-                    <div className="bg-yellow-500 text-black px-4 py-2 rounded-full inline-block mb-4 font-bold">
-                      VIDEO DEMO - BAJA CALIDAD
-                    </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">
-                      Esto es solo una vista previa
-                    </h3>
-                    <p className="text-white/90 mb-4">
-                      Suscríbete para ver este video en alta calidad y acceder a todo el contenido exclusivo
-                    </p>
-                    <Button
-                      onClick={() => navigate('/subscription')}
-                      className="btn-peru px-8 py-4 rounded-full"
-                    >
-                      Ver Planes de Suscripción
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* Video Info */}
           <div data-testid="video-info" className="glass rounded-2xl p-8">
@@ -274,15 +248,9 @@ const VideoPlayer = () => {
                 <h1 className="text-4xl font-bold text-amber-900 mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
                   {video.title}
                 </h1>
-                {video.is_demo ? (
-                  <div className="inline-flex items-center bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                    <Lock className="w-4 h-4 mr-2" />
-                    Video Demo (Baja Calidad)
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                    ✓ Calidad Premium
-                  </div>
+                <div className="inline-flex items-center bg-gradient-to-r from-amber-600 to-amber-700 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                  🎬 Video 360° Premium
+                </div>
                 )}
               </div>
             </div>
