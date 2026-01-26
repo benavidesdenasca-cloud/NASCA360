@@ -251,7 +251,6 @@ const VideoPlayer = () => {
                 <div className="inline-flex items-center bg-gradient-to-r from-amber-600 to-amber-700 text-white px-4 py-2 rounded-full text-sm font-semibold">
                   🎬 Video 360° Premium
                 </div>
-                )}
               </div>
             </div>
 
