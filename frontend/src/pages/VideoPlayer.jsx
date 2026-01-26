@@ -97,12 +97,18 @@ const VideoPlayer = () => {
 
   // Custom fetch function for video streaming with auth headers
   useEffect(() => {
-    if (!streamUrl || !token || !videoRef.current) return;
+    if (!streamUrl || !videoRef.current) return;
     
     const video = videoRef.current;
     
+    // For S3 presigned URLs, use directly (they already have auth in the URL)
+    if (streamUrl.includes('s3.amazonaws.com') || streamUrl.includes('s3.us-east-1.amazonaws.com')) {
+      video.src = streamUrl;
+      return;
+    }
+    
     // For local streaming URLs, we need to handle authentication
-    if (streamUrl.includes('/api/stream/')) {
+    if (streamUrl.includes('/api/stream/') && token) {
       // Use MediaSource API for authenticated streaming
       const loadAuthenticatedVideo = async () => {
         try {
