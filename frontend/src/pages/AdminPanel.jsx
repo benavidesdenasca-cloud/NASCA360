@@ -778,23 +778,33 @@ const VideoModal = ({ video, onClose, onSave }) => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Video Original (Alta Calidad)*
             </label>
-            <div className="flex gap-2">
+            <div className="space-y-2">
               <input
                 type="file"
                 accept="video/mp4,video/webm"
                 onChange={(e) => handleFileUpload(e.target.files[0], 'video')}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
                 disabled={uploading}
               />
-              {uploadProgress.video > 0 && uploadProgress.video < 100 && (
-                <div className="flex items-center">
-                  <span className="text-sm text-amber-600">{uploadProgress.video}%</span>
+              {uploading && uploadProgress.video > 0 && (
+                <div className="space-y-1">
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div 
+                      className="bg-amber-600 h-3 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress.video}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-amber-600 font-medium">
+                    Subiendo video... {uploadProgress.video}%
+                  </p>
                 </div>
               )}
+              {formData.url && !uploading && (
+                <p className="text-sm text-green-600 font-medium">
+                  ✓ Video subido correctamente: {formData.url.split('/').pop()}
+                </p>
+              )}
             </div>
-            {formData.url && (
-              <p className="text-xs text-green-600 mt-1">✓ Archivo subido: {formData.url.split('/').pop()}</p>
-            )}
           </div>
 
           {/* Thumbnail Upload */}
