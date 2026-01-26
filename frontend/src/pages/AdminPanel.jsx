@@ -672,7 +672,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
             if (xhr.status >= 200 && xhr.status < 300) {
               resolve();
             } else {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
+              reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
             }
           });
           
@@ -685,7 +685,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
           });
           
           xhr.open('PUT', presigned_url);
-          xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+          // Don't set Content-Type - let the browser handle it or use binary
           xhr.send(file);
         });
         
