@@ -223,32 +223,23 @@ const VideoPlayer = () => {
             Volver a la Galería
           </Button>
 
-          {/* Video Player */}
-          <div data-testid="video-player-container" className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-8 relative">
-            <div className="video-container bg-black">
-              {streamUrl ? (
-                <video
-                  ref={videoRef}
-                  data-testid="video-element"
-                  controls
-                  controlsList="nodownload"
-                  disablePictureInPicture
-                  onContextMenu={(e) => e.preventDefault()}
-                  className="w-full h-full"
-                  poster={video.thumbnail_url?.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : video.thumbnail_url}
-                  key={streamUrl}
-                >
-                  Tu navegador no soporta el reproductor de video.
-                </video>
-              ) : (
-                <div className="flex items-center justify-center h-96 text-white">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-                    <p>Cargando video seguro...</p>
-                  </div>
+          {/* Video Player 360 */}
+          <div data-testid="video-player-container" className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-8">
+            {streamUrl ? (
+              <Video360Player
+                videoUrl={streamUrl}
+                posterUrl={video.thumbnail_url?.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : (video.thumbnail_url?.startsWith('s3://') ? null : video.thumbnail_url)}
+                title={video.title}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[500px] bg-black text-white">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+                  <p>Cargando video 360°...</p>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
             
             {/* Demo Overlay */}
             {video.is_demo && (
