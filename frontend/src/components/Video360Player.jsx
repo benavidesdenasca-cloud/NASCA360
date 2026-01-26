@@ -246,9 +246,18 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     console.log('Setting video source:', videoUrl.substring(0, 80) + '...');
     video.src = videoUrl;
 
+    // Timeout for initial load - show error only if nothing happens in 30 seconds
+    const loadTimeout = setTimeout(() => {
+      if (!hasMetadata && mountedRef.current) {
+        setError('El video está tardando demasiado en cargar. Verifica tu conexión.');
+        setIsLoading(false);
+      }
+    }, 30000);
+
     // Cleanup
     return () => {
       mountedRef.current = false;
+      clearTimeout(loadTimeout);
       
       if (frameIdRef.current) {
         cancelAnimationFrame(frameIdRef.current);
