@@ -202,10 +202,14 @@ const VideoPlayer = () => {
           {/* Video Player */}
           <div data-testid="video-player-container" className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-8 relative">
             <div className="video-container bg-black">
-              {videoUrl ? (
+              {streamUrl ? (
                 <video
+                  ref={videoRef}
                   data-testid="video-element"
                   controls
+                  controlsList="nodownload"
+                  disablePictureInPicture
+                  onContextMenu={(e) => e.preventDefault()}
                   className="w-full h-full"
                   poster={video.thumbnail_url?.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : video.thumbnail_url}
                   key={videoUrl}
