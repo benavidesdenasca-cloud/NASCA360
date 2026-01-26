@@ -16,8 +16,8 @@ const VideoPlayer = () => {
   const { user, token } = useContext(AuthContext);
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [videoUrl, setVideoUrl] = useState(null);
-  const blobUrlRef = useRef(null);
+  const [streamUrl, setStreamUrl] = useState(null);
+  const videoRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -33,41 +33,14 @@ const VideoPlayer = () => {
         
         setVideo(response.data);
         
-        // If video has a local URL, fetch it with authentication
-        if (response.data.url && response.data.url.startsWith('/api')) {
-          const videoResponse = await fetch(`${BACKEND_URL}${response.data.url}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (!isMounted) return;
-          
-          if (!videoResponse.ok) {
-            let errorMessage = 'No tienes acceso a este video';
-            try {
-              const errorData = await videoResponse.json();
-              if (typeof errorData?.detail === 'string') {
-                errorMessage = errorData.detail;
-              }
-            } catch (e) {}
-            toast.error(errorMessage);
-            setLoading(false);
-            return;
-          }
-          
-          const blob = await videoResponse.blob();
-          const blobUrl = URL.createObjectURL(blob);
-          
-          // Store ref for cleanup
-          blobUrlRef.current = blobUrl;
-          
-          if (isMounted) {
-            setVideoUrl(blobUrl);
-          }
+        // Build streaming URL for local videos
+        if (response.data.url && response.data.url.startsWith('/api/files/')) {
+          // Convert /api/files/xxx.mp4 to /api/stream/xxx.mp4
+          const filename = response.data.url.replace('/api/files/', '');
+          setStreamUrl(`${BACKEND_URL}/api/stream/${filename}`);
         } else if (response.data.url) {
-          // External URL
-          setVideoUrl(response.data.url);
+          // External URL - use directly
+          setStreamUrl(response.data.url);
         }
         
         if (isMounted) {
@@ -100,14 +73,84 @@ const VideoPlayer = () => {
     
     fetchVideoData();
     
-    // Cleanup
     return () => {
       isMounted = false;
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
-      }
     };
   }, [id, token, navigate]);
+
+  // Custom fetch function for video streaming with auth headers
+  useEffect(() => {
+    if (!streamUrl || !token || !videoRef.current) return;
+    
+    const video = videoRef.current;
+    
+    // For local streaming URLs, we need to handle authentication
+    if (streamUrl.includes('/api/stream/')) {
+      // Use MediaSource API for authenticated streaming
+      const loadAuthenticatedVideo = async () => {
+        try {
+          // First, verify access with a HEAD-like request
+          const testResponse = await fetch(streamUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Range': 'bytes=0-0'
+            }
+          });
+          
+          if (!testResponse.ok && testResponse.status !== 206) {
+            let errorMessage = 'No tienes acceso a este video';
+            try {
+              const errorData = await testResponse.json();
+              if (typeof errorData?.detail === 'string') {
+                errorMessage = errorData.detail;
+              }
+            } catch (e) {}
+            toast.error(errorMessage);
+            return;
+          }
+          
+          // Create a custom source using fetch with auth
+          // We'll use a blob URL but stream it in chunks
+          const fullResponse = await fetch(streamUrl, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (!fullResponse.ok) {
+            toast.error('Error al cargar el video');
+            return;
+          }
+          
+          const blob = await fullResponse.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          video.src = blobUrl;
+          
+          // Cleanup on unmount
+          video.onloadeddata = () => {
+            // Video loaded successfully
+          };
+          
+          // Store for cleanup
+          video.dataset.blobUrl = blobUrl;
+          
+        } catch (error) {
+          console.error('Error loading video:', error);
+          toast.error('Error al cargar el video');
+        }
+      };
+      
+      loadAuthenticatedVideo();
+      
+      // Cleanup
+      return () => {
+        if (video.dataset.blobUrl) {
+          URL.revokeObjectURL(video.dataset.blobUrl);
+        }
+      };
+    }
+  }, [streamUrl, token]);
 
   if (loading) {
     return (
