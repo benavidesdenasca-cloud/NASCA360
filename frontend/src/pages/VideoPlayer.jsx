@@ -33,14 +33,29 @@ const VideoPlayer = () => {
         
         setVideo(response.data);
         
-        // Build streaming URL for local videos
-        if (response.data.url && response.data.url.startsWith('/api/files/')) {
-          // Convert /api/files/xxx.mp4 to /api/stream/xxx.mp4
-          const filename = response.data.url.replace('/api/files/', '');
+        const videoUrl = response.data.url;
+        
+        // Handle different video URL types
+        if (videoUrl && videoUrl.startsWith('s3://')) {
+          // S3 video - get presigned URL for viewing
+          const s3Key = videoUrl.replace('s3://', '');
+          try {
+            const presignedResponse = await axios.get(
+              `${API}/s3/presigned-view/${encodeURIComponent(s3Key)}`,
+              { headers }
+            );
+            setStreamUrl(presignedResponse.data.presigned_url);
+          } catch (err) {
+            console.error('Error getting S3 presigned URL:', err);
+            toast.error('Error al cargar el video desde la nube');
+          }
+        } else if (videoUrl && videoUrl.startsWith('/api/files/')) {
+          // Local video - convert to streaming endpoint
+          const filename = videoUrl.replace('/api/files/', '');
           setStreamUrl(`${BACKEND_URL}/api/stream/${filename}`);
-        } else if (response.data.url) {
+        } else if (videoUrl) {
           // External URL - use directly
-          setStreamUrl(response.data.url);
+          setStreamUrl(videoUrl);
         }
         
         if (isMounted) {
