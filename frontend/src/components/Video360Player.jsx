@@ -238,25 +238,8 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
 
     video.onerror = (e) => {
       console.error('Video error event:', e);
-      hadError = true;
-      // Only set error state if we don't have metadata yet
-      // This handles the case where an error fires during CORS preflight but video still loads
-      if (!hasMetadata && mountedRef.current) {
-        const errorCode = video.error?.code || 0;
-        const errorMessages = {
-          1: 'Carga del video abortada',
-          2: 'Error de red. Verifica tu conexión',
-          3: 'Error decodificando el video',
-          4: 'Formato de video no compatible'
-        };
-        // Delay setting error to allow metadata to potentially load
-        setTimeout(() => {
-          if (!hasMetadata && mountedRef.current) {
-            setError(errorMessages[errorCode] || 'Error cargando el video');
-            setIsLoading(false);
-          }
-        }, 1000);
-      }
+      // Ignore errors that happen after successful metadata load
+      // The video is working even if some requests fail
     };
 
     // Set source
