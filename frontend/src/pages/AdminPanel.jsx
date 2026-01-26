@@ -840,18 +840,6 @@ const VideoModal = ({ video, onClose, onSave }) => {
               )}
             </div>
           </div>
-                disabled={uploading}
-              />
-              {uploadProgress.thumbnail > 0 && uploadProgress.thumbnail < 100 && (
-                <div className="flex items-center">
-                  <span className="text-sm text-amber-600">{uploadProgress.thumbnail}%</span>
-                </div>
-              )}
-            </div>
-            {formData.thumbnail_url && (
-              <p className="text-xs text-green-600 mt-1">✓ Archivo subido: {formData.thumbnail_url.split('/').pop()}</p>
-            )}
-          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Categoría*</label>
