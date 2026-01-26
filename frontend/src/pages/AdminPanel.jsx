@@ -631,18 +631,113 @@ const VideoModal = ({ video, onClose, onSave }) => {
     
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
     const fileSizeGB = (file.size / (1024 * 1024 * 1024)).toFixed(2);
+    const FIVE_GB = 5 * 1024 * 1024 * 1024;
     
-    // For files > 100MB, use S3 direct upload
-    if (file.size > 100 * 1024 * 1024) {
+    // For files > 5GB, use S3 Multipart Upload
+    if (file.size > FIVE_GB) {
+      try {
+        setUploading(true);
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 1 }));
+        toast.info(`Subiendo archivo grande (${fileSizeGB}GB) en partes...`);
+        
+        // Step 1: Initialize multipart upload
+        const initResponse = await axios.post(`${API}/s3/multipart/init`, null, {
+          params: {
+            filename: file.name,
+            file_size: file.size
+          },
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const { upload_id, s3_key, part_size, num_parts, s3_url } = initResponse.data;
+        const uploadedParts = [];
+        
+        // Step 2: Upload each part
+        for (let partNumber = 1; partNumber <= num_parts; partNumber++) {
+          const start = (partNumber - 1) * part_size;
+          const end = Math.min(start + part_size, file.size);
+          const chunk = file.slice(start, end);
+          
+          // Get presigned URL for this part
+          const presignResponse = await axios.post(`${API}/s3/multipart/presign-part`, null, {
+            params: {
+              upload_id: upload_id,
+              s3_key: s3_key,
+              part_number: partNumber
+            },
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          // Upload the part
+          const partResponse = await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', (event) => {
+              if (event.lengthComputable) {
+                const partProgress = (event.loaded / event.total);
+                const overallProgress = ((partNumber - 1 + partProgress) / num_parts) * 95 + 2;
+                setUploadProgress(prev => ({ ...prev, [fieldName]: Math.round(overallProgress) }));
+              }
+            });
+            
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                const etag = xhr.getResponseHeader('ETag');
+                resolve({ etag: etag });
+              } else {
+                reject(new Error(`Part ${partNumber} failed with status ${xhr.status}`));
+              }
+            });
+            
+            xhr.addEventListener('error', () => reject(new Error(`Network error on part ${partNumber}`)));
+            xhr.open('PUT', presignResponse.data.presigned_url);
+            xhr.send(chunk);
+          });
+          
+          uploadedParts.push({
+            part_number: partNumber,
+            etag: partResponse.etag.replace(/"/g, '')
+          });
+        }
+        
+        // Step 3: Complete multipart upload
+        await axios.post(`${API}/s3/multipart/complete`, {
+          upload_id: upload_id,
+          s3_key: s3_key,
+          parts: uploadedParts
+        }, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
+        
+        setFormData(prev => ({
+          ...prev,
+          [fieldName === 'video' ? 'url' : 'thumbnail_url']: `s3://${s3_key}`
+        }));
+        
+        toast.success(`Archivo de ${fileSizeGB}GB subido correctamente`);
+        setUploading(false);
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+        
+      } catch (error) {
+        console.error('Multipart upload error:', error);
+        toast.error(`Error: ${error.message || 'Error en subida multipart'}`);
+        setUploading(false);
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+      }
+    }
+    // For files between 100MB and 5GB, use regular S3 presigned URL
+    else if (file.size > 100 * 1024 * 1024) {
       try {
         setUploading(true);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 1 }));
         
         if (file.size > 500 * 1024 * 1024) {
-          toast.info(`Subiendo archivo grande (${fileSizeGB}GB) directamente a la nube...`);
+          toast.info(`Subiendo archivo (${fileSizeMB}MB) a la nube...`);
         }
         
-        // Step 1: Get presigned URL from backend
+        // Get presigned URL from backend
         const presignedResponse = await axios.post(`${API}/s3/presigned-url`, null, {
           params: {
             filename: file.name,
@@ -652,11 +747,11 @@ const VideoModal = ({ video, onClose, onSave }) => {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        const { presigned_url, s3_key, s3_url } = presignedResponse.data;
+        const { presigned_url, s3_key } = presignedResponse.data;
         
         setUploadProgress(prev => ({ ...prev, [fieldName]: 5 }));
         
-        // Step 2: Upload directly to S3 using fetch with XMLHttpRequest for progress
+        // Upload directly to S3
         await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           
@@ -672,37 +767,17 @@ const VideoModal = ({ video, onClose, onSave }) => {
             if (xhr.status >= 200 && xhr.status < 300) {
               resolve();
             } else {
-              reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
+              reject(new Error(`Upload failed with status ${xhr.status}`));
             }
           });
           
-          xhr.addEventListener('error', () => {
-            reject(new Error('Network error during upload'));
-          });
-          
-          xhr.addEventListener('abort', () => {
-            reject(new Error('Upload aborted'));
-          });
-          
+          xhr.addEventListener('error', () => reject(new Error('Network error')));
           xhr.open('PUT', presigned_url);
-          // Don't set Content-Type - let the browser handle it or use binary
           xhr.send(file);
-        });
-        
-        // Step 3: Confirm upload with backend
-        await axios.post(`${API}/s3/confirm-upload`, null, {
-          params: {
-            s3_key: s3_key,
-            s3_url: s3_url,
-            original_filename: file.name,
-            file_size: file.size
-          },
-          headers: { 'Authorization': `Bearer ${token}` }
         });
         
         setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
         
-        // Store S3 URL - use s3:// prefix to identify S3 files
         setFormData(prev => ({
           ...prev,
           [fieldName === 'video' ? 'url' : 'thumbnail_url']: `s3://${s3_key}`
@@ -714,8 +789,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
         
       } catch (error) {
         console.error('S3 upload error:', error);
-        const errorMsg = error.response?.data?.detail || error.message || 'Error al subir archivo';
-        toast.error(`Error: ${errorMsg}`);
+        toast.error(`Error: ${error.message || 'Error al subir'}`);
         setUploading(false);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
       }
@@ -731,7 +805,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'multipart/form-data'
           },
-          timeout: 300000, // 5 minutes
+          timeout: 300000,
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             setUploadProgress(prev => ({ ...prev, [fieldName]: percentCompleted }));
