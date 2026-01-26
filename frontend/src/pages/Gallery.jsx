@@ -104,7 +104,7 @@ const Gallery = () => {
                   {/* Thumbnail */}
                   <div className="relative overflow-hidden">
                     <img
-                      src={video.thumbnail_url}
+                      src={video.thumbnail_url?.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : video.thumbnail_url}
                       alt={video.title}
                       className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
                     />
