@@ -212,9 +212,8 @@ const VideoPlayer = () => {
                   onContextMenu={(e) => e.preventDefault()}
                   className="w-full h-full"
                   poster={video.thumbnail_url?.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : video.thumbnail_url}
-                  key={videoUrl}
+                  key={streamUrl}
                 >
-                  <source src={videoUrl} type="video/mp4" />
                   Tu navegador no soporta el reproductor de video.
                 </video>
               ) : (
