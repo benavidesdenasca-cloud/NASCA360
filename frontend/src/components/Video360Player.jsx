@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 
 const Video360Player = ({ videoUrl, posterUrl, title }) => {
@@ -6,99 +6,194 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const videoRef = useRef(null);
   const rendererRef = useRef(null);
   const frameIdRef = useRef(null);
+  const mediaSourceRef = useRef(null);
+  const sourceBufferRef = useRef(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [buffered, setBuffered] = useState(0);
   const [error, setError] = useState(null);
-  const [blobUrl, setBlobUrl] = useState(null);
   
   const lonRef = useRef(0);
   const latRef = useRef(0);
   const isDraggingRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
   const sceneInitializedRef = useRef(false);
+  const fetchControllerRef = useRef(null);
 
-  // Fetch video as blob first (to handle CORS)
-  useEffect(() => {
-    if (!videoUrl) return;
+  // Streaming video loader using MediaSource API
+  const initMediaSource = useCallback(async () => {
+    if (!videoUrl || !videoRef.current) return;
 
-    let cancelled = false;
+    const video = videoRef.current;
+    
+    // Check if MediaSource is supported
+    if (!window.MediaSource || !MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"')) {
+      console.log('MediaSource not supported, falling back to direct URL');
+      video.src = videoUrl;
+      return;
+    }
 
-    const fetchVideo = async () => {
-      try {
-        setIsLoading(true);
-        setLoadingProgress(0);
-        setError(null);
+    try {
+      const mediaSource = new MediaSource();
+      mediaSourceRef.current = mediaSource;
+      video.src = URL.createObjectURL(mediaSource);
 
-        const response = await fetch(videoUrl);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`);
-        }
-
-        const contentLength = response.headers.get('content-length');
-        const total = contentLength ? parseInt(contentLength, 10) : 0;
-        
-        const reader = response.body.getReader();
-        const chunks = [];
-        let loaded = 0;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          
-          if (cancelled) {
-            reader.cancel();
-            return;
+      mediaSource.addEventListener('sourceopen', async () => {
+        try {
+          // Try different codecs
+          let mimeType = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+          if (!MediaSource.isTypeSupported(mimeType)) {
+            mimeType = 'video/mp4; codecs="avc1.64001F, mp4a.40.2"';
           }
-          
-          if (done) break;
-          
-          chunks.push(value);
-          loaded += value.length;
-          
-          if (total > 0) {
-            setLoadingProgress(Math.round((loaded / total) * 100));
+          if (!MediaSource.isTypeSupported(mimeType)) {
+            mimeType = 'video/mp4';
           }
-        }
 
-        if (cancelled) return;
+          const sourceBuffer = mediaSource.addSourceBuffer(mimeType);
+          sourceBufferRef.current = sourceBuffer;
+          
+          // Fetch video in chunks
+          const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+          let start = 0;
+          let totalSize = 0;
 
-        const blob = new Blob(chunks, { type: 'video/mp4' });
-        const url = URL.createObjectURL(blob);
-        setBlobUrl(url);
-        
-      } catch (err) {
-        console.error('Error fetching video:', err);
-        if (!cancelled) {
-          setError('Error cargando el video. Intenta recargar la página.');
+          // First, get the file size
+          const headResponse = await fetch(videoUrl, { method: 'HEAD' });
+          if (headResponse.headers.get('content-length')) {
+            totalSize = parseInt(headResponse.headers.get('content-length'), 10);
+          }
+
+          // Function to fetch a chunk
+          const fetchChunk = async (rangeStart, rangeEnd) => {
+            const response = await fetch(videoUrl, {
+              headers: {
+                'Range': `bytes=${rangeStart}-${rangeEnd}`
+              }
+            });
+            
+            if (!response.ok && response.status !== 206) {
+              throw new Error(`HTTP error: ${response.status}`);
+            }
+            
+            return await response.arrayBuffer();
+          };
+
+          // Load initial chunks to start playback
+          const loadInitialData = async () => {
+            const initialChunks = Math.min(3, Math.ceil(totalSize / CHUNK_SIZE)); // Load first 3 chunks
+            
+            for (let i = 0; i < initialChunks; i++) {
+              const rangeStart = i * CHUNK_SIZE;
+              const rangeEnd = Math.min(rangeStart + CHUNK_SIZE - 1, totalSize - 1);
+              
+              const chunk = await fetchChunk(rangeStart, rangeEnd);
+              
+              // Wait for sourceBuffer to be ready
+              await new Promise((resolve) => {
+                if (!sourceBuffer.updating) {
+                  resolve();
+                } else {
+                  sourceBuffer.addEventListener('updateend', resolve, { once: true });
+                }
+              });
+              
+              sourceBuffer.appendBuffer(chunk);
+              
+              // Wait for append to complete
+              await new Promise((resolve) => {
+                sourceBuffer.addEventListener('updateend', resolve, { once: true });
+              });
+              
+              start = rangeEnd + 1;
+              setBuffered(Math.round((start / totalSize) * 100));
+            }
+            
+            setIsLoading(false);
+          };
+
+          await loadInitialData();
+
+          // Continue loading more chunks in background
+          const loadMoreChunks = async () => {
+            while (start < totalSize && mediaSourceRef.current?.readyState === 'open') {
+              // Wait a bit to not overwhelm
+              await new Promise(r => setTimeout(r, 100));
+              
+              const rangeEnd = Math.min(start + CHUNK_SIZE - 1, totalSize - 1);
+              
+              try {
+                const chunk = await fetchChunk(start, rangeEnd);
+                
+                // Wait for sourceBuffer
+                await new Promise((resolve) => {
+                  if (!sourceBuffer.updating) {
+                    resolve();
+                  } else {
+                    sourceBuffer.addEventListener('updateend', resolve, { once: true });
+                  }
+                });
+                
+                if (mediaSourceRef.current?.readyState !== 'open') break;
+                
+                sourceBuffer.appendBuffer(chunk);
+                
+                await new Promise((resolve) => {
+                  sourceBuffer.addEventListener('updateend', resolve, { once: true });
+                });
+                
+                start = rangeEnd + 1;
+                setBuffered(Math.round((start / totalSize) * 100));
+                
+              } catch (err) {
+                console.error('Error loading chunk:', err);
+                break;
+              }
+            }
+            
+            // All data loaded
+            if (mediaSourceRef.current?.readyState === 'open' && start >= totalSize) {
+              try {
+                mediaSource.endOfStream();
+              } catch (e) {
+                console.log('End of stream:', e);
+              }
+            }
+          };
+
+          loadMoreChunks();
+
+        } catch (err) {
+          console.error('SourceBuffer error:', err);
+          // Fallback to direct URL
+          video.src = videoUrl;
           setIsLoading(false);
         }
-      }
-    };
+      });
 
-    fetchVideo();
+      mediaSource.addEventListener('error', (e) => {
+        console.error('MediaSource error:', e);
+        video.src = videoUrl;
+      });
 
-    return () => {
-      cancelled = true;
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
-    };
+    } catch (err) {
+      console.error('MediaSource init error:', err);
+      video.src = videoUrl;
+      setIsLoading(false);
+    }
   }, [videoUrl]);
 
-  // Initialize Three.js when blob URL is ready
+  // Initialize video and Three.js
   useEffect(() => {
-    if (!containerRef.current || !blobUrl || sceneInitializedRef.current) return;
+    if (!containerRef.current || !videoUrl || sceneInitializedRef.current) return;
 
     const container = containerRef.current;
-    let scene, camera, renderer, texture;
+    let scene, camera, renderer, texture, geometry, material;
 
-    // Create video element with blob URL
+    // Create video element
     const video = document.createElement('video');
-    video.src = blobUrl;
     video.crossOrigin = 'anonymous';
     video.playsInline = true;
     video.preload = 'auto';
@@ -107,7 +202,6 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
 
     video.onloadedmetadata = () => {
       setDuration(video.duration);
-      setIsLoading(false);
     };
 
     video.oncanplay = () => {
@@ -123,9 +217,23 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     };
 
     video.onerror = (e) => {
-      console.error('Video element error:', e);
-      setError('Error reproduciendo el video');
+      console.error('Video error:', e);
+      // Try direct URL as fallback
+      if (!video.src.startsWith('blob:')) {
+        setError('Error cargando el video');
+      }
     };
+
+    video.onwaiting = () => {
+      setIsLoading(true);
+    };
+
+    video.onplaying = () => {
+      setIsLoading(false);
+    };
+
+    // Initialize MediaSource streaming
+    initMediaSource();
 
     // Three.js setup
     const width = container.clientWidth;
@@ -151,9 +259,9 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     texture.magFilter = THREE.LinearFilter;
 
     // Sphere (inverted for 360 view)
-    const geometry = new THREE.SphereGeometry(500, 32, 32);
+    geometry = new THREE.SphereGeometry(500, 32, 32);
     geometry.scale(-1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({ map: texture });
+    material = new THREE.MeshBasicMaterial({ map: texture });
     const sphere = new THREE.Mesh(geometry, material);
     scene.add(sphere);
 
@@ -178,9 +286,13 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     render();
 
     // Mouse handlers
+    const canvas = renderer.domElement;
+    canvas.style.cursor = 'grab';
+
     const onMouseDown = (e) => {
       isDraggingRef.current = true;
       lastPosRef.current = { x: e.clientX, y: e.clientY };
+      canvas.style.cursor = 'grabbing';
     };
 
     const onMouseMove = (e) => {
@@ -192,9 +304,9 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
 
     const onMouseUp = () => {
       isDraggingRef.current = false;
+      canvas.style.cursor = 'grab';
     };
 
-    // Touch handlers
     const onTouchStart = (e) => {
       if (e.touches.length === 1) {
         isDraggingRef.current = true;
@@ -213,9 +325,6 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
       isDraggingRef.current = false;
     };
 
-    // Attach events
-    const canvas = renderer.domElement;
-    canvas.style.cursor = 'grab';
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onMouseMove);
     canvas.addEventListener('mouseup', onMouseUp);
@@ -224,7 +333,6 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     canvas.addEventListener('touchmove', onTouchMove);
     canvas.addEventListener('touchend', onTouchEnd);
 
-    // Resize
     const onResize = () => {
       const w = container.clientWidth;
       const h = container.clientHeight;
@@ -237,8 +345,9 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     // Cleanup
     return () => {
       if (frameIdRef.current) cancelAnimationFrame(frameIdRef.current);
-      window.removeEventListener('resize', onResize);
+      if (fetchControllerRef.current) fetchControllerRef.current.abort();
       
+      window.removeEventListener('resize', onResize);
       canvas.removeEventListener('mousedown', onMouseDown);
       canvas.removeEventListener('mousemove', onMouseMove);
       canvas.removeEventListener('mouseup', onMouseUp);
@@ -249,6 +358,14 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
       
       video.pause();
       video.src = '';
+      
+      if (mediaSourceRef.current) {
+        try {
+          if (mediaSourceRef.current.readyState === 'open') {
+            mediaSourceRef.current.endOfStream();
+          }
+        } catch (e) {}
+      }
       
       texture?.dispose();
       geometry?.dispose();
@@ -261,16 +378,7 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
       
       sceneInitializedRef.current = false;
     };
-  }, [blobUrl]);
-
-  // Cleanup blob URL on unmount
-  useEffect(() => {
-    return () => {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
-    };
-  }, [blobUrl]);
+  }, [videoUrl, initMediaSource]);
 
   const togglePlay = async () => {
     const video = videoRef.current;
@@ -321,23 +429,12 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     <div className="relative w-full bg-black rounded-xl overflow-hidden" style={{ height: '500px' }}>
       <div ref={containerRef} className="w-full h-full" />
 
-      {/* Loading with progress */}
+      {/* Loading overlay */}
       {isLoading && !error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 pointer-events-none">
           <div className="text-center text-white">
             <div className="w-12 h-12 border-4 border-white/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-sm mb-2">Cargando video 360°...</p>
-            {loadingProgress > 0 && (
-              <div className="w-48 mx-auto">
-                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-amber-500 transition-all duration-300"
-                    style={{ width: `${loadingProgress}%` }}
-                  />
-                </div>
-                <p className="text-xs mt-1 text-white/60">{loadingProgress}%</p>
-              </div>
-            )}
+            <p className="text-sm">Cargando video 360°...</p>
           </div>
         </div>
       )}
@@ -360,13 +457,19 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
       {/* Controls */}
       {!error && (
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-          {/* Progress bar */}
+          {/* Progress bar with buffer indicator */}
           <div 
-            className="h-1.5 bg-white/20 rounded-full cursor-pointer mb-3 group"
+            className="h-1.5 bg-white/20 rounded-full cursor-pointer mb-3 group relative"
             onClick={handleSeek}
           >
+            {/* Buffered indicator */}
             <div 
-              className="h-full bg-amber-500 rounded-full relative"
+              className="absolute h-full bg-white/30 rounded-full"
+              style={{ width: `${buffered}%` }}
+            />
+            {/* Playback progress */}
+            <div 
+              className="h-full bg-amber-500 rounded-full relative z-10"
               style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
             >
               <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -378,7 +481,7 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
             <div className="flex items-center gap-3">
               <button
                 onClick={togglePlay}
-                disabled={isLoading}
+                disabled={isLoading && buffered < 5}
                 className="w-10 h-10 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/50 rounded-full flex items-center justify-center text-white transition-colors"
               >
                 {isPlaying ? (
@@ -397,6 +500,12 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Buffer indicator */}
+              {buffered < 100 && (
+                <span className="text-xs text-white/60">
+                  Buffer: {buffered}%
+                </span>
+              )}
               <span className="text-xs bg-amber-600 text-white px-2 py-0.5 rounded-full font-medium">
                 360°
               </span>
