@@ -368,11 +368,17 @@ const AdminPanel = () => {
                   {videos.map((video) => (
                     <div key={video.id} className="border-2 border-amber-200 rounded-xl p-4 hover:shadow-lg transition">
                       <div className="relative mb-3">
-                        <video
-                          src={video.demo_url || video.url}
-                          className="w-full h-40 object-cover rounded-lg"
-                          controls={false}
-                        />
+                        {video.thumbnail_url ? (
+                          <img
+                            src={video.thumbnail_url?.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : video.thumbnail_url}
+                            alt={video.title}
+                            className="w-full h-40 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-full h-40 bg-amber-100 rounded-lg flex items-center justify-center">
+                            <Video className="w-12 h-12 text-amber-400" />
+                          </div>
+                        )}
                         {video.is_premium && (
                           <span className="absolute top-2 right-2 bg-amber-500 text-white px-2 py-1 rounded text-xs font-bold">
                             PREMIUM
