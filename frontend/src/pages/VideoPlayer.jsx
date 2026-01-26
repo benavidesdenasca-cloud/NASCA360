@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '@/App';
 import Navbar from '@/components/Navbar';
+import Video360Player from '@/components/Video360Player';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Play, Clock, Tag, Lock } from 'lucide-react';
 import { toast } from 'sonner';
