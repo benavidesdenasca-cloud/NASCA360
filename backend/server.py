@@ -23,7 +23,8 @@ from auth_utils import (
     hash_password, verify_password, create_access_token, decode_access_token,
     generate_verification_token, verify_email_token,
     generate_password_reset_token, verify_password_reset_token,
-    send_verification_email, send_password_reset_email
+    send_verification_email, send_password_reset_email,
+    JWT_SECRET_KEY, JWT_ALGORITHM
 )
 
 ROOT_DIR = Path(__file__).parent
