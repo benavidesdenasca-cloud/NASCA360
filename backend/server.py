@@ -1279,6 +1279,118 @@ async def health_check():
 
 # ==================== FILE UPLOAD ROUTES ====================
 
+# Store for tracking chunked uploads
+chunked_uploads = {}
+
+@api_router.post("/upload/init")
+async def init_chunked_upload(
+    filename: str,
+    total_size: int,
+    total_chunks: int,
+    current_user: User = Depends(get_current_user)
+):
+    """Initialize a chunked upload session"""
+    upload_id = uuid.uuid4().hex
+    file_extension = Path(filename).suffix if filename else ""
+    unique_filename = f"{upload_id}{file_extension}"
+    
+    chunked_uploads[upload_id] = {
+        "filename": unique_filename,
+        "original_filename": filename,
+        "total_size": total_size,
+        "total_chunks": total_chunks,
+        "received_chunks": set(),
+        "user_id": current_user.user_id
+    }
+    
+    return {
+        "upload_id": upload_id,
+        "filename": unique_filename
+    }
+
+@api_router.post("/upload/chunk/{upload_id}/{chunk_index}")
+async def upload_chunk(
+    upload_id: str,
+    chunk_index: int,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload a single chunk of a file"""
+    if upload_id not in chunked_uploads:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    
+    upload_info = chunked_uploads[upload_id]
+    
+    # Verify user
+    if upload_info["user_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    # Create uploads directory
+    upload_dir = Path("uploads")
+    upload_dir.mkdir(exist_ok=True)
+    
+    # Save chunk to temp file
+    chunk_path = upload_dir / f"{upload_id}_chunk_{chunk_index}"
+    
+    try:
+        async with aiofiles.open(chunk_path, 'wb') as f:
+            content = await file.read()
+            await f.write(content)
+        
+        upload_info["received_chunks"].add(chunk_index)
+        
+        return {
+            "chunk_index": chunk_index,
+            "received": len(upload_info["received_chunks"]),
+            "total": upload_info["total_chunks"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving chunk: {str(e)}")
+
+@api_router.post("/upload/complete/{upload_id}")
+async def complete_chunked_upload(
+    upload_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Combine all chunks into final file"""
+    if upload_id not in chunked_uploads:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    
+    upload_info = chunked_uploads[upload_id]
+    
+    # Verify all chunks received
+    if len(upload_info["received_chunks"]) != upload_info["total_chunks"]:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Missing chunks: received {len(upload_info['received_chunks'])} of {upload_info['total_chunks']}"
+        )
+    
+    upload_dir = Path("uploads")
+    final_path = upload_dir / upload_info["filename"]
+    
+    try:
+        # Combine chunks
+        async with aiofiles.open(final_path, 'wb') as final_file:
+            for i in range(upload_info["total_chunks"]):
+                chunk_path = upload_dir / f"{upload_id}_chunk_{i}"
+                async with aiofiles.open(chunk_path, 'rb') as chunk_file:
+                    content = await chunk_file.read()
+                    await final_file.write(content)
+                # Delete chunk file
+                chunk_path.unlink()
+        
+        # Clean up upload session
+        del chunked_uploads[upload_id]
+        
+        return {
+            "filename": upload_info["filename"],
+            "original_filename": upload_info["original_filename"],
+            "size": upload_info["total_size"],
+            "url": f"/api/files/{upload_info['filename']}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error combining chunks: {str(e)}")
+
 @api_router.post("/upload")
 async def upload_file(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
     """Upload a file with chunked streaming (supports large files up to 10GB)"""
