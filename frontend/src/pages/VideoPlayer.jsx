@@ -176,7 +176,7 @@ const VideoPlayer = () => {
                   data-testid="video-element"
                   controls
                   className="w-full h-full"
-                  poster={video.thumbnail_url}
+                  poster={video.thumbnail_url?.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : video.thumbnail_url}
                   key={videoUrl}
                 >
                   <source src={videoUrl} type="video/mp4" />
