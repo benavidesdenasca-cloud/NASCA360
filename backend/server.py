@@ -1297,7 +1297,129 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-# ==================== FILE UPLOAD ROUTES ====================
+# ==================== AWS S3 UPLOAD ROUTES ====================
+
+@api_router.post("/s3/presigned-url")
+async def get_s3_presigned_url(
+    filename: str,
+    content_type: str,
+    file_size: int,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate a presigned URL for direct S3 upload"""
+    if not s3_client:
+        raise HTTPException(status_code=500, detail="S3 no está configurado")
+    
+    # Generate unique key
+    file_extension = Path(filename).suffix if filename else ""
+    unique_key = f"videos/{uuid.uuid4().hex}{file_extension}"
+    
+    try:
+        # Create bucket if it doesn't exist
+        try:
+            s3_client.head_bucket(Bucket=S3_BUCKET_NAME)
+        except ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                # Bucket doesn't exist, create it
+                if AWS_REGION == 'us-east-1':
+                    s3_client.create_bucket(Bucket=S3_BUCKET_NAME)
+                else:
+                    s3_client.create_bucket(
+                        Bucket=S3_BUCKET_NAME,
+                        CreateBucketConfiguration={'LocationConstraint': AWS_REGION}
+                    )
+                logger.info(f"Created S3 bucket: {S3_BUCKET_NAME}")
+            else:
+                raise
+        
+        # Generate presigned URL for upload (valid for 2 hours)
+        presigned_url = s3_client.generate_presigned_url(
+            'put_object',
+            Params={
+                'Bucket': S3_BUCKET_NAME,
+                'Key': unique_key,
+                'ContentType': content_type
+            },
+            ExpiresIn=7200  # 2 hours
+        )
+        
+        # Generate the public URL for accessing the file
+        s3_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{unique_key}"
+        
+        return {
+            "presigned_url": presigned_url,
+            "s3_key": unique_key,
+            "s3_url": s3_url,
+            "expires_in": 7200
+        }
+    except ClientError as e:
+        logger.error(f"S3 error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generando URL de S3: {str(e)}")
+
+@api_router.post("/s3/confirm-upload")
+async def confirm_s3_upload(
+    s3_key: str,
+    s3_url: str,
+    original_filename: str,
+    file_size: int,
+    current_user: User = Depends(get_current_user)
+):
+    """Confirm that an S3 upload was completed successfully"""
+    if not s3_client:
+        raise HTTPException(status_code=500, detail="S3 no está configurado")
+    
+    try:
+        # Verify the file exists in S3
+        s3_client.head_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+        
+        return {
+            "success": True,
+            "url": s3_url,
+            "key": s3_key,
+            "filename": original_filename,
+            "size": file_size
+        }
+    except ClientError as e:
+        if e.response['Error']['Code'] == '404':
+            raise HTTPException(status_code=404, detail="Archivo no encontrado en S3")
+        raise HTTPException(status_code=500, detail=f"Error verificando archivo: {str(e)}")
+
+@api_router.get("/s3/presigned-view/{s3_key:path}")
+async def get_s3_presigned_view_url(
+    s3_key: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate a presigned URL for viewing a video (streaming)"""
+    if not s3_client:
+        raise HTTPException(status_code=500, detail="S3 no está configurado")
+    
+    # NETFLIX MODEL: Only allow premium users and admins
+    if current_user.role != 'admin' and current_user.subscription_plan == 'basic':
+        raise HTTPException(
+            status_code=403, 
+            detail="Necesitas una suscripción activa para ver contenido"
+        )
+    
+    try:
+        # Generate presigned URL for viewing (valid for 1 hour)
+        presigned_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': S3_BUCKET_NAME,
+                'Key': s3_key
+            },
+            ExpiresIn=3600  # 1 hour
+        )
+        
+        return {
+            "presigned_url": presigned_url,
+            "expires_in": 3600
+        }
+    except ClientError as e:
+        logger.error(f"S3 error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generando URL de visualización: {str(e)}")
+
+# ==================== FILE UPLOAD ROUTES (LOCAL) ====================
 
 # Store for tracking chunked uploads
 chunked_uploads = {}
