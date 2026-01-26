@@ -15,6 +15,9 @@ from emergentintegrations.payments.stripe.checkout import StripeCheckout, Checko
 import httpx
 from authlib.integrations.starlette_client import OAuth
 import aiofiles
+import boto3
+from botocore.exceptions import ClientError
+from botocore.config import Config
 
 import jwt
 
