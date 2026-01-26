@@ -623,36 +623,99 @@ const VideoModal = ({ video, onClose, onSave }) => {
   const handleFileUpload = async (file, fieldName) => {
     if (!file) return;
     
-    try {
-      setUploading(true);
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await axios.post(`${API}/upload`, formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(prev => ({ ...prev, [fieldName]: percentCompleted }));
+    const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    
+    // Use chunked upload for files > 50MB, regular upload for smaller files
+    if (file.size > 50 * 1024 * 1024) {
+      try {
+        setUploading(true);
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+        
+        // Step 1: Initialize upload
+        const initResponse = await axios.post(`${API}/upload/init`, null, {
+          params: {
+            filename: file.name,
+            total_size: file.size,
+            total_chunks: totalChunks
+          },
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const uploadId = initResponse.data.upload_id;
+        
+        // Step 2: Upload chunks
+        for (let i = 0; i < totalChunks; i++) {
+          const start = i * CHUNK_SIZE;
+          const end = Math.min(start + CHUNK_SIZE, file.size);
+          const chunk = file.slice(start, end);
+          
+          const chunkFormData = new FormData();
+          chunkFormData.append('file', chunk);
+          
+          await axios.post(`${API}/upload/chunk/${uploadId}/${i}`, chunkFormData, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data'
+            }
+          });
+          
+          const progress = Math.round(((i + 1) / totalChunks) * 100);
+          setUploadProgress(prev => ({ ...prev, [fieldName]: progress }));
         }
-      });
+        
+        // Step 3: Complete upload
+        const completeResponse = await axios.post(`${API}/upload/complete/${uploadId}`, null, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        setFormData(prev => ({
+          ...prev,
+          [fieldName === 'video' ? 'url' : 'thumbnail_url']: completeResponse.data.url
+        }));
+        
+        toast.success('Archivo subido correctamente');
+        setUploading(false);
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+        
+      } catch (error) {
+        console.error('Chunked upload error:', error);
+        toast.error(getErrorMessage(error, 'Error al subir archivo grande'));
+        setUploading(false);
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+      }
+    } else {
+      // Regular upload for smaller files
+      try {
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
 
-      // Update the URL field with the uploaded file URL
-      setFormData(prev => ({
-        ...prev,
-        [fieldName === 'video' ? 'url' : 'thumbnail_url']: response.data.url
-      }));
-      
-      toast.success('Archivo subido correctamente');
-      setUploading(false);
-      setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error(getErrorMessage(error, 'Error al subir archivo'));
-      setUploading(false);
-      setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+        const response = await axios.post(`${API}/upload`, formData, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(prev => ({ ...prev, [fieldName]: percentCompleted }));
+          }
+        });
+
+        setFormData(prev => ({
+          ...prev,
+          [fieldName === 'video' ? 'url' : 'thumbnail_url']: response.data.url
+        }));
+        
+        toast.success('Archivo subido correctamente');
+        setUploading(false);
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+      } catch (error) {
+        console.error('Upload error:', error);
+        toast.error(getErrorMessage(error, 'Error al subir archivo'));
+        setUploading(false);
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+      }
     }
   };
 
