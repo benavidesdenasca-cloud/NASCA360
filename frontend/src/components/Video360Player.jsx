@@ -6,269 +6,76 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const videoRef = useRef(null);
   const rendererRef = useRef(null);
   const frameIdRef = useRef(null);
-  const mediaSourceRef = useRef(null);
-  const sourceBufferRef = useRef(null);
+  const sceneRef = useRef(null);
+  const cameraRef = useRef(null);
+  const textureRef = useRef(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [buffered, setBuffered] = useState(0);
   const [error, setError] = useState(null);
+  const [buffered, setBuffered] = useState(0);
   
   const lonRef = useRef(0);
   const latRef = useRef(0);
   const isDraggingRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
-  const sceneInitializedRef = useRef(false);
-  const fetchControllerRef = useRef(null);
+  const initializedRef = useRef(false);
 
-  // Streaming video loader using MediaSource API
-  const initMediaSource = useCallback(async () => {
-    if (!videoUrl || !videoRef.current) return;
-
-    const video = videoRef.current;
+  // Initialize Three.js scene
+  const initThreeJS = useCallback((video) => {
+    if (!containerRef.current || initializedRef.current) return;
     
-    // Check if MediaSource is supported
-    if (!window.MediaSource || !MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"')) {
-      console.log('MediaSource not supported, falling back to direct URL');
-      video.src = videoUrl;
-      return;
-    }
-
-    try {
-      const mediaSource = new MediaSource();
-      mediaSourceRef.current = mediaSource;
-      video.src = URL.createObjectURL(mediaSource);
-
-      mediaSource.addEventListener('sourceopen', async () => {
-        try {
-          // Try different codecs
-          let mimeType = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
-          if (!MediaSource.isTypeSupported(mimeType)) {
-            mimeType = 'video/mp4; codecs="avc1.64001F, mp4a.40.2"';
-          }
-          if (!MediaSource.isTypeSupported(mimeType)) {
-            mimeType = 'video/mp4';
-          }
-
-          const sourceBuffer = mediaSource.addSourceBuffer(mimeType);
-          sourceBufferRef.current = sourceBuffer;
-          
-          // Fetch video in chunks
-          const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
-          let start = 0;
-          let totalSize = 0;
-
-          // First, get the file size
-          const headResponse = await fetch(videoUrl, { method: 'HEAD' });
-          if (headResponse.headers.get('content-length')) {
-            totalSize = parseInt(headResponse.headers.get('content-length'), 10);
-          }
-
-          // Function to fetch a chunk
-          const fetchChunk = async (rangeStart, rangeEnd) => {
-            const response = await fetch(videoUrl, {
-              headers: {
-                'Range': `bytes=${rangeStart}-${rangeEnd}`
-              }
-            });
-            
-            if (!response.ok && response.status !== 206) {
-              throw new Error(`HTTP error: ${response.status}`);
-            }
-            
-            return await response.arrayBuffer();
-          };
-
-          // Load initial chunks to start playback
-          const loadInitialData = async () => {
-            const initialChunks = Math.min(3, Math.ceil(totalSize / CHUNK_SIZE)); // Load first 3 chunks
-            
-            for (let i = 0; i < initialChunks; i++) {
-              const rangeStart = i * CHUNK_SIZE;
-              const rangeEnd = Math.min(rangeStart + CHUNK_SIZE - 1, totalSize - 1);
-              
-              const chunk = await fetchChunk(rangeStart, rangeEnd);
-              
-              // Wait for sourceBuffer to be ready
-              await new Promise((resolve) => {
-                if (!sourceBuffer.updating) {
-                  resolve();
-                } else {
-                  sourceBuffer.addEventListener('updateend', resolve, { once: true });
-                }
-              });
-              
-              sourceBuffer.appendBuffer(chunk);
-              
-              // Wait for append to complete
-              await new Promise((resolve) => {
-                sourceBuffer.addEventListener('updateend', resolve, { once: true });
-              });
-              
-              start = rangeEnd + 1;
-              setBuffered(Math.round((start / totalSize) * 100));
-            }
-            
-            setIsLoading(false);
-          };
-
-          await loadInitialData();
-
-          // Continue loading more chunks in background
-          const loadMoreChunks = async () => {
-            while (start < totalSize && mediaSourceRef.current?.readyState === 'open') {
-              // Wait a bit to not overwhelm
-              await new Promise(r => setTimeout(r, 100));
-              
-              const rangeEnd = Math.min(start + CHUNK_SIZE - 1, totalSize - 1);
-              
-              try {
-                const chunk = await fetchChunk(start, rangeEnd);
-                
-                // Wait for sourceBuffer
-                await new Promise((resolve) => {
-                  if (!sourceBuffer.updating) {
-                    resolve();
-                  } else {
-                    sourceBuffer.addEventListener('updateend', resolve, { once: true });
-                  }
-                });
-                
-                if (mediaSourceRef.current?.readyState !== 'open') break;
-                
-                sourceBuffer.appendBuffer(chunk);
-                
-                await new Promise((resolve) => {
-                  sourceBuffer.addEventListener('updateend', resolve, { once: true });
-                });
-                
-                start = rangeEnd + 1;
-                setBuffered(Math.round((start / totalSize) * 100));
-                
-              } catch (err) {
-                console.error('Error loading chunk:', err);
-                break;
-              }
-            }
-            
-            // All data loaded
-            if (mediaSourceRef.current?.readyState === 'open' && start >= totalSize) {
-              try {
-                mediaSource.endOfStream();
-              } catch (e) {
-                console.log('End of stream:', e);
-              }
-            }
-          };
-
-          loadMoreChunks();
-
-        } catch (err) {
-          console.error('SourceBuffer error:', err);
-          // Fallback to direct URL
-          video.src = videoUrl;
-          setIsLoading(false);
-        }
-      });
-
-      mediaSource.addEventListener('error', (e) => {
-        console.error('MediaSource error:', e);
-        video.src = videoUrl;
-      });
-
-    } catch (err) {
-      console.error('MediaSource init error:', err);
-      video.src = videoUrl;
-      setIsLoading(false);
-    }
-  }, [videoUrl]);
-
-  // Initialize video and Three.js
-  useEffect(() => {
-    if (!containerRef.current || !videoUrl || sceneInitializedRef.current) return;
-
     const container = containerRef.current;
-    let scene, camera, renderer, texture, geometry, material;
-
-    // Create video element
-    const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
-    video.playsInline = true;
-    video.preload = 'auto';
-    video.muted = false;
-    videoRef.current = video;
-
-    video.onloadedmetadata = () => {
-      setDuration(video.duration);
-    };
-
-    video.oncanplay = () => {
-      setIsLoading(false);
-    };
-
-    video.ontimeupdate = () => {
-      setCurrentTime(video.currentTime);
-    };
-
-    video.onended = () => {
-      setIsPlaying(false);
-    };
-
-    video.onerror = (e) => {
-      console.error('Video error:', e);
-      // Try direct URL as fallback
-      if (!video.src.startsWith('blob:')) {
-        setError('Error cargando el video');
-      }
-    };
-
-    video.onwaiting = () => {
-      setIsLoading(true);
-    };
-
-    video.onplaying = () => {
-      setIsLoading(false);
-    };
-
-    // Initialize MediaSource streaming
-    initMediaSource();
-
-    // Three.js setup
     const width = container.clientWidth;
     const height = container.clientHeight;
 
-    scene = new THREE.Scene();
-    
-    camera = new THREE.PerspectiveCamera(75, width / height, 1, 1100);
-    camera.position.set(0, 0, 0);
+    // Scene
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
 
-    renderer = new THREE.WebGLRenderer({ 
+    // Camera
+    const camera = new THREE.PerspectiveCamera(75, width / height, 1, 1100);
+    camera.position.set(0, 0, 0);
+    cameraRef.current = camera;
+
+    // Renderer - use simpler settings for better compatibility
+    const renderer = new THREE.WebGLRenderer({ 
       antialias: false,
-      powerPreference: 'high-performance'
+      powerPreference: 'default',
+      alpha: false
     });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(1);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Video texture
-    texture = new THREE.VideoTexture(video);
+    // Video Texture
+    const texture = new THREE.VideoTexture(video);
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
+    texture.format = THREE.RGBAFormat;
+    texture.generateMipmaps = false;
+    textureRef.current = texture;
 
-    // Sphere (inverted for 360 view)
-    geometry = new THREE.SphereGeometry(500, 32, 32);
+    // Sphere geometry (inverted for 360 view from inside)
+    const geometry = new THREE.SphereGeometry(500, 60, 40);
     geometry.scale(-1, 1, 1);
-    material = new THREE.MeshBasicMaterial({ map: texture });
+    
+    const material = new THREE.MeshBasicMaterial({ 
+      map: texture,
+      side: THREE.FrontSide
+    });
+    
     const sphere = new THREE.Mesh(geometry, material);
     scene.add(sphere);
 
-    sceneInitializedRef.current = true;
-
     // Render loop
     const render = () => {
+      if (!rendererRef.current) return;
+      
+      // Update camera based on drag
       const lat = Math.max(-85, Math.min(85, latRef.current));
       const phi = THREE.MathUtils.degToRad(90 - lat);
       const theta = THREE.MathUtils.degToRad(lonRef.current);
@@ -278,14 +85,14 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
         500 * Math.cos(phi),
         500 * Math.sin(phi) * Math.sin(theta)
       );
-      
+
       renderer.render(scene, camera);
       frameIdRef.current = requestAnimationFrame(render);
     };
 
     render();
 
-    // Mouse handlers
+    // Mouse/Touch handlers for 360 navigation
     const canvas = renderer.domElement;
     canvas.style.cursor = 'grab';
 
@@ -297,8 +104,10 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
 
     const onMouseMove = (e) => {
       if (!isDraggingRef.current) return;
-      lonRef.current -= (e.clientX - lastPosRef.current.x) * 0.15;
-      latRef.current += (e.clientY - lastPosRef.current.y) * 0.15;
+      const deltaX = e.clientX - lastPosRef.current.x;
+      const deltaY = e.clientY - lastPosRef.current.y;
+      lonRef.current -= deltaX * 0.15;
+      latRef.current += deltaY * 0.15;
       lastPosRef.current = { x: e.clientX, y: e.clientY };
     };
 
@@ -316,8 +125,10 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
 
     const onTouchMove = (e) => {
       if (!isDraggingRef.current || e.touches.length !== 1) return;
-      lonRef.current -= (e.touches[0].clientX - lastPosRef.current.x) * 0.15;
-      latRef.current += (e.touches[0].clientY - lastPosRef.current.y) * 0.15;
+      const deltaX = e.touches[0].clientX - lastPosRef.current.x;
+      const deltaY = e.touches[0].clientY - lastPosRef.current.y;
+      lonRef.current -= deltaX * 0.15;
+      latRef.current += deltaY * 0.15;
       lastPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     };
 
@@ -325,28 +136,30 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
       isDraggingRef.current = false;
     };
 
+    // Add event listeners
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onMouseMove);
     canvas.addEventListener('mouseup', onMouseUp);
     canvas.addEventListener('mouseleave', onMouseUp);
-    canvas.addEventListener('touchstart', onTouchStart);
-    canvas.addEventListener('touchmove', onTouchMove);
+    canvas.addEventListener('touchstart', onTouchStart, { passive: true });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: true });
     canvas.addEventListener('touchend', onTouchEnd);
 
+    // Resize handler
     const onResize = () => {
-      const w = container.clientWidth;
-      const h = container.clientHeight;
+      if (!containerRef.current || !rendererRef.current) return;
+      const w = containerRef.current.clientWidth;
+      const h = containerRef.current.clientHeight;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
     window.addEventListener('resize', onResize);
 
-    // Cleanup
+    initializedRef.current = true;
+
+    // Return cleanup function
     return () => {
-      if (frameIdRef.current) cancelAnimationFrame(frameIdRef.current);
-      if (fetchControllerRef.current) fetchControllerRef.current.abort();
-      
       window.removeEventListener('resize', onResize);
       canvas.removeEventListener('mousedown', onMouseDown);
       canvas.removeEventListener('mousemove', onMouseMove);
@@ -355,31 +168,115 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
       canvas.removeEventListener('touchstart', onTouchStart);
       canvas.removeEventListener('touchmove', onTouchMove);
       canvas.removeEventListener('touchend', onTouchEnd);
+    };
+  }, []);
+
+  // Main effect - setup video and Three.js
+  useEffect(() => {
+    if (!videoUrl || !containerRef.current) return;
+
+    let cleanupThree = null;
+    
+    // Create hidden video element
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.playsInline = true;
+    video.preload = 'metadata';
+    video.muted = false;
+    video.loop = false;
+    videoRef.current = video;
+
+    // Video event handlers
+    video.onloadedmetadata = () => {
+      console.log('Video metadata loaded:', video.duration, 'seconds');
+      setDuration(video.duration);
+      // Initialize Three.js once we have metadata
+      cleanupThree = initThreeJS(video);
+    };
+
+    video.oncanplay = () => {
+      console.log('Video can play');
+      setIsLoading(false);
+    };
+
+    video.onwaiting = () => {
+      setIsLoading(true);
+    };
+
+    video.onplaying = () => {
+      setIsLoading(false);
+    };
+
+    video.ontimeupdate = () => {
+      setCurrentTime(video.currentTime);
+    };
+
+    video.onprogress = () => {
+      if (video.buffered.length > 0) {
+        const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+        const duration = video.duration || 1;
+        setBuffered(Math.round((bufferedEnd / duration) * 100));
+      }
+    };
+
+    video.onended = () => {
+      setIsPlaying(false);
+    };
+
+    video.onerror = (e) => {
+      console.error('Video error:', e, video.error);
+      const errorMessages = {
+        1: 'Carga del video abortada',
+        2: 'Error de red al cargar el video',
+        3: 'Error decodificando el video',
+        4: 'Formato de video no soportado'
+      };
+      const errorCode = video.error?.code || 0;
+      setError(errorMessages[errorCode] || 'Error cargando el video');
+      setIsLoading(false);
+    };
+
+    // Set video source directly - S3 presigned URLs support Range requests natively
+    console.log('Setting video source:', videoUrl.substring(0, 100) + '...');
+    video.src = videoUrl;
+
+    // Cleanup
+    return () => {
+      if (frameIdRef.current) {
+        cancelAnimationFrame(frameIdRef.current);
+      }
       
+      if (cleanupThree) {
+        cleanupThree();
+      }
+      
+      // Stop and cleanup video
       video.pause();
       video.src = '';
-      
-      if (mediaSourceRef.current) {
-        try {
-          if (mediaSourceRef.current.readyState === 'open') {
-            mediaSourceRef.current.endOfStream();
-          }
-        } catch (e) {}
-      }
-      
-      texture?.dispose();
-      geometry?.dispose();
-      material?.dispose();
-      renderer?.dispose();
-      
-      if (container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
-      }
-      
-      sceneInitializedRef.current = false;
-    };
-  }, [videoUrl, initMediaSource]);
+      video.load();
+      videoRef.current = null;
 
+      // Cleanup Three.js resources
+      if (textureRef.current) {
+        textureRef.current.dispose();
+        textureRef.current = null;
+      }
+      
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        if (containerRef.current && rendererRef.current.domElement.parentNode === containerRef.current) {
+          containerRef.current.removeChild(rendererRef.current.domElement);
+        }
+        rendererRef.current = null;
+      }
+
+      sceneRef.current = null;
+      cameraRef.current = null;
+      initializedRef.current = false;
+    };
+  }, [videoUrl, initThreeJS]);
+
+  // Play/Pause toggle
   const togglePlay = async () => {
     const video = videoRef.current;
     if (!video) return;
@@ -389,31 +286,53 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
         video.pause();
         setIsPlaying(false);
       } else {
+        setIsLoading(true);
         await video.play();
         setIsPlaying(true);
       }
     } catch (err) {
       console.error('Play error:', err);
-      setError('Error al reproducir');
+      // Try muted autoplay as fallback (browser policy)
+      try {
+        video.muted = true;
+        await video.play();
+        setIsPlaying(true);
+        // Unmute after starting
+        setTimeout(() => { video.muted = false; }, 100);
+      } catch (err2) {
+        setError('No se pudo reproducir el video. Intenta de nuevo.');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Seek handler
   const handleSeek = (e) => {
     const video = videoRef.current;
     if (!video || !duration) return;
     
     const rect = e.currentTarget.getBoundingClientRect();
     const percentage = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    video.currentTime = percentage * duration;
+    const newTime = percentage * duration;
+    
+    console.log('Seeking to:', newTime);
+    video.currentTime = newTime;
   };
 
+  // Format time helper
   const formatTime = (sec) => {
     if (!sec || isNaN(sec)) return '0:00';
-    const m = Math.floor(sec / 60);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
     const s = Math.floor(sec % 60);
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Fullscreen toggle
   const toggleFullscreen = () => {
     const el = containerRef.current?.parentElement;
     if (!el) return;
@@ -421,31 +340,47 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     if (document.fullscreenElement) {
       document.exitFullscreen();
     } else {
-      el.requestFullscreen();
+      el.requestFullscreen().catch(err => {
+        console.log('Fullscreen error:', err);
+      });
     }
   };
 
   return (
-    <div className="relative w-full bg-black rounded-xl overflow-hidden" style={{ height: '500px' }}>
+    <div 
+      data-testid="video-360-player"
+      className="relative w-full bg-black rounded-xl overflow-hidden" 
+      style={{ height: '500px' }}
+    >
+      {/* Three.js container */}
       <div ref={containerRef} className="w-full h-full" />
 
       {/* Loading overlay */}
       {isLoading && !error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/70 pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 pointer-events-none z-10">
           <div className="text-center text-white">
             <div className="w-12 h-12 border-4 border-white/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-4" />
             <p className="text-sm">Cargando video 360°...</p>
+            {buffered > 0 && buffered < 100 && (
+              <p className="text-xs text-white/60 mt-2">Buffering: {buffered}%</p>
+            )}
           </div>
         </div>
       )}
 
-      {/* Error */}
+      {/* Error overlay */}
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/90">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-20">
           <div className="text-center text-white p-6">
             <p className="text-red-400 mb-4">{error}</p>
             <button 
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                setError(null);
+                setIsLoading(true);
+                if (videoRef.current) {
+                  videoRef.current.load();
+                }
+              }}
               className="px-6 py-2 bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
             >
               Reintentar
@@ -456,23 +391,23 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
 
       {/* Controls */}
       {!error && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-          {/* Progress bar with buffer indicator */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-10">
+          {/* Progress bar */}
           <div 
             className="h-1.5 bg-white/20 rounded-full cursor-pointer mb-3 group relative"
             onClick={handleSeek}
           >
-            {/* Buffered indicator */}
+            {/* Buffer indicator */}
             <div 
-              className="absolute h-full bg-white/30 rounded-full"
+              className="absolute h-full bg-white/30 rounded-full transition-all"
               style={{ width: `${buffered}%` }}
             />
             {/* Playback progress */}
             <div 
-              className="h-full bg-amber-500 rounded-full relative z-10"
+              className="h-full bg-amber-500 rounded-full relative z-10 transition-all"
               style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
             >
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
             </div>
           </div>
 
@@ -480,8 +415,9 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
+                data-testid="play-pause-btn"
                 onClick={togglePlay}
-                disabled={isLoading && buffered < 5}
+                disabled={isLoading && !isPlaying}
                 className="w-10 h-10 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/50 rounded-full flex items-center justify-center text-white transition-colors"
               >
                 {isPlaying ? (
@@ -500,16 +436,11 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Buffer indicator */}
-              {buffered < 100 && (
-                <span className="text-xs text-white/60">
-                  Buffer: {buffered}%
-                </span>
-              )}
               <span className="text-xs bg-amber-600 text-white px-2 py-0.5 rounded-full font-medium">
                 360°
               </span>
               <button
+                data-testid="fullscreen-btn"
                 onClick={toggleFullscreen}
                 className="text-white/70 hover:text-white p-1.5 transition-colors"
               >
