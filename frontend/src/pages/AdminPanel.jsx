@@ -812,12 +812,34 @@ const VideoModal = ({ video, onClose, onSave }) => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Miniatura (Imagen - Opcional)
             </label>
-            <div className="flex gap-2">
+            <div className="space-y-2">
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleFileUpload(e.target.files[0], 'thumbnail')}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                disabled={uploading}
+              />
+              {uploading && uploadProgress.thumbnail > 0 && (
+                <div className="space-y-1">
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div 
+                      className="bg-amber-600 h-3 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress.thumbnail}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-amber-600 font-medium">
+                    Subiendo imagen... {uploadProgress.thumbnail}%
+                  </p>
+                </div>
+              )}
+              {formData.thumbnail_url && !uploading && (
+                <p className="text-sm text-green-600 font-medium">
+                  ✓ Imagen subida: {formData.thumbnail_url.split('/').pop()}
+                </p>
+              )}
+            </div>
+          </div>
                 disabled={uploading}
               />
               {uploadProgress.thumbnail > 0 && uploadProgress.thumbnail < 100 && (
