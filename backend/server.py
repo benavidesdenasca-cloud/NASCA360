@@ -16,6 +16,8 @@ import httpx
 from authlib.integrations.starlette_client import OAuth
 import aiofiles
 
+import jwt
+
 # Import custom auth utilities
 from auth_utils import (
     hash_password, verify_password, create_access_token, decode_access_token,
