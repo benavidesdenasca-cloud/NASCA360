@@ -1371,6 +1371,147 @@ async def get_s3_presigned_url(
         logger.error(f"S3 error: {e}")
         raise HTTPException(status_code=500, detail=f"Error generando URL de S3: {str(e)}")
 
+# ==================== S3 MULTIPART UPLOAD (for files > 5GB) ====================
+
+@api_router.post("/s3/multipart/init")
+async def init_multipart_upload(
+    filename: str,
+    file_size: int,
+    current_user: User = Depends(get_current_user)
+):
+    """Initialize a multipart upload for large files (> 5GB)"""
+    if not s3_client:
+        raise HTTPException(status_code=500, detail="S3 no está configurado")
+    
+    file_extension = Path(filename).suffix.lower() if filename else ""
+    unique_key = f"videos/{uuid.uuid4().hex}{file_extension}"
+    
+    # Determine content type
+    content_type_map = {
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.mov': 'video/quicktime',
+        '.avi': 'video/x-msvideo',
+    }
+    content_type = content_type_map.get(file_extension, 'application/octet-stream')
+    
+    try:
+        # Start multipart upload
+        response = s3_client.create_multipart_upload(
+            Bucket=S3_BUCKET_NAME,
+            Key=unique_key,
+            ContentType=content_type
+        )
+        
+        upload_id = response['UploadId']
+        
+        # Calculate number of parts (100MB each, minimum 5MB, maximum 10000 parts)
+        part_size = 100 * 1024 * 1024  # 100MB
+        num_parts = (file_size + part_size - 1) // part_size
+        
+        return {
+            "upload_id": upload_id,
+            "s3_key": unique_key,
+            "part_size": part_size,
+            "num_parts": num_parts,
+            "s3_url": f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{unique_key}"
+        }
+    except ClientError as e:
+        logger.error(f"S3 multipart init error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error iniciando subida: {str(e)}")
+
+@api_router.post("/s3/multipart/presign-part")
+async def get_multipart_presigned_url(
+    upload_id: str,
+    s3_key: str,
+    part_number: int,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate a presigned URL for uploading a single part"""
+    if not s3_client:
+        raise HTTPException(status_code=500, detail="S3 no está configurado")
+    
+    try:
+        presigned_url = s3_client.generate_presigned_url(
+            'upload_part',
+            Params={
+                'Bucket': S3_BUCKET_NAME,
+                'Key': s3_key,
+                'UploadId': upload_id,
+                'PartNumber': part_number
+            },
+            ExpiresIn=3600  # 1 hour per part
+        )
+        
+        return {
+            "presigned_url": presigned_url,
+            "part_number": part_number
+        }
+    except ClientError as e:
+        logger.error(f"S3 presign part error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generando URL de parte: {str(e)}")
+
+class PartInfo(BaseModel):
+    part_number: int
+    etag: str
+
+class CompleteMultipartRequest(BaseModel):
+    upload_id: str
+    s3_key: str
+    parts: List[PartInfo]
+
+@api_router.post("/s3/multipart/complete")
+async def complete_multipart_upload(
+    request: CompleteMultipartRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Complete a multipart upload by combining all parts"""
+    if not s3_client:
+        raise HTTPException(status_code=500, detail="S3 no está configurado")
+    
+    try:
+        # Format parts for S3
+        parts = [{'PartNumber': p.part_number, 'ETag': p.etag} for p in request.parts]
+        
+        s3_client.complete_multipart_upload(
+            Bucket=S3_BUCKET_NAME,
+            Key=request.s3_key,
+            UploadId=request.upload_id,
+            MultipartUpload={'Parts': parts}
+        )
+        
+        s3_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{request.s3_key}"
+        
+        return {
+            "success": True,
+            "s3_key": request.s3_key,
+            "s3_url": s3_url
+        }
+    except ClientError as e:
+        logger.error(f"S3 complete multipart error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error completando subida: {str(e)}")
+
+@api_router.post("/s3/multipart/abort")
+async def abort_multipart_upload(
+    upload_id: str,
+    s3_key: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Abort a multipart upload (cleanup)"""
+    if not s3_client:
+        raise HTTPException(status_code=500, detail="S3 no está configurado")
+    
+    try:
+        s3_client.abort_multipart_upload(
+            Bucket=S3_BUCKET_NAME,
+            Key=s3_key,
+            UploadId=upload_id
+        )
+        return {"success": True}
+    except ClientError as e:
+        logger.error(f"S3 abort multipart error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error abortando subida: {str(e)}")
+
 @api_router.post("/s3/confirm-upload")
 async def confirm_s3_upload(
     s3_key: str,
