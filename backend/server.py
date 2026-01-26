@@ -1302,8 +1302,8 @@ async def health_check():
 @api_router.post("/s3/presigned-url")
 async def get_s3_presigned_url(
     filename: str,
-    content_type: str,
-    file_size: int,
+    content_type: str = "application/octet-stream",
+    file_size: int = 0,
     current_user: User = Depends(get_current_user)
 ):
     """Generate a presigned URL for direct S3 upload"""
@@ -1311,8 +1311,22 @@ async def get_s3_presigned_url(
         raise HTTPException(status_code=500, detail="S3 no está configurado")
     
     # Generate unique key
-    file_extension = Path(filename).suffix if filename else ""
+    file_extension = Path(filename).suffix.lower() if filename else ""
     unique_key = f"videos/{uuid.uuid4().hex}{file_extension}"
+    
+    # Determine correct content type based on extension
+    content_type_map = {
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.mov': 'video/quicktime',
+        '.avi': 'video/x-msvideo',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp'
+    }
+    actual_content_type = content_type_map.get(file_extension, 'application/octet-stream')
     
     try:
         # Create bucket if it doesn't exist
@@ -1332,13 +1346,13 @@ async def get_s3_presigned_url(
             else:
                 raise
         
-        # Generate presigned URL for upload (valid for 2 hours)
+        # Generate presigned URL for upload WITHOUT ContentType restriction
+        # This allows the browser to set any Content-Type
         presigned_url = s3_client.generate_presigned_url(
             'put_object',
             Params={
                 'Bucket': S3_BUCKET_NAME,
-                'Key': unique_key,
-                'ContentType': content_type
+                'Key': unique_key
             },
             ExpiresIn=7200  # 2 hours
         )
@@ -1348,6 +1362,11 @@ async def get_s3_presigned_url(
         
         return {
             "presigned_url": presigned_url,
+            "s3_key": unique_key,
+            "s3_url": s3_url,
+            "content_type": actual_content_type,
+            "expires_in": 7200
+        }
             "s3_key": unique_key,
             "s3_url": s3_url,
             "expires_in": 7200
