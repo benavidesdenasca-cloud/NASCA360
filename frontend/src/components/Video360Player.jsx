@@ -225,15 +225,19 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
 
     video.onerror = (e) => {
       console.error('Video error:', e, video.error);
-      const errorMessages = {
-        1: 'Carga del video abortada',
-        2: 'Error de red al cargar el video',
-        3: 'Error decodificando el video',
-        4: 'Formato de video no soportado'
-      };
+      // Don't immediately show error - could be transient during initialization
       const errorCode = video.error?.code || 0;
-      setError(errorMessages[errorCode] || 'Error cargando el video');
-      setIsLoading(false);
+      // Only show error if we haven't successfully loaded metadata yet
+      if (!video.duration || video.duration === 0) {
+        const errorMessages = {
+          1: 'Carga del video abortada',
+          2: 'Error de red al cargar el video',
+          3: 'Error decodificando el video',
+          4: 'Formato de video no soportado'
+        };
+        setError(errorMessages[errorCode] || 'Error cargando el video');
+        setIsLoading(false);
+      }
     };
 
     // Set video source directly - S3 presigned URLs support Range requests natively
