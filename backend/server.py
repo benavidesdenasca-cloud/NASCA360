@@ -1281,7 +1281,7 @@ async def health_check():
 
 @api_router.post("/upload")
 async def upload_file(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    """Upload a file (authenticated users only)"""
+    """Upload a file with chunked streaming (supports large files up to 10GB)"""
     # Create uploads directory if it doesn't exist
     upload_dir = Path("uploads")
     upload_dir.mkdir(exist_ok=True)
@@ -1291,15 +1291,28 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
     unique_filename = f"{uuid.uuid4().hex}{file_extension}"
     file_path = upload_dir / unique_filename
     
-    # Save file
-    async with aiofiles.open(file_path, 'wb') as f:
-        content = await file.read()
-        await f.write(content)
+    # Save file in chunks to handle large files
+    total_size = 0
+    chunk_size = 1024 * 1024  # 1MB chunks
+    
+    try:
+        async with aiofiles.open(file_path, 'wb') as f:
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                await f.write(chunk)
+                total_size += len(chunk)
+    except Exception as e:
+        # Clean up partial file on error
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
     
     return {
         "filename": unique_filename,
         "original_filename": file.filename,
-        "size": len(content),
+        "size": total_size,
         "content_type": file.content_type,
         "url": f"/api/files/{unique_filename}"
     }
