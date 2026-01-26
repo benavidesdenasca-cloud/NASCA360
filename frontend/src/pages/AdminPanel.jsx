@@ -629,92 +629,78 @@ const VideoModal = ({ video, onClose, onSave }) => {
   const handleFileUpload = async (file, fieldName) => {
     if (!file) return;
     
-    const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks (smaller for better reliability)
-    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    const fileSizeGB = (file.size / (1024 * 1024 * 1024)).toFixed(2);
     
-    // Warning for very large files
-    if (file.size > 500 * 1024 * 1024) { // > 500MB
-      toast.warning(`Archivo grande detectado (${fileSizeMB}MB). La subida puede tomar varios minutos.`);
-    }
-    
-    // For files > 10MB, use chunked upload
-    if (file.size > 10 * 1024 * 1024) {
+    // For files > 100MB, use S3 direct upload
+    if (file.size > 100 * 1024 * 1024) {
       try {
         setUploading(true);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 1 }));
         
-        // Step 1: Initialize upload
-        const initResponse = await axios.post(`${API}/upload/init`, null, {
-          params: {
-            filename: file.name,
-            total_size: file.size,
-            total_chunks: totalChunks
-          },
-          headers: { 'Authorization': `Bearer ${token}` },
-          timeout: 30000
-        });
-        
-        const uploadId = initResponse.data.upload_id;
-        
-        // Step 2: Upload chunks with retry logic
-        for (let i = 0; i < totalChunks; i++) {
-          const start = i * CHUNK_SIZE;
-          const end = Math.min(start + CHUNK_SIZE, file.size);
-          const chunk = file.slice(start, end);
-          
-          const chunkFormData = new FormData();
-          chunkFormData.append('file', chunk);
-          
-          // Retry logic for each chunk
-          let retries = 3;
-          while (retries > 0) {
-            try {
-              await axios.post(`${API}/upload/chunk/${uploadId}/${i}`, chunkFormData, {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'multipart/form-data'
-                },
-                timeout: 60000 // 60 second timeout per chunk
-              });
-              break; // Success, exit retry loop
-            } catch (err) {
-              retries--;
-              if (retries === 0) throw err;
-              await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
-            }
-          }
-          
-          const progress = Math.round(((i + 1) / totalChunks) * 95); // Reserve 5% for completion
-          setUploadProgress(prev => ({ ...prev, [fieldName]: progress }));
+        if (file.size > 500 * 1024 * 1024) {
+          toast.info(`Subiendo archivo grande (${fileSizeGB}GB) directamente a la nube...`);
         }
         
-        // Step 3: Complete upload
-        const completeResponse = await axios.post(`${API}/upload/complete/${uploadId}`, null, {
-          headers: { 'Authorization': `Bearer ${token}` },
-          timeout: 120000 // 2 minutes for file assembly
+        // Step 1: Get presigned URL from backend
+        const presignedResponse = await axios.post(`${API}/s3/presigned-url`, null, {
+          params: {
+            filename: file.name,
+            content_type: file.type || 'video/mp4',
+            file_size: file.size
+          },
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const { presigned_url, s3_key, s3_url } = presignedResponse.data;
+        
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 5 }));
+        
+        // Step 2: Upload directly to S3 using presigned URL
+        await axios.put(presigned_url, file, {
+          headers: {
+            'Content-Type': file.type || 'video/mp4'
+          },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            // Scale from 5% to 95%
+            const scaledProgress = 5 + Math.round(percentCompleted * 0.9);
+            setUploadProgress(prev => ({ ...prev, [fieldName]: scaledProgress }));
+          }
+        });
+        
+        // Step 3: Confirm upload with backend
+        await axios.post(`${API}/s3/confirm-upload`, null, {
+          params: {
+            s3_key: s3_key,
+            s3_url: s3_url,
+            original_filename: file.name,
+            file_size: file.size
+          },
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         
         setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
         
+        // Store S3 URL - use s3:// prefix to identify S3 files
         setFormData(prev => ({
           ...prev,
-          [fieldName === 'video' ? 'url' : 'thumbnail_url']: completeResponse.data.url
+          [fieldName === 'video' ? 'url' : 'thumbnail_url']: `s3://${s3_key}`
         }));
         
-        toast.success(`Archivo subido correctamente (${fileSizeMB}MB)`);
+        toast.success(`Archivo subido a la nube (${fileSizeMB}MB)`);
         setUploading(false);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
         
       } catch (error) {
-        console.error('Chunked upload error:', error);
+        console.error('S3 upload error:', error);
         const errorMsg = error.response?.data?.detail || error.message || 'Error al subir archivo';
         toast.error(`Error: ${errorMsg}`);
         setUploading(false);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
       }
     } else {
-      // Regular upload for smaller files (< 10MB)
+      // Regular upload for smaller files (< 100MB) to local server
       try {
         setUploading(true);
         const formData = new FormData();
@@ -725,7 +711,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'multipart/form-data'
           },
-          timeout: 120000,
+          timeout: 300000, // 5 minutes
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             setUploadProgress(prev => ({ ...prev, [fieldName]: percentCompleted }));
