@@ -1367,10 +1367,6 @@ async def get_s3_presigned_url(
             "content_type": actual_content_type,
             "expires_in": 7200
         }
-            "s3_key": unique_key,
-            "s3_url": s3_url,
-            "expires_in": 7200
-        }
     except ClientError as e:
         logger.error(f"S3 error: {e}")
         raise HTTPException(status_code=500, detail=f"Error generando URL de S3: {str(e)}")
