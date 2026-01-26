@@ -119,7 +119,7 @@ const VideoPlayer = () => {
         URL.revokeObjectURL(videoUrl);
       }
     };
-  }, [fetchVideo, videoUrl]);
+  }, [fetchVideo]);  // Removed videoUrl from dependencies to prevent infinite loop
 
   if (loading) {
     return (
