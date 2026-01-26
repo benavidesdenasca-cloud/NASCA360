@@ -1,7 +1,7 @@
 # Nazca360 - Product Requirements Document
 
 ## Problema Original
-Plataforma de turismo virtual para explorar las Líneas de Nasca y Palpa en experiencias inmersivas 360°.
+Plataforma de turismo virtual premium para explorar las Líneas de Nasca y Palpa en experiencias inmersivas 360°.
 
 ## Requisitos Implementados
 
@@ -10,63 +10,79 @@ Plataforma de turismo virtual para explorar las Líneas de Nasca y Palpa en expe
 - Panel de admin con gestión de usuarios (ver, bloquear/desbloquear)
 - Gestión de videos (CRUD con carga de MP4)
 
-### 2. Sistema de Videos con Streaming Protegido
-- Carga directa de archivos MP4 al servidor (`/app/backend/uploads`)
-- **Streaming seguro:** Videos se sirven via `/api/stream/{filename}` con:
-  - Autenticación JWT obligatoria
-  - Soporte de Range requests (HTTP 206)
-  - Headers anti-descarga: `Content-Disposition: inline`, `Cache-Control: no-store`
-- **Protección contra descargas:**
-  - Acceso directo a archivos MP4 bloqueado (`/api/files/` retorna 403 para videos)
-  - Atributo `controlsList="nodownload"` en el reproductor
-  - Menú contextual deshabilitado (`onContextMenu`)
-  - Picture-in-Picture deshabilitado
+### 2. Sistema de Videos con AWS S3
+- **Videos pequeños (<100MB):** Almacenados localmente en `/app/backend/uploads`
+- **Videos grandes (>100MB):** Almacenados en AWS S3 bucket `nazca360-videos`
+- **Multipart Upload:** Soporte para archivos mayores a 5GB usando S3 Multipart Upload
+- **URLs Presignadas:** Videos de S3 se acceden mediante URLs temporales (1 hora de validez)
+- Streaming seguro con autenticación JWT
 
-### 3. Modelo Netflix (Paywall)
+### 3. Reproductor de Video 360° ✅ CORREGIDO
+- Componente Three.js para experiencia inmersiva 360°
+- Navegación con drag del mouse (horizontal y vertical)
+- Controles: Play/Pause, Seek, Fullscreen
+- Badge "360°" visible
+- Manejo robusto de errores transitorios de CORS
+- Compatible con videos grandes de S3 (probado con 5GB)
+
+### 4. Modelo Netflix (Paywall)
 - Solo usuarios con suscripción `premium` pueden hacer login
 - Excepción: administradores pueden acceder siempre
-- Se eliminaron las opciones de "demo" y "baja calidad"
+- Stripe para gestión de suscripciones
 
-### 4. Autenticación
+### 5. Autenticación
 - JWT con roles (`admin`, `user`)
 - Integración con Emergent Google Auth
 - Verificación de email
 
-### 5. Reservas VR
+### 6. Reservas VR
 - Sistema multi-cabina para experiencias VR
 - Selección de fecha y horario
 - Gestión de reservas por usuario
 
 ## Stack Técnico
-- **Frontend:** React, Tailwind CSS, Shadcn/UI
-- **Backend:** FastAPI, Python
+- **Frontend:** React, Tailwind CSS, Shadcn/UI, Three.js
+- **Backend:** FastAPI, Python, boto3
 - **Database:** MongoDB
+- **Storage:** AWS S3 (videos grandes)
 - **Pagos:** Stripe
 - **Auth:** JWT + Emergent Google Auth
 
 ## Archivos Clave
-- `/app/backend/server.py` - API principal con endpoints de streaming
-- `/app/frontend/src/pages/AdminPanel.jsx` - Panel de administración
+- `/app/frontend/src/components/Video360Player.jsx` - Reproductor 360° con Three.js
+- `/app/frontend/src/pages/VideoPlayer.jsx` - Página de video
 - `/app/frontend/src/pages/Gallery.jsx` - Galería de videos
-- `/app/frontend/src/pages/VideoPlayer.jsx` - Reproductor con protección anti-descarga
-- `/app/frontend/src/pages/Reservations.jsx` - Sistema de reservas
+- `/app/frontend/src/pages/AdminPanel.jsx` - Panel de administración
+- `/app/backend/server.py` - API con endpoints S3 y streaming
 
 ## Endpoints de Video
-- `GET /api/stream/{filename}` - Streaming de video con auth (soporta Range requests)
-- `GET /api/files/{filename}` - Solo para imágenes/thumbnails (videos bloqueados)
-- `POST /api/upload` - Subir videos (solo admin)
+- `GET /api/s3/presigned-view/{s3_key}` - URL temporal para ver video de S3
+- `POST /api/s3/presigned-url` - URL temporal para subir a S3 (<5GB)
+- `POST /api/s3/multipart/start` - Iniciar upload multipart (>5GB)
+- `GET /api/s3/multipart/presign-part` - URL para cada parte del multipart
+- `POST /api/s3/multipart/complete` - Completar upload multipart
+- `GET /api/stream/{filename}` - Streaming de video local con auth
 
 ## Credenciales de Prueba
 - **Superusuario:** `benavidesdenasca@gmail.com` / `Benavides02@`
+- **AWS S3 Bucket:** `nazca360-videos`
 
-## Estado Actual: ESTABLE
-- Login funcionando
-- Galería funcionando
-- VideoPlayer con streaming protegido
-- Panel Admin funcionando
-- Reservas funcionando
+## Estado Actual: ✅ ESTABLE
+- Login funcionando ✓
+- Galería funcionando ✓
+- **Reproductor 360° funcionando** ✓ (Corregido Enero 2026)
+- Panel Admin funcionando ✓
+- Upload de videos grandes a S3 funcionando ✓
+- Reservas funcionando ✓
 
-## Última actualización: Enero 2025
-- Implementado streaming seguro de videos
-- Bloqueado acceso directo a archivos MP4
-- Deshabilitadas opciones de descarga en el reproductor
+## Tareas Pendientes (P1-P2)
+1. **(P1)** Refactorizar manejo de errores API en frontend (usar `/app/frontend/src/utils/apiErrorHandler.js`)
+2. **(P1)** Integración AWS CloudFront para mejor rendimiento CDN
+3. **(P2)** Implementar streaming HLS/DASH para calidad adaptativa
+4. **(Futuro)** Integración DRM (Widevine) para máxima seguridad
+
+## Última actualización: 26 Enero 2026
+- ✅ Corregido reproductor de video 360° 
+- ✅ Videos grandes de S3 se reproducen correctamente
+- ✅ Navegación 360° con drag funcionando
+- ✅ Testing agent confirmó 100% de funcionalidad
