@@ -638,6 +638,8 @@ const VideoModal = ({ video, onClose, onSave }) => {
         setUploading(true);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 1 }));
         
+        const isLargeFile = file.size > 200 * 1024 * 1024; // > 200MB
+        
         toast.info(`Subiendo video (${file.size > 1024*1024*1024 ? fileSizeGB + 'GB' : fileSizeMB + 'MB'}) a Cloudflare Stream...`);
         
         // Step 1: Get upload URL from backend
@@ -656,47 +658,85 @@ const VideoModal = ({ video, onClose, onSave }) => {
         
         console.log('Got upload URL:', upload_url);
         console.log('Video ID:', video_id);
+        console.log('File size:', file.size, 'Large file:', isLargeFile);
         
         setUploadProgress(prev => ({ ...prev, [fieldName]: 2 }));
         
-        // Step 2: Upload using Basic method (POST with FormData)
-        await new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          const formData = new FormData();
-          formData.append('file', file);
+        if (isLargeFile) {
+          // Use TUS protocol for large files (chunked resumable upload)
+          const CHUNK_SIZE = 50 * 1024 * 1024; // 50MB chunks
+          let offset = 0;
           
-          xhr.upload.addEventListener('progress', (event) => {
-            if (event.lengthComputable) {
-              const percentage = Math.round((event.loaded / event.total) * 100);
-              const scaledProgress = Math.min(2 + Math.round(percentage * 0.97), 99);
-              setUploadProgress(prev => ({ ...prev, [fieldName]: scaledProgress }));
-            }
+          while (offset < file.size) {
+            const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
+            const isLastChunk = offset + chunk.size >= file.size;
+            
+            console.log(`Uploading chunk: offset=${offset}, size=${chunk.size}, isLast=${isLastChunk}`);
+            
+            await new Promise((resolve, reject) => {
+              const xhr = new XMLHttpRequest();
+              
+              xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300 || xhr.status === 204) {
+                  // Get the new offset from response header
+                  const newOffset = xhr.getResponseHeader('Upload-Offset');
+                  if (newOffset) {
+                    offset = parseInt(newOffset, 10);
+                  } else {
+                    offset += chunk.size;
+                  }
+                  
+                  const progress = Math.min(2 + Math.round((offset / file.size) * 97), 99);
+                  setUploadProgress(prev => ({ ...prev, [fieldName]: progress }));
+                  
+                  resolve();
+                } else {
+                  reject(new Error(`Chunk upload failed: ${xhr.status} - ${xhr.responseText}`));
+                }
+              });
+              
+              xhr.addEventListener('error', () => reject(new Error('Error de red al subir chunk')));
+              xhr.addEventListener('timeout', () => reject(new Error('Timeout al subir chunk')));
+              
+              xhr.open('PATCH', upload_url);
+              xhr.setRequestHeader('Tus-Resumable', '1.0.0');
+              xhr.setRequestHeader('Upload-Offset', offset.toString());
+              xhr.setRequestHeader('Content-Type', 'application/offset+octet-stream');
+              xhr.timeout = 300000; // 5 min per chunk
+              xhr.send(chunk);
+            });
+          }
+        } else {
+          // Use basic POST for smaller files
+          await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            xhr.upload.addEventListener('progress', (event) => {
+              if (event.lengthComputable) {
+                const percentage = Math.round((event.loaded / event.total) * 100);
+                const scaledProgress = Math.min(2 + Math.round(percentage * 0.97), 99);
+                setUploadProgress(prev => ({ ...prev, [fieldName]: scaledProgress }));
+              }
+            });
+            
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve();
+              } else {
+                reject(new Error(`Upload failed: ${xhr.status} - ${xhr.responseText}`));
+              }
+            });
+            
+            xhr.addEventListener('error', () => reject(new Error('Error de red al subir el video')));
+            xhr.addEventListener('timeout', () => reject(new Error('Tiempo de espera agotado')));
+            
+            xhr.open('POST', upload_url);
+            xhr.timeout = 0;
+            xhr.send(formData);
           });
-          
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              console.log('Upload complete, status:', xhr.status);
-              resolve();
-            } else {
-              console.error('Upload failed:', xhr.status, xhr.responseText);
-              reject(new Error(`Upload failed: ${xhr.status} - ${xhr.responseText || 'Unknown error'}`));
-            }
-          });
-          
-          xhr.addEventListener('error', (e) => {
-            console.error('XHR error:', e);
-            reject(new Error('Error de red al subir el video'));
-          });
-          
-          xhr.addEventListener('timeout', () => {
-            reject(new Error('Tiempo de espera agotado'));
-          });
-          
-          // Basic upload: POST with FormData
-          xhr.open('POST', upload_url);
-          xhr.timeout = 0; // No timeout for large files
-          xhr.send(formData);
-        });
+        }
         
         setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
         
