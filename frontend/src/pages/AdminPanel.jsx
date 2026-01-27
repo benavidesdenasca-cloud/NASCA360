@@ -659,7 +659,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
         
         setUploadProgress(prev => ({ ...prev, [fieldName]: 2 }));
         
-        // Step 2: Upload directly using fetch with progress tracking via XHR
+        // Step 2: Upload using TUS protocol with PATCH request
         await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           
@@ -672,7 +672,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
           });
           
           xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
+            if (xhr.status >= 200 && xhr.status < 300 || xhr.status === 204) {
               console.log('Upload complete, status:', xhr.status);
               resolve();
             } else {
@@ -690,12 +690,11 @@ const VideoModal = ({ video, onClose, onSave }) => {
             reject(new Error('Tiempo de espera agotado'));
           });
           
-          // Cloudflare Stream expects TUS protocol headers
-          xhr.open('POST', upload_url);
+          // TUS protocol: Use PATCH to upload data
+          xhr.open('PATCH', upload_url);
           xhr.setRequestHeader('Tus-Resumable', '1.0.0');
-          xhr.setRequestHeader('Upload-Length', file.size.toString());
-          xhr.setRequestHeader('Content-Type', 'application/offset+octet-stream');
           xhr.setRequestHeader('Upload-Offset', '0');
+          xhr.setRequestHeader('Content-Type', 'application/offset+octet-stream');
           xhr.timeout = 0; // No timeout for large files
           xhr.send(file);
         });
