@@ -193,7 +193,49 @@ const VideoPlayer = () => {
 
           {/* Video Player 360 */}
           <div data-testid="video-player-container" className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-8">
-            {streamUrl ? (
+            {videoProcessing ? (
+              /* Video still processing in Cloudflare */
+              <div className="flex items-center justify-center h-[500px] bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+                <div className="text-center p-8">
+                  <div className="w-20 h-20 mx-auto mb-6 relative">
+                    <div className="absolute inset-0 border-4 border-orange-500/30 rounded-full"></div>
+                    <div 
+                      className="absolute inset-0 border-4 border-transparent border-t-orange-500 rounded-full animate-spin"
+                    ></div>
+                    <div className="absolute inset-4 flex items-center justify-center">
+                      <span className="text-sm font-bold text-orange-400">{videoProcessing.progress || '0'}%</span>
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Procesando Video</h3>
+                  <p className="text-gray-400 mb-4">{videoProcessing.message}</p>
+                  <p className="text-sm text-gray-500">
+                    Cloudflare está optimizando tu video para streaming.<br/>
+                    Esto puede tomar unos minutos para videos grandes.
+                  </p>
+                  <Button 
+                    onClick={() => window.location.reload()} 
+                    variant="outline" 
+                    className="mt-6 border-orange-500 text-orange-400 hover:bg-orange-500/10"
+                  >
+                    Actualizar Estado
+                  </Button>
+                </div>
+              </div>
+            ) : cloudflareEmbed ? (
+              /* Use Cloudflare iframe for playback (avoids CORS issues) */
+              <div className="relative" style={{ height: '500px' }}>
+                <iframe
+                  src={`${cloudflareEmbed.embedUrl}?preload=auto&primaryColor=%23f59e0b`}
+                  style={{ border: 'none', width: '100%', height: '100%' }}
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                  allowFullScreen
+                  title={video.title}
+                ></iframe>
+                <div className="absolute top-4 right-4 bg-amber-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                  360° Cloudflare Stream
+                </div>
+              </div>
+            ) : streamUrl ? (
               <Video360Player
                 videoUrl={streamUrl}
                 posterUrl={video.thumbnail_url?.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : (video.thumbnail_url?.startsWith('s3://') ? null : video.thumbnail_url)}
