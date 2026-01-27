@@ -642,72 +642,69 @@ const VideoModal = ({ video, onClose, onSave }) => {
         
         toast.info(`Subiendo video (${file.size > 1024*1024*1024 ? fileSizeGB + 'GB' : fileSizeMB + 'MB'}) a Cloudflare Stream...`);
         
-        // Step 1: Get upload URL from backend
-        const uploadUrlResponse = await axios.post(`${API}/stream/upload-url`, null, {
-          params: {
-            max_duration_seconds: 7200 // 2 hours max
-          },
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        const { upload_url, video_id } = uploadUrlResponse.data;
-        
-        if (!upload_url) {
-          throw new Error('No se pudo obtener URL de subida');
-        }
-        
-        console.log('Got upload URL:', upload_url);
-        console.log('Video ID:', video_id);
-        console.log('File size:', file.size, 'Large file:', isLargeFile);
-        
-        setUploadProgress(prev => ({ ...prev, [fieldName]: 2 }));
-        
         if (isLargeFile) {
-          // Use TUS protocol for large files (chunked resumable upload)
-          const CHUNK_SIZE = 50 * 1024 * 1024; // 50MB chunks
-          let offset = 0;
+          // Use TUS protocol via backend endpoint for large files
+          const { Upload } = await import('tus-js-client');
           
-          while (offset < file.size) {
-            const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
-            const isLastChunk = offset + chunk.size >= file.size;
-            
-            console.log(`Uploading chunk: offset=${offset}, size=${chunk.size}, isLast=${isLastChunk}`);
-            
-            await new Promise((resolve, reject) => {
-              const xhr = new XMLHttpRequest();
-              
-              xhr.addEventListener('load', () => {
-                if (xhr.status >= 200 && xhr.status < 300 || xhr.status === 204) {
-                  // Get the new offset from response header
-                  const newOffset = xhr.getResponseHeader('Upload-Offset');
-                  if (newOffset) {
-                    offset = parseInt(newOffset, 10);
-                  } else {
-                    offset += chunk.size;
-                  }
-                  
-                  const progress = Math.min(2 + Math.round((offset / file.size) * 97), 99);
-                  setUploadProgress(prev => ({ ...prev, [fieldName]: progress }));
-                  
-                  resolve();
-                } else {
-                  reject(new Error(`Chunk upload failed: ${xhr.status} - ${xhr.responseText}`));
+          let videoId = null;
+          
+          await new Promise((resolve, reject) => {
+            const upload = new Upload(file, {
+              endpoint: `${API}/stream/tus`,
+              headers: {
+                'Authorization': `Bearer ${token}`
+              },
+              retryDelays: [0, 3000, 5000, 10000, 20000],
+              chunkSize: 50 * 1024 * 1024, // 50MB chunks
+              metadata: {
+                filename: file.name,
+                filetype: file.type || 'video/mp4'
+              },
+              onError: (error) => {
+                console.error('TUS upload error:', error);
+                reject(error);
+              },
+              onProgress: (bytesUploaded, bytesTotal) => {
+                const percentage = Math.round((bytesUploaded / bytesTotal) * 100);
+                const scaledProgress = Math.min(2 + Math.round(percentage * 0.97), 99);
+                setUploadProgress(prev => ({ ...prev, [fieldName]: scaledProgress }));
+              },
+              onSuccess: () => {
+                console.log('TUS upload complete');
+                // Extract video ID from upload URL
+                const url = upload.url;
+                if (url) {
+                  const parts = url.split('/');
+                  videoId = parts[parts.length - 1];
                 }
-              });
-              
-              xhr.addEventListener('error', () => reject(new Error('Error de red al subir chunk')));
-              xhr.addEventListener('timeout', () => reject(new Error('Timeout al subir chunk')));
-              
-              xhr.open('PATCH', upload_url);
-              xhr.setRequestHeader('Tus-Resumable', '1.0.0');
-              xhr.setRequestHeader('Upload-Offset', offset.toString());
-              xhr.setRequestHeader('Content-Type', 'application/offset+octet-stream');
-              xhr.timeout = 300000; // 5 min per chunk
-              xhr.send(chunk);
+                resolve();
+              },
+              onAfterResponse: (req, res) => {
+                // Get video ID from response header
+                const vid = res.getHeader('X-Video-Id');
+                if (vid) videoId = vid;
+              }
             });
+            
+            upload.start();
+          });
+          
+          if (!videoId) {
+            throw new Error('No se pudo obtener el ID del video');
           }
+          
+          setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
+          setFormData(prev => ({ ...prev, url: `stream://${videoId}` }));
+          
         } else {
           // Use basic POST for smaller files
+          const uploadUrlResponse = await axios.post(`${API}/stream/upload-url`, null, {
+            params: { max_duration_seconds: 7200 },
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          const { upload_url, video_id } = uploadUrlResponse.data;
+          
           await new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             const formData = new FormData();
@@ -716,37 +713,26 @@ const VideoModal = ({ video, onClose, onSave }) => {
             xhr.upload.addEventListener('progress', (event) => {
               if (event.lengthComputable) {
                 const percentage = Math.round((event.loaded / event.total) * 100);
-                const scaledProgress = Math.min(2 + Math.round(percentage * 0.97), 99);
-                setUploadProgress(prev => ({ ...prev, [fieldName]: scaledProgress }));
+                setUploadProgress(prev => ({ ...prev, [fieldName]: Math.min(2 + percentage * 0.97, 99) }));
               }
             });
             
             xhr.addEventListener('load', () => {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                resolve();
-              } else {
-                reject(new Error(`Upload failed: ${xhr.status} - ${xhr.responseText}`));
-              }
+              if (xhr.status >= 200 && xhr.status < 300) resolve();
+              else reject(new Error(`Upload failed: ${xhr.status}`));
             });
             
-            xhr.addEventListener('error', () => reject(new Error('Error de red al subir el video')));
-            xhr.addEventListener('timeout', () => reject(new Error('Tiempo de espera agotado')));
-            
+            xhr.addEventListener('error', () => reject(new Error('Error de red')));
             xhr.open('POST', upload_url);
             xhr.timeout = 0;
             xhr.send(formData);
           });
+          
+          setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
+          setFormData(prev => ({ ...prev, url: `stream://${video_id}` }));
         }
         
-        setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
-        
-        // Store as stream:// URL with video ID
-        setFormData(prev => ({
-          ...prev,
-          url: `stream://${video_id}`
-        }));
-        
-        toast.success(`¡Video subido a Cloudflare Stream! Se está procesando...`);
+        toast.success(`¡Video subido a Cloudflare Stream! Procesando...`);
         setUploading(false);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
         
