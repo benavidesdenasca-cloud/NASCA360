@@ -18,6 +18,8 @@ const VideoPlayer = () => {
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [streamUrl, setStreamUrl] = useState(null);
+  const [cloudflareEmbed, setCloudflareEmbed] = useState(null);
+  const [videoProcessing, setVideoProcessing] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
