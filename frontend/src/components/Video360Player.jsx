@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
+import Hls from 'hls.js';
 
 const QUALITY_SETTINGS = {
   auto: { label: 'Auto', pixelRatio: -1, segments: 60 },
@@ -18,6 +19,7 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const textureRef = useRef(null);
   const cleanupFnRef = useRef(null);
   const sphereRef = useRef(null);
+  const hlsRef = useRef(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -28,6 +30,7 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const [isReady, setIsReady] = useState(false);
   const [quality, setQuality] = useState('auto');
   const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [hlsLevels, setHlsLevels] = useState([]);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   
