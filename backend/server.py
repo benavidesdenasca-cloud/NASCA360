@@ -81,6 +81,10 @@ if R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY and R2_ENDPOINT:
         config=Config(signature_version='s3v4')
     )
 
+# Cloudflare Stream Configuration
+CF_ACCOUNT_ID = os.environ.get('CF_ACCOUNT_ID')
+CF_STREAM_TOKEN = os.environ.get('CF_STREAM_TOKEN')
+
 oauth = OAuth()
 oauth.register(
     name='google',
