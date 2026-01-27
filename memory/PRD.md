@@ -90,9 +90,10 @@ Plataforma de turismo virtual premium para explorar las Líneas de Nasca y Palpa
 4. **(Futuro)** Integración DRM (Widevine) para máxima seguridad
 
 ## Última actualización: 27 Enero 2026
+- ✅ Integración con Cloudflare R2 (CDN) para streaming más rápido
+- ✅ Panel Admin con opción de elegir almacenamiento (R2 vs S3)
 - ✅ Agregado selector de calidad de video (Auto, 4K, 1080p, 720p)
 - ✅ Agregado control de volumen con slider expandible
 - ✅ Corregido reproductor de video 360° 
 - ✅ Videos grandes de S3 se reproducen correctamente
 - ✅ Navegación 360° con drag funcionando
-- ✅ Testing agent confirmó 100% de funcionalidad
