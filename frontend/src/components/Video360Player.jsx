@@ -258,9 +258,51 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
       // The video is working even if some requests fail
     };
 
-    // Set source
+    // Set source - check if HLS stream
     console.log('Setting video source:', videoUrl.substring(0, 80) + '...');
-    video.src = videoUrl;
+    
+    const isHLS = videoUrl.includes('.m3u8') || videoUrl.includes('cloudflarestream.com');
+    
+    if (isHLS && Hls.isSupported()) {
+      // Use HLS.js for adaptive streaming
+      console.log('Using HLS.js for adaptive streaming');
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        backBufferLength: 90
+      });
+      
+      hls.loadSource(videoUrl);
+      hls.attachMedia(video);
+      
+      hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+        console.log('HLS manifest parsed, levels:', data.levels.length);
+        setHlsLevels(data.levels.map((level, index) => ({
+          index,
+          height: level.height,
+          bitrate: level.bitrate
+        })));
+      });
+      
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          console.error('HLS fatal error:', data);
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            hls.startLoad();
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            hls.recoverMediaError();
+          }
+        }
+      });
+      
+      hlsRef.current = hls;
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS support (Safari)
+      video.src = videoUrl;
+    } else {
+      // Regular video source
+      video.src = videoUrl;
+    }
 
     // Timeout for initial load - show error only if nothing happens in 30 seconds
     const loadTimeout = setTimeout(() => {
@@ -274,6 +316,11 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     return () => {
       mountedRef.current = false;
       clearTimeout(loadTimeout);
+      
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
       
       if (frameIdRef.current) {
         cancelAnimationFrame(frameIdRef.current);
