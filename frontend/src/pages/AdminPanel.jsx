@@ -794,40 +794,9 @@ const VideoModal = ({ video, onClose, onSave }) => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Video Original (Alta Calidad)*
             </label>
-            
-            {/* Storage option toggle */}
-            <div className="flex items-center gap-4 mb-3 p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600">Subir a:</span>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="storage"
-                  checked={storageType === 'stream'}
-                  onChange={() => setStorageType('stream')}
-                  className="text-amber-600 focus:ring-amber-500"
-                />
-                <span className="text-sm font-medium text-orange-700">
-                  🎬 Cloudflare Stream ⭐
-                </span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="storage"
-                  checked={storageType === 's3'}
-                  onChange={() => setStorageType('s3')}
-                  className="text-amber-600 focus:ring-amber-500"
-                />
-                <span className="text-sm text-gray-600">
-                  AWS S3
-                </span>
-              </label>
-            </div>
-            {storageType === 'stream' && (
-              <p className="text-xs text-green-600 mb-2">
-                ✓ Transcoding automático • CDN global • Streaming adaptativo HLS
-              </p>
-            )}
+            <p className="text-xs text-green-600 mb-2">
+              🎬 Cloudflare Stream: Transcoding automático • CDN global • Streaming adaptativo HLS
+            </p>
             
             <div className="space-y-2">
               <input
@@ -841,18 +810,18 @@ const VideoModal = ({ video, onClose, onSave }) => {
                 <div className="space-y-1">
                   <div className="w-full bg-gray-200 rounded-full h-3">
                     <div 
-                      className={`h-3 rounded-full transition-all duration-300 ${storageType === 'stream' ? 'bg-orange-500' : 'bg-amber-600'}`}
+                      className="h-3 rounded-full transition-all duration-300 bg-orange-500"
                       style={{ width: `${uploadProgress.video}%` }}
                     ></div>
                   </div>
-                  <p className={`text-sm font-medium ${storageType === 'stream' ? 'text-orange-600' : 'text-amber-600'}`}>
-                    {storageType === 'stream' ? '🎬 Subiendo a Cloudflare Stream...' : 'Subiendo a S3...'} {uploadProgress.video}%
+                  <p className="text-sm font-medium text-orange-600">
+                    🎬 Subiendo a Cloudflare Stream... {uploadProgress.video}%
                   </p>
                 </div>
               )}
               {formData.url && !uploading && (
                 <p className="text-sm text-green-600 font-medium">
-                  ✓ Video subido: {formData.url.startsWith('stream://') ? '🎬 Cloudflare Stream' : formData.url.startsWith('r2://') ? '☁️ R2' : 'AWS S3'}
+                  ✓ Video subido: {formData.url.startsWith('stream://') ? '🎬 Cloudflare Stream' : 'Local'}
                 </p>
               )}
             </div>
