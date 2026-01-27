@@ -336,6 +336,70 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     video.currentTime = pct * duration;
   };
 
+  // Quality change
+  const handleQualityChange = (newQuality) => {
+    setQuality(newQuality);
+    setShowQualityMenu(false);
+    
+    const settings = QUALITY_SETTINGS[newQuality];
+    
+    // Update renderer pixel ratio
+    if (rendererRef.current) {
+      const pixelRatio = settings.pixelRatio === -1 
+        ? Math.min(window.devicePixelRatio, 2) 
+        : settings.pixelRatio;
+      rendererRef.current.setPixelRatio(pixelRatio);
+    }
+    
+    // Update sphere geometry for quality
+    if (sphereRef.current && sceneRef.current) {
+      const oldSphere = sphereRef.current;
+      const texture = textureRef.current;
+      
+      // Create new geometry with different segment count
+      const newGeometry = new THREE.SphereGeometry(500, settings.segments, Math.round(settings.segments * 0.67));
+      newGeometry.scale(-1, 1, 1);
+      
+      const newMaterial = new THREE.MeshBasicMaterial({ 
+        map: texture,
+        side: THREE.FrontSide
+      });
+      
+      const newSphere = new THREE.Mesh(newGeometry, newMaterial);
+      
+      sceneRef.current.remove(oldSphere);
+      sceneRef.current.add(newSphere);
+      sphereRef.current = newSphere;
+      
+      // Dispose old resources
+      oldSphere.geometry.dispose();
+      oldSphere.material.dispose();
+    }
+  };
+
+  // Volume control
+  const handleVolumeChange = (e) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (videoRef.current) {
+      videoRef.current.volume = newVolume;
+      videoRef.current.muted = newVolume === 0;
+      setIsMuted(newVolume === 0);
+    }
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      const newMuted = !isMuted;
+      videoRef.current.muted = newMuted;
+      setIsMuted(newMuted);
+      if (!newMuted && volume === 0) {
+        setVolume(0.5);
+        videoRef.current.volume = 0.5;
+      }
+    }
+  };
+
   // Format time
   const formatTime = (sec) => {
     if (!sec || isNaN(sec)) return '0:00';
