@@ -625,6 +625,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
     video: 0,
     thumbnail: 0
   });
+  const [useR2, setUseR2] = useState(true); // Use R2 (Cloudflare CDN) by default
 
   const handleFileUpload = async (file, fieldName) => {
     if (!file) return;
@@ -632,6 +633,82 @@ const VideoModal = ({ video, onClose, onSave }) => {
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
     const fileSizeGB = (file.size / (1024 * 1024 * 1024)).toFixed(2);
     const FIVE_GB = 5 * 1024 * 1024 * 1024;
+    const ONE_HUNDRED_MB = 100 * 1024 * 1024;
+    
+    // For video files, use R2 (Cloudflare CDN) for faster streaming
+    if (fieldName === 'video' && useR2 && file.size > ONE_HUNDRED_MB) {
+      try {
+        setUploading(true);
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 1 }));
+        
+        if (file.size > FIVE_GB) {
+          toast.info(`Subiendo video grande (${fileSizeGB}GB) a CDN Cloudflare...`);
+        } else {
+          toast.info(`Subiendo video (${fileSizeMB}MB) a CDN Cloudflare para streaming rápido...`);
+        }
+        
+        // Get presigned URL for R2 upload
+        const presignedResponse = await axios.post(`${API}/r2/presigned-upload`, null, {
+          params: {
+            filename: file.name,
+            content_type: file.type || 'video/mp4'
+          },
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const { presigned_url, key: r2_key } = presignedResponse.data;
+        
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 5 }));
+        
+        // Upload directly to R2
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+              const percentCompleted = Math.round((event.loaded * 100) / event.total);
+              const scaledProgress = Math.min(5 + Math.round(percentCompleted * 0.94), 99);
+              setUploadProgress(prev => ({ ...prev, [fieldName]: scaledProgress }));
+            }
+          });
+          
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          });
+          
+          xhr.addEventListener('error', () => reject(new Error('Network error')));
+          xhr.addEventListener('timeout', () => reject(new Error('Upload timeout')));
+          
+          xhr.open('PUT', presigned_url);
+          xhr.timeout = 0; // No timeout for large files
+          xhr.send(file);
+        });
+        
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
+        
+        // Store as r2:// URL
+        setFormData(prev => ({
+          ...prev,
+          url: `r2://nasca360video/${r2_key}`
+        }));
+        
+        toast.success(`Video subido a CDN Cloudflare (${fileSizeMB}MB) - ¡Streaming más rápido!`);
+        setUploading(false);
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
+        
+      } catch (error) {
+        console.error('R2 upload error:', error);
+        toast.error(`Error subiendo a R2: ${error.message}. Intentando con S3...`);
+        setUseR2(false); // Fallback to S3
+        // Retry with S3
+        handleFileUpload(file, fieldName);
+      }
+      return;
+    }
     
     // For files > 5GB, use S3 Multipart Upload
     if (file.size > FIVE_GB) {
