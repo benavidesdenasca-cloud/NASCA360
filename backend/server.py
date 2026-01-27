@@ -1871,6 +1871,78 @@ async def stream_tus_create(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Proxy upload endpoint - uploads file through backend to avoid CORS
+@api_router.post("/stream/proxy-upload")
+async def stream_proxy_upload(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload video to Cloudflare Stream through backend proxy (avoids CORS)"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores pueden subir videos")
+    
+    if not CF_ACCOUNT_ID or not CF_STREAM_TOKEN:
+        raise HTTPException(status_code=500, detail="Cloudflare Stream no está configurado")
+    
+    try:
+        import httpx
+        
+        # Step 1: Create direct upload URL
+        async with httpx.AsyncClient() as client:
+            create_response = await client.post(
+                f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/stream/direct_upload",
+                headers={
+                    "Authorization": f"Bearer {CF_STREAM_TOKEN}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "maxDurationSeconds": 7200,
+                    "creator": current_user.email
+                },
+                timeout=30
+            )
+            
+            data = create_response.json()
+            if not data.get("success"):
+                raise HTTPException(status_code=500, detail="Error creating upload")
+            
+            result = data.get("result", {})
+            upload_url = result.get("uploadURL")
+            video_id = result.get("uid")
+        
+        logger.info(f"Created Cloudflare upload: {video_id}")
+        
+        # Step 2: Read file content and upload to Cloudflare
+        file_content = await file.read()
+        
+        async with httpx.AsyncClient(timeout=httpx.Timeout(600.0, connect=60.0)) as client:
+            # Upload using multipart form
+            files = {'file': (file.filename, file_content, file.content_type or 'video/mp4')}
+            
+            upload_response = await client.post(
+                upload_url,
+                files=files
+            )
+            
+            if upload_response.status_code >= 400:
+                logger.error(f"Upload failed: {upload_response.status_code} - {upload_response.text}")
+                raise HTTPException(status_code=500, detail=f"Error uploading to Cloudflare: {upload_response.status_code}")
+        
+        logger.info(f"Successfully uploaded video {video_id}")
+        
+        return {
+            "success": True,
+            "video_id": video_id,
+            "message": "Video subido correctamente. Cloudflare lo está procesando."
+        }
+        
+    except httpx.HTTPError as e:
+        logger.error(f"HTTP error during upload: {e}")
+        raise HTTPException(status_code=500, detail=f"Error de red: {str(e)}")
+    except Exception as e:
+        logger.error(f"Upload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/stream/video/{video_id}")
 async def get_stream_video_info(
     video_id: str,
