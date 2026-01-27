@@ -36,15 +36,29 @@ const VideoPlayer = () => {
         const videoUrl = response.data.url;
         
         // Handle different video URL types
-        if (videoUrl && videoUrl.startsWith('r2://')) {
-          // R2 video (Cloudflare CDN - faster!)
+        if (videoUrl && videoUrl.startsWith('stream://')) {
+          // Cloudflare Stream video (best quality - HLS adaptive streaming)
+          const videoId = videoUrl.replace('stream://', '');
+          try {
+            const streamResponse = await axios.get(
+              `${API}/stream/embed/${videoId}`,
+              { headers }
+            );
+            console.log('Cloudflare Stream HLS URL:', streamResponse.data.hls_url);
+            setStreamUrl(streamResponse.data.hls_url);
+          } catch (err) {
+            console.error('Error getting Cloudflare Stream URL:', err);
+            toast.error('Error al cargar el video desde Cloudflare Stream');
+          }
+        } else if (videoUrl && videoUrl.startsWith('r2://')) {
+          // R2 video (Cloudflare CDN)
           const r2Key = videoUrl.replace('r2://', '').replace(/^[^/]+\//, '');
           try {
             const presignedResponse = await axios.get(
               `${API}/r2/presigned-view/${r2Key}`,
               { headers }
             );
-            console.log('R2 CDN URL obtained (faster!):', presignedResponse.data.presigned_url.substring(0, 100));
+            console.log('R2 CDN URL obtained:', presignedResponse.data.presigned_url.substring(0, 100));
             setStreamUrl(presignedResponse.data.presigned_url);
           } catch (err) {
             console.error('Error getting R2 URL:', err);
