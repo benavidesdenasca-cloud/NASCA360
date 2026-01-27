@@ -10,12 +10,18 @@ Plataforma de turismo virtual premium para explorar las Líneas de Nasca y Palpa
 - Panel de admin con gestión de usuarios (ver, bloquear/desbloquear)
 - Gestión de videos (CRUD con carga de MP4)
 
-### 2. Sistema de Videos con AWS S3
+### 2. Sistema de Videos con Almacenamiento Híbrido
 - **Videos pequeños (<100MB):** Almacenados localmente en `/app/backend/uploads`
-- **Videos grandes (>100MB):** Almacenados en AWS S3 bucket `nazca360-videos`
-- **Multipart Upload:** Soporte para archivos mayores a 5GB usando S3 Multipart Upload
-- **URLs Presignadas:** Videos de S3 se acceden mediante URLs temporales (1 hora de validez)
+- **Videos en AWS S3:** Bucket `nazca360-videos` para almacenamiento original
+- **Videos en Cloudflare R2 (CDN) ⭐ NUEVO:** Bucket `nasca360video` - streaming más rápido
+- **Multipart Upload:** Soporte para archivos mayores a 5GB
+- **URLs Presignadas:** Videos de S3/R2 se acceden mediante URLs temporales
 - Streaming seguro con autenticación JWT
+
+### Admin Panel - Opciones de Almacenamiento
+- Al subir video, elegir entre:
+  - ☁️ **Cloudflare CDN (Rápido)** - R2 con CDN global
+  - **AWS S3 (Original)** - almacenamiento estándar
 
 ### 3. Reproductor de Video 360° ✅ CORREGIDO
 - Componente Three.js para experiencia inmersiva 360°
