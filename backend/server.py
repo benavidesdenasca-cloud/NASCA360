@@ -1749,6 +1749,151 @@ async def get_r2_presigned_view_url(
         logger.error(f"R2 error: {e}")
         raise HTTPException(status_code=500, detail=f"Error generando URL: {str(e)}")
 
+# ==================== CLOUDFLARE STREAM ROUTES (VIDEO CDN) ====================
+
+@api_router.get("/stream/status")
+async def get_cloudflare_stream_status():
+    """Check Cloudflare Stream connection status"""
+    if not CF_ACCOUNT_ID or not CF_STREAM_TOKEN:
+        return {"status": "not_configured", "message": "Cloudflare Stream no está configurado"}
+    
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/stream",
+                headers={"Authorization": f"Bearer {CF_STREAM_TOKEN}"},
+                timeout=10
+            )
+            if response.status_code == 200:
+                return {"status": "connected", "message": "Cloudflare Stream conectado"}
+            else:
+                return {"status": "error", "message": f"Error: {response.status_code}"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@api_router.post("/stream/upload-url")
+async def get_stream_upload_url(
+    max_duration_seconds: int = 3600,
+    current_user: User = Depends(get_current_user)
+):
+    """Get a direct upload URL for Cloudflare Stream (TUS protocol)"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores pueden subir videos")
+    
+    if not CF_ACCOUNT_ID or not CF_STREAM_TOKEN:
+        raise HTTPException(status_code=500, detail="Cloudflare Stream no está configurado")
+    
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/stream/direct_upload",
+                headers={
+                    "Authorization": f"Bearer {CF_STREAM_TOKEN}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "maxDurationSeconds": max_duration_seconds,
+                    "creator": current_user.email,
+                    "meta": {
+                        "uploaded_by": current_user.email,
+                        "platform": "nazca360"
+                    }
+                },
+                timeout=30
+            )
+            
+            data = response.json()
+            
+            if not data.get("success"):
+                error_msg = data.get("errors", [{"message": "Unknown error"}])[0].get("message", "Error")
+                raise HTTPException(status_code=500, detail=f"Cloudflare error: {error_msg}")
+            
+            result = data.get("result", {})
+            
+            return {
+                "upload_url": result.get("uploadURL"),
+                "video_id": result.get("uid"),
+                "watermark": result.get("watermark")
+            }
+            
+    except httpx.HTTPError as e:
+        logger.error(f"Cloudflare Stream error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error conectando con Cloudflare: {str(e)}")
+
+@api_router.get("/stream/video/{video_id}")
+async def get_stream_video_info(
+    video_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get video info and playback URLs from Cloudflare Stream"""
+    if not CF_ACCOUNT_ID or not CF_STREAM_TOKEN:
+        raise HTTPException(status_code=500, detail="Cloudflare Stream no está configurado")
+    
+    # NETFLIX MODEL: Only allow premium users and admins
+    if current_user.role != 'admin' and current_user.subscription_plan == 'basic':
+        raise HTTPException(
+            status_code=403, 
+            detail="Necesitas una suscripción activa para ver contenido"
+        )
+    
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/stream/{video_id}",
+                headers={"Authorization": f"Bearer {CF_STREAM_TOKEN}"},
+                timeout=10
+            )
+            
+            data = response.json()
+            
+            if not data.get("success"):
+                raise HTTPException(status_code=404, detail="Video no encontrado en Cloudflare Stream")
+            
+            result = data.get("result", {})
+            playback = result.get("playback", {})
+            
+            return {
+                "video_id": result.get("uid"),
+                "status": result.get("status", {}).get("state", "unknown"),
+                "duration": result.get("duration"),
+                "thumbnail": result.get("thumbnail"),
+                "hls_url": playback.get("hls"),
+                "dash_url": playback.get("dash"),
+                "preview_url": result.get("preview"),
+                "ready_to_stream": result.get("readyToStream", False)
+            }
+            
+    except httpx.HTTPError as e:
+        logger.error(f"Cloudflare Stream error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+@api_router.get("/stream/embed/{video_id}")
+async def get_stream_embed_url(
+    video_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get embed iframe URL for Cloudflare Stream video"""
+    # NETFLIX MODEL: Only allow premium users and admins
+    if current_user.role != 'admin' and current_user.subscription_plan == 'basic':
+        raise HTTPException(
+            status_code=403, 
+            detail="Necesitas una suscripción activa para ver contenido"
+        )
+    
+    # Generate signed token for secure playback (optional - requires signing key)
+    # For now, return the public embed URL
+    embed_url = f"https://customer-{CF_ACCOUNT_ID[:8]}.cloudflarestream.com/{video_id}/iframe"
+    hls_url = f"https://customer-{CF_ACCOUNT_ID[:8]}.cloudflarestream.com/{video_id}/manifest/video.m3u8"
+    
+    return {
+        "embed_url": embed_url,
+        "hls_url": hls_url,
+        "video_id": video_id
+    }
+
 # ==================== FILE UPLOAD ROUTES (LOCAL) ====================
 
 # Store for tracking chunked uploads
