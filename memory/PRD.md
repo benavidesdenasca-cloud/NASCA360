@@ -21,6 +21,8 @@ Plataforma de turismo virtual premium para explorar las Líneas de Nasca y Palpa
 - Componente Three.js para experiencia inmersiva 360°
 - Navegación con drag del mouse (horizontal y vertical)
 - Controles: Play/Pause, Seek, Fullscreen
+- **Control de calidad:** Auto, Alta (4K), Media (1080p), Baja (720p)
+- **Control de volumen:** Slider expandible con mute/unmute
 - Badge "360°" visible
 - Manejo robusto de errores transitorios de CORS
 - Compatible con videos grandes de S3 (probado con 5GB)
