@@ -52,6 +52,13 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
 S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'nazca360-videos')
 
+# Cloudflare R2 Configuration (CDN)
+R2_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID')
+R2_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY')
+R2_ENDPOINT = os.environ.get('R2_ENDPOINT')
+R2_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', 'nasca360video')
+R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID')
+
 # Initialize S3 client
 s3_client = None
 if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
@@ -60,6 +67,17 @@ if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
         aws_access_key_id=AWS_ACCESS_KEY_ID,
         aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
         region_name=AWS_REGION,
+        config=Config(signature_version='s3v4')
+    )
+
+# Initialize R2 client (Cloudflare - S3 compatible)
+r2_client = None
+if R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY and R2_ENDPOINT:
+    r2_client = boto3.client(
+        's3',
+        aws_access_key_id=R2_ACCESS_KEY_ID,
+        aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+        endpoint_url=R2_ENDPOINT,
         config=Config(signature_version='s3v4')
     )
 
