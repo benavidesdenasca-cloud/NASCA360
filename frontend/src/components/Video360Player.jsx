@@ -84,6 +84,7 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     
     const sphere = new THREE.Mesh(geometry, material);
     scene.add(sphere);
+    sphereRef.current = sphere;
 
     // Render loop
     const render = () => {
