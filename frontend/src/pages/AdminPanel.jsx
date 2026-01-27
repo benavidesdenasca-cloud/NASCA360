@@ -625,23 +625,20 @@ const VideoModal = ({ video, onClose, onSave }) => {
     video: 0,
     thumbnail: 0
   });
-  const [storageType, setStorageType] = useState('stream'); // 'stream' = Cloudflare Stream, 's3' = AWS S3
 
   const handleFileUpload = async (file, fieldName) => {
     if (!file) return;
     
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
     const fileSizeGB = (file.size / (1024 * 1024 * 1024)).toFixed(2);
-    const FIVE_GB = 5 * 1024 * 1024 * 1024;
-    const ONE_HUNDRED_MB = 100 * 1024 * 1024;
     
-    // For video files, use Cloudflare Stream (best option - automatic transcoding + CDN)
-    if (fieldName === 'video' && storageType === 'stream') {
+    // For video files, use Cloudflare Stream
+    if (fieldName === 'video') {
       try {
         setUploading(true);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 1 }));
         
-        toast.info(`Subiendo video (${file.size > FIVE_GB ? fileSizeGB + 'GB' : fileSizeMB + 'MB'}) a Cloudflare Stream...`);
+        toast.info(`Subiendo video (${file.size > 1024*1024*1024 ? fileSizeGB + 'GB' : fileSizeMB + 'MB'}) a Cloudflare Stream...`);
         
         // Step 1: Get upload URL from backend
         const uploadUrlResponse = await axios.post(`${API}/stream/upload-url`, null, {
@@ -657,20 +654,20 @@ const VideoModal = ({ video, onClose, onSave }) => {
           throw new Error('No se pudo obtener URL de subida');
         }
         
+        console.log('Got upload URL:', upload_url);
+        console.log('Video ID:', video_id);
+        
         setUploadProgress(prev => ({ ...prev, [fieldName]: 5 }));
         
-        // Step 2: Upload using TUS protocol
+        // Step 2: Upload using TUS protocol with correct configuration
         const { Upload } = await import('tus-js-client');
         
         await new Promise((resolve, reject) => {
           const upload = new Upload(file, {
-            endpoint: upload_url,
+            uploadUrl: upload_url, // Use uploadUrl instead of endpoint for direct upload
             retryDelays: [0, 3000, 5000, 10000, 20000],
             chunkSize: 50 * 1024 * 1024, // 50MB chunks
-            metadata: {
-              filename: file.name,
-              filetype: file.type || 'video/mp4'
-            },
+            removeFingerprintOnSuccess: true,
             onError: (error) => {
               console.error('TUS upload error:', error);
               reject(error);
@@ -697,20 +694,20 @@ const VideoModal = ({ video, onClose, onSave }) => {
           url: `stream://${video_id}`
         }));
         
-        toast.success(`¡Video subido a Cloudflare Stream! Se está procesando para streaming optimizado.`);
+        toast.success(`¡Video subido a Cloudflare Stream! Se está procesando...`);
         setUploading(false);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
         
       } catch (error) {
         console.error('Cloudflare Stream upload error:', error);
-        toast.error(`Error: ${error.message}. Puedes intentar con S3.`);
+        toast.error(`Error: ${error.message || 'Error al subir video'}`);
         setUploading(false);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
       }
       return;
     }
     
-    // For files > 5GB, use S3 Multipart Upload
+    // For thumbnails and other files - upload to local server
     if (file.size > FIVE_GB) {
       try {
         setUploading(true);
