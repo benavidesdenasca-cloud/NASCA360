@@ -632,7 +632,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
     const fileSizeGB = (file.size / (1024 * 1024 * 1024)).toFixed(2);
     
-    // For video files, use Cloudflare Stream
+    // For video files, use Cloudflare Stream via backend proxy
     if (fieldName === 'video') {
       try {
         setUploading(true);
@@ -640,75 +640,40 @@ const VideoModal = ({ video, onClose, onSave }) => {
         
         toast.info(`Subiendo video (${file.size > 1024*1024*1024 ? fileSizeGB + 'GB' : fileSizeMB + 'MB'}) a Cloudflare Stream...`);
         
-        // Get upload URL from backend
-        const uploadUrlResponse = await axios.post(`${API}/stream/upload-url`, null, {
-          params: { max_duration_seconds: 7200 },
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        // Upload through backend proxy to avoid CORS
+        const formData = new FormData();
+        formData.append('file', file);
         
-        const { upload_url, video_id } = uploadUrlResponse.data;
-        
-        if (!upload_url) {
-          throw new Error('No se pudo obtener URL de subida');
-        }
-        
-        console.log('Upload URL:', upload_url);
-        console.log('Video ID:', video_id);
-        console.log('File size:', (file.size / (1024*1024)).toFixed(1), 'MB');
-        
-        setUploadProgress(prev => ({ ...prev, [fieldName]: 2 }));
-        
-        // Upload using FormData (works for all file sizes with Cloudflare)
-        await new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          const formData = new FormData();
-          formData.append('file', file);
-          
-          xhr.upload.addEventListener('progress', (event) => {
-            if (event.lengthComputable) {
-              const percentage = Math.round((event.loaded / event.total) * 100);
-              setUploadProgress(prev => ({ ...prev, [fieldName]: Math.min(2 + percentage * 0.97, 99) }));
+        const response = await axios.post(`${API}/stream/proxy-upload`, formData, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          },
+          timeout: 0, // No timeout for large files
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.lengthComputable) {
+              const percentage = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+              setUploadProgress(prev => ({ ...prev, [fieldName]: Math.min(percentage, 99) }));
               console.log(`Upload progress: ${percentage}%`);
             }
-          });
-          
-          xhr.addEventListener('load', () => {
-            console.log('Upload response:', xhr.status, xhr.responseText);
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve();
-            } else {
-              reject(new Error(`Upload failed: ${xhr.status} - ${xhr.responseText || 'Error'}`));
-            }
-          });
-          
-          xhr.addEventListener('error', (e) => {
-            console.error('Upload error event:', e);
-            reject(new Error('Error de red al subir el video. Intenta de nuevo.'));
-          });
-          
-          xhr.addEventListener('timeout', () => {
-            reject(new Error('Tiempo de espera agotado'));
-          });
-          
-          xhr.addEventListener('abort', () => {
-            reject(new Error('Upload cancelado'));
-          });
-          
-          xhr.open('POST', upload_url);
-          xhr.timeout = 0; // Sin timeout para archivos grandes
-          xhr.send(formData);
+          }
         });
         
-        setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
-        setFormData(prev => ({ ...prev, url: `stream://${video_id}` }));
+        if (response.data.success && response.data.video_id) {
+          setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
+          setFormData(prev => ({ ...prev, url: `stream://${response.data.video_id}` }));
+          toast.success('¡Video subido! Cloudflare lo está procesando...');
+        } else {
+          throw new Error(response.data.message || 'Error al subir video');
+        }
         
-        toast.success(`¡Video subido! Cloudflare lo está procesando...`);
         setUploading(false);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
         
       } catch (error) {
         console.error('Cloudflare Stream upload error:', error);
-        toast.error(`Error: ${error.message || 'Error al subir video'}`);
+        const errorMsg = error.response?.data?.detail || error.message || 'Error al subir video';
+        toast.error(`Error: ${errorMsg}`);
         setUploading(false);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
       }
