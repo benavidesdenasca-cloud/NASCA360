@@ -36,11 +36,24 @@ const VideoPlayer = () => {
         const videoUrl = response.data.url;
         
         // Handle different video URL types
-        if (videoUrl && videoUrl.startsWith('s3://')) {
+        if (videoUrl && videoUrl.startsWith('r2://')) {
+          // R2 video (Cloudflare CDN - faster!)
+          const r2Key = videoUrl.replace('r2://', '').replace(/^[^/]+\//, '');
+          try {
+            const presignedResponse = await axios.get(
+              `${API}/r2/presigned-view/${r2Key}`,
+              { headers }
+            );
+            console.log('R2 CDN URL obtained (faster!):', presignedResponse.data.presigned_url.substring(0, 100));
+            setStreamUrl(presignedResponse.data.presigned_url);
+          } catch (err) {
+            console.error('Error getting R2 URL:', err);
+            toast.error('Error al cargar el video desde CDN');
+          }
+        } else if (videoUrl && videoUrl.startsWith('s3://')) {
           // S3 video - get presigned URL for viewing
           const s3Key = videoUrl.replace('s3://', '');
           try {
-            // Don't double-encode - the key already has the correct format
             const presignedResponse = await axios.get(
               `${API}/s3/presigned-view/${s3Key}`,
               { headers }
