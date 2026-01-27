@@ -1777,7 +1777,7 @@ async def get_stream_upload_url(
     max_duration_seconds: int = 3600,
     current_user: User = Depends(get_current_user)
 ):
-    """Get a direct upload URL for Cloudflare Stream (TUS protocol)"""
+    """Get a direct upload URL for Cloudflare Stream"""
     if current_user.role != 'admin':
         raise HTTPException(status_code=403, detail="Solo administradores pueden subir videos")
     
@@ -1808,6 +1808,68 @@ async def get_stream_upload_url(
             
             if not data.get("success"):
                 error_msg = data.get("errors", [{"message": "Unknown error"}])[0].get("message", "Error")
+                raise HTTPException(status_code=500, detail=f"Cloudflare error: {error_msg}")
+            
+            result = data.get("result", {})
+            
+            return {
+                "upload_url": result.get("uploadURL"),
+                "video_id": result.get("uid"),
+                "watermark": result.get("watermark")
+            }
+            
+    except httpx.HTTPError as e:
+        logger.error(f"Cloudflare Stream error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error conectando con Cloudflare: {str(e)}")
+
+# TUS endpoint for Cloudflare Stream - handles large file uploads
+@api_router.post("/stream/tus")
+async def stream_tus_create(
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
+    """TUS endpoint - Create upload and return Location header"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    
+    upload_length = request.headers.get('Upload-Length')
+    
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/stream/direct_upload",
+                headers={
+                    "Authorization": f"Bearer {CF_STREAM_TOKEN}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "maxDurationSeconds": 7200,
+                    "creator": current_user.email
+                },
+                timeout=30
+            )
+            
+            data = response.json()
+            if not data.get("success"):
+                raise HTTPException(status_code=500, detail="Error creating upload")
+            
+            result = data.get("result", {})
+            upload_url = result.get("uploadURL")
+            video_id = result.get("uid")
+            
+            # Return TUS response with Location header
+            from fastapi.responses import Response
+            return Response(
+                status_code=201,
+                headers={
+                    "Location": upload_url,
+                    "Tus-Resumable": "1.0.0",
+                    "X-Video-Id": video_id
+                }
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
                 raise HTTPException(status_code=500, detail=f"Cloudflare error: {error_msg}")
             
             result = data.get("result", {})
