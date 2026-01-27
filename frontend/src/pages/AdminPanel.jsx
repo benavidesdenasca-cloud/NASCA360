@@ -657,33 +657,47 @@ const VideoModal = ({ video, onClose, onSave }) => {
         console.log('Got upload URL:', upload_url);
         console.log('Video ID:', video_id);
         
-        setUploadProgress(prev => ({ ...prev, [fieldName]: 5 }));
+        setUploadProgress(prev => ({ ...prev, [fieldName]: 2 }));
         
-        // Step 2: Upload using TUS protocol with correct configuration
-        const { Upload } = await import('tus-js-client');
-        
+        // Step 2: Upload directly using fetch with progress tracking via XHR
         await new Promise((resolve, reject) => {
-          const upload = new Upload(file, {
-            uploadUrl: upload_url, // Use uploadUrl instead of endpoint for direct upload
-            retryDelays: [0, 3000, 5000, 10000, 20000],
-            chunkSize: 50 * 1024 * 1024, // 50MB chunks
-            removeFingerprintOnSuccess: true,
-            onError: (error) => {
-              console.error('TUS upload error:', error);
-              reject(error);
-            },
-            onProgress: (bytesUploaded, bytesTotal) => {
-              const percentage = Math.round((bytesUploaded / bytesTotal) * 100);
-              const scaledProgress = Math.min(5 + Math.round(percentage * 0.94), 99);
+          const xhr = new XMLHttpRequest();
+          
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+              const percentage = Math.round((event.loaded / event.total) * 100);
+              const scaledProgress = Math.min(2 + Math.round(percentage * 0.97), 99);
               setUploadProgress(prev => ({ ...prev, [fieldName]: scaledProgress }));
-            },
-            onSuccess: () => {
-              console.log('TUS upload complete');
-              resolve();
             }
           });
           
-          upload.start();
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              console.log('Upload complete, status:', xhr.status);
+              resolve();
+            } else {
+              console.error('Upload failed:', xhr.status, xhr.responseText);
+              reject(new Error(`Upload failed: ${xhr.status} - ${xhr.responseText || 'Unknown error'}`));
+            }
+          });
+          
+          xhr.addEventListener('error', (e) => {
+            console.error('XHR error:', e);
+            reject(new Error('Error de red al subir el video'));
+          });
+          
+          xhr.addEventListener('timeout', () => {
+            reject(new Error('Tiempo de espera agotado'));
+          });
+          
+          // Cloudflare Stream expects TUS protocol headers
+          xhr.open('POST', upload_url);
+          xhr.setRequestHeader('Tus-Resumable', '1.0.0');
+          xhr.setRequestHeader('Upload-Length', file.size.toString());
+          xhr.setRequestHeader('Content-Type', 'application/offset+octet-stream');
+          xhr.setRequestHeader('Upload-Offset', '0');
+          xhr.timeout = 0; // No timeout for large files
+          xhr.send(file);
         });
         
         setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
