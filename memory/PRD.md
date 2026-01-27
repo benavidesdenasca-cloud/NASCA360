@@ -83,7 +83,9 @@ Plataforma de turismo virtual premium para explorar las Líneas de Nasca y Palpa
 3. **(P2)** Implementar streaming HLS/DASH para calidad adaptativa
 4. **(Futuro)** Integración DRM (Widevine) para máxima seguridad
 
-## Última actualización: 26 Enero 2026
+## Última actualización: 27 Enero 2026
+- ✅ Agregado selector de calidad de video (Auto, 4K, 1080p, 720p)
+- ✅ Agregado control de volumen con slider expandible
 - ✅ Corregido reproductor de video 360° 
 - ✅ Videos grandes de S3 se reproducen correctamente
 - ✅ Navegación 360° con drag funcionando
