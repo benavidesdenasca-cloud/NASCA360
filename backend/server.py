@@ -1870,19 +1870,6 @@ async def stream_tus_create(
             )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-                raise HTTPException(status_code=500, detail=f"Cloudflare error: {error_msg}")
-            
-            result = data.get("result", {})
-            
-            return {
-                "upload_url": result.get("uploadURL"),
-                "video_id": result.get("uid"),
-                "watermark": result.get("watermark")
-            }
-            
-    except httpx.HTTPError as e:
-        logger.error(f"Cloudflare Stream error: {e}")
-        raise HTTPException(status_code=500, detail=f"Error conectando con Cloudflare: {str(e)}")
 
 @api_router.get("/stream/video/{video_id}")
 async def get_stream_video_info(
