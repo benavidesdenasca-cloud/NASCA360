@@ -1,6 +1,13 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 
+const QUALITY_SETTINGS = {
+  auto: { label: 'Auto', pixelRatio: -1, segments: 60 },
+  high: { label: 'Alta (4K)', pixelRatio: 2, segments: 64 },
+  medium: { label: 'Media (1080p)', pixelRatio: 1.5, segments: 48 },
+  low: { label: 'Baja (720p)', pixelRatio: 1, segments: 32 },
+};
+
 const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const containerRef = useRef(null);
   const videoRef = useRef(null);
@@ -10,6 +17,7 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const cameraRef = useRef(null);
   const textureRef = useRef(null);
   const cleanupFnRef = useRef(null);
+  const sphereRef = useRef(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -18,6 +26,10 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const [error, setError] = useState(null);
   const [buffered, setBuffered] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  const [quality, setQuality] = useState('auto');
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
   
   const lonRef = useRef(0);
   const latRef = useRef(0);
