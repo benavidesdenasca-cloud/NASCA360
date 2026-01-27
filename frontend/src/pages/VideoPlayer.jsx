@@ -39,15 +39,35 @@ const VideoPlayer = () => {
         
         // Handle different video URL types
         if (videoUrl && videoUrl.startsWith('stream://')) {
-          // Cloudflare Stream video (best quality - HLS adaptive streaming)
+          // Cloudflare Stream video
           const videoId = videoUrl.replace('stream://', '');
           try {
             const streamResponse = await axios.get(
               `${API}/stream/embed/${videoId}`,
               { headers }
             );
-            console.log('Cloudflare Stream HLS URL:', streamResponse.data.hls_url);
-            setStreamUrl(streamResponse.data.hls_url);
+            
+            const data = streamResponse.data;
+            
+            if (!data.ready) {
+              // Video is still processing
+              setVideoProcessing({
+                status: data.status,
+                progress: data.progress,
+                message: data.message
+              });
+              toast.info(data.message || 'El video aún se está procesando...');
+            } else {
+              // Video is ready - use iframe embed for 360 videos to avoid CORS
+              console.log('Cloudflare Stream ready:', data);
+              setCloudflareEmbed({
+                embedUrl: data.embed_url,
+                hlsUrl: data.hls_url,
+                videoId: videoId
+              });
+              // Also set HLS URL for potential direct playback
+              setStreamUrl(data.hls_url);
+            }
           } catch (err) {
             console.error('Error getting Cloudflare Stream URL:', err);
             toast.error('Error al cargar el video desde Cloudflare Stream');
