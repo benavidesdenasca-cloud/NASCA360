@@ -1883,16 +1883,52 @@ async def get_stream_embed_url(
             detail="Necesitas una suscripción activa para ver contenido"
         )
     
-    # Generate signed token for secure playback (optional - requires signing key)
-    # For now, return the public embed URL
-    embed_url = f"https://customer-{CF_ACCOUNT_ID[:8]}.cloudflarestream.com/{video_id}/iframe"
-    hls_url = f"https://customer-{CF_ACCOUNT_ID[:8]}.cloudflarestream.com/{video_id}/manifest/video.m3u8"
-    
-    return {
-        "embed_url": embed_url,
-        "hls_url": hls_url,
-        "video_id": video_id
-    }
+    # First, check if video is ready to stream
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/stream/{video_id}",
+                headers={"Authorization": f"Bearer {CF_STREAM_TOKEN}"},
+                timeout=10
+            )
+            
+            data = response.json()
+            
+            if data.get("success"):
+                result = data.get("result", {})
+                ready = result.get("readyToStream", False)
+                status = result.get("status", {})
+                state = status.get("state", "unknown")
+                
+                if not ready:
+                    # Video is still processing
+                    pct = status.get("pctComplete", "0")
+                    return {
+                        "ready": False,
+                        "status": state,
+                        "progress": pct,
+                        "message": f"Video procesándose: {pct}% completado"
+                    }
+                
+                # Video is ready - return playback URLs
+                playback = result.get("playback", {})
+                
+                return {
+                    "ready": True,
+                    "embed_url": f"https://iframe.cloudflarestream.com/{video_id}",
+                    "hls_url": playback.get("hls") or f"https://customer-{CF_ACCOUNT_ID[:8]}.cloudflarestream.com/{video_id}/manifest/video.m3u8",
+                    "dash_url": playback.get("dash"),
+                    "video_id": video_id,
+                    "duration": result.get("duration"),
+                    "thumbnail": result.get("thumbnail")
+                }
+            else:
+                raise HTTPException(status_code=404, detail="Video no encontrado")
+                
+    except httpx.HTTPError as e:
+        logger.error(f"Cloudflare Stream error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 # ==================== FILE UPLOAD ROUTES (LOCAL) ====================
 
