@@ -1593,6 +1593,158 @@ async def get_s3_presigned_view_url(
         logger.error(f"S3 error: {e}")
         raise HTTPException(status_code=500, detail=f"Error generando URL de visualización: {str(e)}")
 
+# ==================== CLOUDFLARE R2 ROUTES (CDN - FASTER) ====================
+
+@api_router.get("/r2/status")
+async def get_r2_status():
+    """Check R2 connection status"""
+    if not r2_client:
+        return {"status": "not_configured", "message": "R2 no está configurado"}
+    
+    try:
+        # Try to list buckets to verify connection
+        r2_client.list_buckets()
+        return {"status": "connected", "bucket": R2_BUCKET_NAME, "message": "R2 conectado correctamente"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@api_router.post("/r2/migrate-from-s3")
+async def migrate_video_to_r2(
+    video_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Migrate a video from S3 to R2 for faster streaming"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores pueden migrar videos")
+    
+    if not r2_client:
+        raise HTTPException(status_code=500, detail="R2 no está configurado")
+    
+    if not s3_client:
+        raise HTTPException(status_code=500, detail="S3 no está configurado")
+    
+    # Get video from database
+    video = await db.videos.find_one({"id": video_id})
+    if not video:
+        raise HTTPException(status_code=404, detail="Video no encontrado")
+    
+    video_url = video.get('url', '')
+    if not video_url.startswith('s3://'):
+        raise HTTPException(status_code=400, detail="Este video no está en S3")
+    
+    # Extract S3 key
+    s3_key = video_url.replace('s3://', '').replace(f'{S3_BUCKET_NAME}/', '')
+    
+    try:
+        # Download from S3 and upload to R2
+        logger.info(f"Migrating {s3_key} from S3 to R2...")
+        
+        # Get object from S3
+        s3_response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+        
+        # Upload to R2
+        r2_key = f"videos/{s3_key.split('/')[-1]}"
+        r2_client.upload_fileobj(
+            s3_response['Body'],
+            R2_BUCKET_NAME,
+            r2_key,
+            ExtraArgs={'ContentType': 'video/mp4'}
+        )
+        
+        # Update video URL in database to use R2
+        new_url = f"r2://{R2_BUCKET_NAME}/{r2_key}"
+        await db.videos.update_one(
+            {"id": video_id},
+            {"$set": {"url": new_url, "storage": "r2"}}
+        )
+        
+        logger.info(f"Successfully migrated {video_id} to R2")
+        
+        return {
+            "success": True,
+            "message": "Video migrado a R2 exitosamente",
+            "old_url": video_url,
+            "new_url": new_url
+        }
+        
+    except Exception as e:
+        logger.error(f"Migration error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error migrando video: {str(e)}")
+
+@api_router.post("/r2/presigned-upload")
+async def get_r2_presigned_upload_url(
+    filename: str,
+    content_type: str = "video/mp4",
+    current_user: User = Depends(get_current_user)
+):
+    """Get a presigned URL for uploading to R2"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores pueden subir videos")
+    
+    if not r2_client:
+        raise HTTPException(status_code=500, detail="R2 no está configurado")
+    
+    try:
+        # Generate unique key
+        file_ext = Path(filename).suffix or '.mp4'
+        unique_key = f"videos/{uuid.uuid4().hex}{file_ext}"
+        
+        # Generate presigned URL for upload
+        presigned_url = r2_client.generate_presigned_url(
+            'put_object',
+            Params={
+                'Bucket': R2_BUCKET_NAME,
+                'Key': unique_key,
+                'ContentType': content_type
+            },
+            ExpiresIn=3600  # 1 hour
+        )
+        
+        return {
+            "presigned_url": presigned_url,
+            "key": unique_key,
+            "expires_in": 3600
+        }
+    except Exception as e:
+        logger.error(f"R2 presigned URL error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generando URL: {str(e)}")
+
+@api_router.get("/r2/presigned-view/{r2_key:path}")
+async def get_r2_presigned_view_url(
+    r2_key: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate a presigned URL for viewing a video from R2 (CDN)"""
+    if not r2_client:
+        raise HTTPException(status_code=500, detail="R2 no está configurado")
+    
+    # NETFLIX MODEL: Only allow premium users and admins
+    if current_user.role != 'admin' and current_user.subscription_plan == 'basic':
+        raise HTTPException(
+            status_code=403, 
+            detail="Necesitas una suscripción activa para ver contenido"
+        )
+    
+    try:
+        # Generate presigned URL (valid for 4 hours - longer for big videos)
+        presigned_url = r2_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': R2_BUCKET_NAME,
+                'Key': r2_key
+            },
+            ExpiresIn=14400  # 4 hours
+        )
+        
+        return {
+            "presigned_url": presigned_url,
+            "expires_in": 14400,
+            "cdn": "cloudflare"
+        }
+    except Exception as e:
+        logger.error(f"R2 error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generando URL: {str(e)}")
+
 # ==================== FILE UPLOAD ROUTES (LOCAL) ====================
 
 # Store for tracking chunked uploads
