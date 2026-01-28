@@ -245,6 +245,14 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
       canvas.removeEventListener('touchmove', onTouchMove);
       canvas.removeEventListener('touchend', onTouchEnd);
       
+      // End VR session if active
+      if (renderer.xr.isPresenting) {
+        const session = renderer.xr.getSession();
+        if (session) {
+          session.end().catch(() => {});
+        }
+      }
+      
       // Stop animation loop
       renderer.setAnimationLoop(null);
       
