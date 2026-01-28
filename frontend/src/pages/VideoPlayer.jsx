@@ -221,7 +221,7 @@ const VideoPlayer = () => {
                   </Button>
                 </div>
               </div>
-            ) : cloudflareEmbed ? (
+            ) : cloudflareEmbed && cloudflareEmbed.embedUrl ? (
               /* Use Cloudflare iframe for playback (avoids CORS issues) */
               <div className="relative" style={{ height: '500px' }}>
                 <iframe
