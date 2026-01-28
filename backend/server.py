@@ -1871,8 +1871,56 @@ async def stream_tus_create(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Get TUS upload URL for large files (>200MB)
+@api_router.post("/stream/tus-url")
+async def get_tus_upload_url(
+    file_size: int,
+    current_user: User = Depends(get_current_user)
+):
+    """Get TUS upload URL for large files - Cloudflare Stream resumable upload"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores pueden subir videos")
+    
+    if not CF_ACCOUNT_ID or not CF_STREAM_TOKEN:
+        raise HTTPException(status_code=500, detail="Cloudflare Stream no está configurado")
+    
+    try:
+        # Create TUS upload via Cloudflare API
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/stream?direct_user=true",
+                headers={
+                    "Authorization": f"Bearer {CF_STREAM_TOKEN}",
+                    "Tus-Resumable": "1.0.0",
+                    "Upload-Length": str(file_size),
+                    "Upload-Metadata": "maxDurationSeconds NDMyMDA="  # 43200 seconds = 12 hours max
+                },
+                timeout=30
+            )
+            
+            if response.status_code not in [200, 201]:
+                logger.error(f"TUS URL creation failed: {response.status_code} - {response.text}")
+                raise HTTPException(status_code=500, detail="Error creando URL de subida")
+            
+            # Get the Location header which contains the TUS upload URL
+            upload_url = response.headers.get("Location") or response.headers.get("location")
+            stream_media_id = response.headers.get("stream-media-id")
+            
+            if not upload_url:
+                raise HTTPException(status_code=500, detail="No se obtuvo URL de subida")
+            
+            return {
+                "upload_url": upload_url,
+                "video_id": stream_media_id,
+                "protocol": "tus"
+            }
+            
+    except httpx.HTTPError as e:
+        logger.error(f"TUS URL error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error de red: {str(e)}")
+
 # Proxy upload endpoint - uploads file through backend to avoid CORS
-# Uses streaming to handle large files without loading them into memory
+# Uses streaming for small files (<200MB), returns TUS URL for large files
 @api_router.post("/stream/proxy-upload")
 async def stream_proxy_upload(
     request: Request,
@@ -1885,6 +1933,97 @@ async def stream_proxy_upload(
     if not CF_ACCOUNT_ID or not CF_STREAM_TOKEN:
         raise HTTPException(status_code=500, detail="Cloudflare Stream no está configurado")
     
+    content_length = request.headers.get("content-length")
+    file_size = int(content_length) if content_length else 0
+    
+    # For large files (>200MB), use TUS protocol
+    MAX_DIRECT_UPLOAD = 200 * 1024 * 1024  # 200MB
+    
+    if file_size > MAX_DIRECT_UPLOAD:
+        logger.info(f"File size {file_size} exceeds direct upload limit, using TUS protocol")
+        
+        try:
+            # Create TUS upload via Cloudflare API
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/stream?direct_user=true",
+                    headers={
+                        "Authorization": f"Bearer {CF_STREAM_TOKEN}",
+                        "Tus-Resumable": "1.0.0",
+                        "Upload-Length": str(file_size),
+                        "Upload-Metadata": "maxDurationSeconds NDMyMDA="
+                    },
+                    timeout=30
+                )
+                
+                if response.status_code not in [200, 201]:
+                    logger.error(f"TUS creation failed: {response.status_code}")
+                    raise HTTPException(status_code=500, detail="Error iniciando subida TUS")
+                
+                upload_url = response.headers.get("Location") or response.headers.get("location")
+                video_id = response.headers.get("stream-media-id")
+                
+                if not upload_url:
+                    raise HTTPException(status_code=500, detail="No TUS URL received")
+                
+                logger.info(f"TUS upload created: {video_id}, URL: {upload_url}")
+                
+                # Stream the file content to TUS endpoint using PATCH
+                content_type = request.headers.get("content-type", "")
+                
+                # For multipart form data, we need to extract just the file
+                if "multipart/form-data" in content_type:
+                    # Read raw body and upload via TUS PATCH
+                    body_bytes = await request.body()
+                    
+                    # Find the file content in multipart data (skip headers)
+                    boundary = content_type.split("boundary=")[1].split(";")[0].strip()
+                    parts = body_bytes.split(f"--{boundary}".encode())
+                    
+                    file_content = None
+                    for part in parts:
+                        if b"Content-Type:" in part and b"video" in part.lower():
+                            # Find where headers end and content begins
+                            header_end = part.find(b"\r\n\r\n")
+                            if header_end != -1:
+                                file_content = part[header_end + 4:]
+                                # Remove trailing boundary markers
+                                if file_content.endswith(b"\r\n"):
+                                    file_content = file_content[:-2]
+                                break
+                    
+                    if not file_content:
+                        raise HTTPException(status_code=400, detail="No video file found in request")
+                    
+                    # Upload via TUS PATCH
+                    async with httpx.AsyncClient(timeout=httpx.Timeout(7200.0, connect=120.0)) as upload_client:
+                        patch_response = await upload_client.patch(
+                            upload_url,
+                            content=file_content,
+                            headers={
+                                "Content-Type": "application/offset+octet-stream",
+                                "Upload-Offset": "0",
+                                "Tus-Resumable": "1.0.0"
+                            }
+                        )
+                        
+                        if patch_response.status_code >= 400:
+                            logger.error(f"TUS PATCH failed: {patch_response.status_code} - {patch_response.text}")
+                            raise HTTPException(status_code=500, detail=f"Error en TUS upload: {patch_response.status_code}")
+                
+                return {
+                    "success": True,
+                    "video_id": video_id,
+                    "message": "Video subido correctamente. Cloudflare lo está procesando."
+                }
+                
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"TUS upload error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    # For small files (<200MB), use direct upload
     try:
         # Step 1: Create direct upload URL from Cloudflare
         async with httpx.AsyncClient() as client:
@@ -1895,7 +2034,7 @@ async def stream_proxy_upload(
                     "Content-Type": "application/json"
                 },
                 json={
-                    "maxDurationSeconds": 14400,  # 4 hours max for large 360 videos
+                    "maxDurationSeconds": 14400,
                     "creator": current_user.email
                 },
                 timeout=30
@@ -1910,21 +2049,17 @@ async def stream_proxy_upload(
             upload_url = result.get("uploadURL")
             video_id = result.get("uid")
         
-        logger.info(f"Created Cloudflare upload URL for video: {video_id}")
+        logger.info(f"Created Cloudflare direct upload URL for video: {video_id}")
         
         # Step 2: Stream the request body directly to Cloudflare
-        # This avoids loading the entire file into memory
         content_type = request.headers.get("content-type", "")
-        content_length = request.headers.get("content-length")
         
-        logger.info(f"Streaming upload: content-type={content_type}, content-length={content_length}")
+        logger.info(f"Streaming direct upload: content-type={content_type}, content-length={content_length}")
         
-        # Create async generator to stream chunks from request body
         async def stream_body():
             async for chunk in request.stream():
                 yield chunk
         
-        # Stream directly to Cloudflare with long timeout for large files
         async with httpx.AsyncClient(timeout=httpx.Timeout(7200.0, connect=120.0)) as client:
             upload_response = await client.post(
                 upload_url,
@@ -1938,7 +2073,7 @@ async def stream_proxy_upload(
             )
             
             if upload_response.status_code >= 400:
-                logger.error(f"Upload failed: {upload_response.status_code} - {upload_response.text}")
+                logger.error(f"Direct upload failed: {upload_response.status_code} - {upload_response.text}")
                 raise HTTPException(
                     status_code=500, 
                     detail=f"Error uploading to Cloudflare: {upload_response.status_code}"
