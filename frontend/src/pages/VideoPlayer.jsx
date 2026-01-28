@@ -221,21 +221,8 @@ const VideoPlayer = () => {
                   </Button>
                 </div>
               </div>
-            ) : cloudflareEmbed && cloudflareEmbed.embedUrl ? (
-              /* Use Cloudflare iframe for playback (avoids CORS issues) */
-              <div className="relative" style={{ height: '500px' }}>
-                <iframe
-                  src={`${cloudflareEmbed.embedUrl}?preload=auto&primaryColor=%23f59e0b`}
-                  style={{ border: 'none', width: '100%', height: '100%' }}
-                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                  allowFullScreen
-                  title={video.title}
-                ></iframe>
-                <div className="absolute top-4 right-4 bg-amber-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                  360° Cloudflare Stream
-                </div>
-              </div>
             ) : streamUrl ? (
+              /* Use Video360Player with HLS URL for 360° experience */
               <Video360Player
                 videoUrl={streamUrl}
                 posterUrl={video.thumbnail_url?.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : (video.thumbnail_url?.startsWith('s3://') ? null : video.thumbnail_url)}
