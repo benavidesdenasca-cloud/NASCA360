@@ -722,7 +722,7 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
           </div>
           
           <p className="text-white/40 text-xs text-center mt-2">
-            Arrastra para ver en 360°
+            Arrastra para ver en 360° {vrSupported && '• Usa Meta Quest para experiencia inmersiva'}
           </p>
         </div>
       )}
