@@ -103,11 +103,17 @@ const Gallery = () => {
                 >
                   {/* Thumbnail */}
                   <div className="relative overflow-hidden">
-                    <img
-                      src={video.thumbnail_url?.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : video.thumbnail_url}
-                      alt={video.title}
-                      className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
+                    {video.thumbnail_url ? (
+                      <img
+                        src={video.thumbnail_url.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : video.thumbnail_url}
+                        alt={video.title}
+                        className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-56 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                        <Play className="w-16 h-16 text-amber-500" />
+                      </div>
+                    )}
                     
                     {/* Demo Badge */}
                     {video.is_demo && (
