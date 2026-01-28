@@ -533,6 +533,29 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     }
   };
 
+  // Exit VR mode
+  const exitVR = async () => {
+    if (rendererRef.current?.xr?.isPresenting) {
+      try {
+        const session = rendererRef.current.xr.getSession();
+        if (session) {
+          await session.end();
+        }
+      } catch (error) {
+        console.log('Error ending VR session:', error);
+      }
+    }
+  };
+
+  // Toggle VR mode
+  const toggleVR = () => {
+    if (isInVR) {
+      exitVR();
+    } else if (vrButtonRef.current) {
+      vrButtonRef.current.click();
+    }
+  };
+
   // Format time
   const formatTime = (sec) => {
     if (!sec || isNaN(sec)) return '0:00';
