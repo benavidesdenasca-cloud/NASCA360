@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import Hls from 'hls.js';
+import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 
 const QUALITY_SETTINGS = {
   auto: { label: 'Auto', pixelRatio: -1, segments: 60 },
@@ -20,6 +21,7 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const cleanupFnRef = useRef(null);
   const sphereRef = useRef(null);
   const hlsRef = useRef(null);
+  const vrButtonRef = useRef(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -33,12 +35,24 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const [hlsLevels, setHlsLevels] = useState([]);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [vrSupported, setVrSupported] = useState(false);
+  const [isInVR, setIsInVR] = useState(false);
   
   const lonRef = useRef(0);
   const latRef = useRef(0);
   const isDraggingRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
   const mountedRef = useRef(false);
+
+  // Check for WebXR VR support
+  useEffect(() => {
+    if (navigator.xr) {
+      navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+        setVrSupported(supported);
+        console.log('WebXR VR supported:', supported);
+      });
+    }
+  }, []);
 
   // Initialize Three.js scene
   const initThreeJS = useCallback((video) => {
