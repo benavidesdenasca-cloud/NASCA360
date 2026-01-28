@@ -2269,10 +2269,18 @@ async def get_stream_embed_url(
                 # Video is ready - return playback URLs
                 playback = result.get("playback", {})
                 
+                # Get the actual HLS URL from the playback object
+                hls_url = playback.get("hls")
+                
+                # If no HLS URL, construct it from the video info
+                if not hls_url:
+                    # Use the preview URL format which doesn't require signed URLs
+                    hls_url = f"https://customer-cxr4vpr67nvexmc3.cloudflarestream.com/{video_id}/manifest/video.m3u8"
+                
                 return {
                     "ready": True,
                     "embed_url": f"https://iframe.cloudflarestream.com/{video_id}",
-                    "hls_url": playback.get("hls") or f"https://customer-{CF_ACCOUNT_ID[:8]}.cloudflarestream.com/{video_id}/manifest/video.m3u8",
+                    "hls_url": hls_url,
                     "dash_url": playback.get("dash"),
                     "video_id": video_id,
                     "duration": result.get("duration"),
