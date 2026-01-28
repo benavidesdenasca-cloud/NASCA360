@@ -773,14 +773,54 @@ const VideoModal = ({ video, onClose, onSave }) => {
               🎬 Cloudflare Stream: Transcoding automático • CDN global • Streaming adaptativo HLS
             </p>
             
-            <div className="space-y-2">
-              <input
-                type="file"
-                accept="video/mp4,video/webm"
-                onChange={(e) => handleFileUpload(e.target.files[0], 'video')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-                disabled={uploading}
-              />
+            <div className="space-y-3">
+              {/* Option 1: Upload file */}
+              <div className="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                <p className="text-xs font-medium text-gray-600 mb-2">Opción 1: Subir archivo</p>
+                <input
+                  type="file"
+                  accept="video/mp4,video/webm"
+                  onChange={(e) => handleFileUpload(e.target.files[0], 'video')}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white"
+                  disabled={uploading}
+                />
+              </div>
+              
+              {/* Option 2: Paste Cloudflare Video ID */}
+              <div className="p-3 border border-blue-200 rounded-lg bg-blue-50">
+                <p className="text-xs font-medium text-blue-600 mb-2">
+                  Opción 2: Pegar Video ID de Cloudflare (si ya subiste directo a Cloudflare)
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Ej: a1b2c3d4e5f6..."
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    id="cloudflare-video-id"
+                    disabled={uploading}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const videoId = document.getElementById('cloudflare-video-id').value.trim();
+                      if (videoId) {
+                        setFormData(prev => ({ ...prev, url: `stream://${videoId}` }));
+                        toast.success('Video ID vinculado correctamente');
+                      } else {
+                        toast.error('Ingresa un Video ID válido');
+                      }
+                    }}
+                    disabled={uploading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4"
+                  >
+                    Vincular
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Encuentra el Video ID en tu panel de Cloudflare Stream
+                </p>
+              </div>
+              
               {uploading && uploadProgress.video > 0 && (
                 <div className="space-y-1">
                   <div className="w-full bg-gray-200 rounded-full h-3">
@@ -790,13 +830,13 @@ const VideoModal = ({ video, onClose, onSave }) => {
                     ></div>
                   </div>
                   <p className="text-sm font-medium text-orange-600">
-                    🎬 Subiendo a Cloudflare Stream... {uploadProgress.video}%
+                    🎬 Procesando y subiendo a Cloudflare Stream... {uploadProgress.video}%
                   </p>
                 </div>
               )}
               {formData.url && !uploading && (
                 <p className="text-sm text-green-600 font-medium">
-                  ✓ Video subido: {formData.url.startsWith('stream://') ? '🎬 Cloudflare Stream' : 'Local'}
+                  ✓ Video vinculado: {formData.url.startsWith('stream://') ? `🎬 Cloudflare Stream (${formData.url.replace('stream://', '')})` : 'Local'}
                 </p>
               )}
             </div>
