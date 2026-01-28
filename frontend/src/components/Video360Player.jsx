@@ -83,6 +83,9 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
+    // Store current XR session reference for cleanup
+    let currentSession = null;
+
     // Add VR Button if supported
     if (navigator.xr) {
       navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
@@ -104,11 +107,28 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
           
           // Track VR session state
           renderer.xr.addEventListener('sessionstart', () => {
+            currentSession = renderer.xr.getSession();
             setIsInVR(true);
             console.log('VR session started');
+            
+            // Listen for session end from Meta menu button
+            if (currentSession) {
+              currentSession.addEventListener('end', () => {
+                setIsInVR(false);
+                currentSession = null;
+                console.log('VR session ended by user');
+              });
+              
+              // Handle visibility change (when user opens Meta menu)
+              currentSession.addEventListener('visibilitychange', (event) => {
+                console.log('VR visibility changed:', event.session.visibilityState);
+              });
+            }
           });
+          
           renderer.xr.addEventListener('sessionend', () => {
             setIsInVR(false);
+            currentSession = null;
             console.log('VR session ended');
           });
         }
