@@ -71,16 +71,49 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     camera.position.set(0, 0, 0);
     cameraRef.current = camera;
 
-    // Renderer
+    // Renderer with WebXR support
     const renderer = new THREE.WebGLRenderer({ 
-      antialias: false,
-      powerPreference: 'default',
+      antialias: true,
+      powerPreference: 'high-performance',
       alpha: false
     });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.xr.enabled = true; // Enable WebXR
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
+
+    // Add VR Button if supported
+    if (navigator.xr) {
+      navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+        if (supported) {
+          const vrButton = VRButton.createButton(renderer);
+          vrButton.style.position = 'absolute';
+          vrButton.style.bottom = '80px';
+          vrButton.style.left = '50%';
+          vrButton.style.transform = 'translateX(-50%)';
+          vrButton.style.zIndex = '100';
+          vrButton.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+          vrButton.style.border = 'none';
+          vrButton.style.borderRadius = '25px';
+          vrButton.style.padding = '12px 24px';
+          vrButton.style.fontWeight = 'bold';
+          vrButton.style.fontSize = '14px';
+          container.appendChild(vrButton);
+          vrButtonRef.current = vrButton;
+          
+          // Track VR session state
+          renderer.xr.addEventListener('sessionstart', () => {
+            setIsInVR(true);
+            console.log('VR session started');
+          });
+          renderer.xr.addEventListener('sessionend', () => {
+            setIsInVR(false);
+            console.log('VR session ended');
+          });
+        }
+      });
+    }
 
     // Video Texture
     const texture = new THREE.VideoTexture(video);
@@ -103,25 +136,25 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
     scene.add(sphere);
     sphereRef.current = sphere;
 
-    // Render loop
-    const render = () => {
+    // Render loop - supports both regular and VR rendering
+    renderer.setAnimationLoop(() => {
       if (!rendererRef.current || !mountedRef.current) return;
       
-      const lat = Math.max(-85, Math.min(85, latRef.current));
-      const phi = THREE.MathUtils.degToRad(90 - lat);
-      const theta = THREE.MathUtils.degToRad(lonRef.current);
+      // Only update camera rotation when not in VR (VR handles its own camera)
+      if (!renderer.xr.isPresenting) {
+        const lat = Math.max(-85, Math.min(85, latRef.current));
+        const phi = THREE.MathUtils.degToRad(90 - lat);
+        const theta = THREE.MathUtils.degToRad(lonRef.current);
 
-      camera.lookAt(
-        500 * Math.sin(phi) * Math.cos(theta),
-        500 * Math.cos(phi),
-        500 * Math.sin(phi) * Math.sin(theta)
-      );
+        camera.lookAt(
+          500 * Math.sin(phi) * Math.cos(theta),
+          500 * Math.cos(phi),
+          500 * Math.sin(phi) * Math.sin(theta)
+        );
+      }
 
       renderer.render(scene, camera);
-      frameIdRef.current = requestAnimationFrame(render);
-    };
-
-    render();
+    });
 
     // Mouse/Touch handlers
     const canvas = renderer.domElement;
