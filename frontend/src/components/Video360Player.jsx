@@ -225,6 +225,14 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
       canvas.removeEventListener('touchmove', onTouchMove);
       canvas.removeEventListener('touchend', onTouchEnd);
       
+      // Stop animation loop
+      renderer.setAnimationLoop(null);
+      
+      // Remove VR button if exists
+      if (vrButtonRef.current && container.contains(vrButtonRef.current)) {
+        container.removeChild(vrButtonRef.current);
+      }
+      
       texture?.dispose();
       geometry?.dispose();
       material?.dispose();
