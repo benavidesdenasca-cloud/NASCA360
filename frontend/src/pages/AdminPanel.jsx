@@ -632,81 +632,31 @@ const VideoModal = ({ video, onClose, onSave }) => {
     
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
     const fileSizeGB = (file.size / (1024 * 1024 * 1024)).toFixed(2);
-    const MAX_DIRECT_UPLOAD = 200 * 1024 * 1024; // 200MB
     
-    // For video files, use Cloudflare Stream
+    // For video files, use Cloudflare Stream with metadata fix
     if (fieldName === 'video') {
       try {
         setUploading(true);
         setUploadProgress(prev => ({ ...prev, [fieldName]: 1 }));
         
         const sizeDisplay = file.size > 1024*1024*1024 ? fileSizeGB + 'GB' : fileSizeMB + 'MB';
+        toast.info(`Procesando y subiendo video (${sizeDisplay})...`);
         
-        // For large files (>200MB), use TUS protocol directly
-        if (file.size > MAX_DIRECT_UPLOAD) {
-          toast.info(`Subiendo video grande (${sizeDisplay}) con TUS...`);
-          
-          // Get TUS upload URL from backend
-          const tusResponse = await axios.post(`${API}/stream/tus-url`, null, {
-            params: { file_size: file.size },
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          const { upload_url, video_id } = tusResponse.data;
-          
-          // Use TUS client for resumable upload
-          return new Promise((resolve, reject) => {
-            const upload = new tus.Upload(file, {
-              endpoint: upload_url,
-              uploadUrl: upload_url,
-              retryDelays: [0, 1000, 3000, 5000, 10000],
-              chunkSize: 50 * 1024 * 1024, // 50MB chunks
-              metadata: {
-                filename: file.name,
-                filetype: file.type || 'video/mp4'
-              },
-              onError: (error) => {
-                console.error('TUS upload error:', error);
-                toast.error(`Error: ${error.message || 'Error al subir video'}`);
-                setUploading(false);
-                setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
-                reject(error);
-              },
-              onProgress: (bytesUploaded, bytesTotal) => {
-                const percentage = Math.round((bytesUploaded / bytesTotal) * 100);
-                setUploadProgress(prev => ({ ...prev, [fieldName]: Math.min(percentage, 99) }));
-                console.log(`TUS progress: ${percentage}%`);
-              },
-              onSuccess: () => {
-                setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
-                setFormData(prev => ({ ...prev, url: `stream://${video_id}` }));
-                toast.success('¡Video subido! Cloudflare lo está procesando...');
-                setUploading(false);
-                setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
-                resolve();
-              }
-            });
-            
-            upload.start();
-          });
-        }
-        
-        // For small files (<200MB), use backend proxy
-        toast.info(`Subiendo video (${sizeDisplay}) a Cloudflare Stream...`);
-        
+        // Use the new endpoint that fixes metadata with ffmpeg
         const formData = new FormData();
         formData.append('file', file);
         
-        const response = await axios.post(`${API}/stream/proxy-upload`, formData, {
+        const response = await axios.post(`${API}/stream/upload-fixed`, formData, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'multipart/form-data'
           },
-          timeout: 0,
+          timeout: 0, // No timeout for large files
           onUploadProgress: (progressEvent) => {
             if (progressEvent.lengthComputable) {
-              const percentage = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-              setUploadProgress(prev => ({ ...prev, [fieldName]: Math.min(percentage, 99) }));
+              // Show upload progress (first 50%)
+              const percentage = Math.round((progressEvent.loaded / progressEvent.total) * 50);
+              setUploadProgress(prev => ({ ...prev, [fieldName]: Math.min(percentage, 49) }));
               console.log(`Upload progress: ${percentage}%`);
             }
           }
@@ -715,7 +665,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
         if (response.data.success && response.data.video_id) {
           setUploadProgress(prev => ({ ...prev, [fieldName]: 100 }));
           setFormData(prev => ({ ...prev, url: `stream://${response.data.video_id}` }));
-          toast.success('¡Video subido! Cloudflare lo está procesando...');
+          toast.success('¡Video procesado y subido! Metadata corregido.');
         } else {
           throw new Error(response.data.message || 'Error al subir video');
         }
@@ -724,7 +674,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
         setUploadProgress(prev => ({ ...prev, [fieldName]: 0 }));
         
       } catch (error) {
-        console.error('Cloudflare Stream upload error:', error);
+        console.error('Video upload error:', error);
         const errorMsg = error.response?.data?.detail || error.message || 'Error al subir video';
         toast.error(`Error: ${errorMsg}`);
         setUploading(false);
