@@ -1885,6 +1885,10 @@ async def get_tus_upload_url(
         raise HTTPException(status_code=500, detail="Cloudflare Stream no está configurado")
     
     try:
+        import base64
+        # maxDurationSeconds: 36000 (10 hours max allowed by Cloudflare)
+        max_duration_b64 = base64.b64encode(b"36000").decode()
+        
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/stream?direct_user=true",
@@ -1892,7 +1896,7 @@ async def get_tus_upload_url(
                     "Authorization": f"Bearer {CF_STREAM_TOKEN}",
                     "Tus-Resumable": "1.0.0",
                     "Upload-Length": str(file_size),
-                    "Upload-Metadata": "maxDurationSeconds NDMyMDA="
+                    "Upload-Metadata": f"maxDurationSeconds {max_duration_b64}"
                 },
                 timeout=30
             )
