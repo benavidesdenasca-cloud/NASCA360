@@ -1902,7 +1902,16 @@ async def get_tus_upload_url(
             )
             
             if response.status_code not in [200, 201]:
-                logger.error(f"TUS URL creation failed: {response.status_code} - {response.text}")
+                error_text = response.text
+                logger.error(f"TUS URL creation failed: {response.status_code} - {error_text}")
+                
+                # Check for quota exceeded error
+                if "Storage capacity exceeded" in error_text or "10011" in error_text:
+                    raise HTTPException(
+                        status_code=507,
+                        detail="⚠️ CUOTA EXCEDIDA: Tu cuenta de Cloudflare Stream está llena. Elimina videos viejos o compra más minutos en tu panel de Cloudflare."
+                    )
+                
                 raise HTTPException(status_code=500, detail="Error creando URL de subida")
             
             upload_url = response.headers.get("Location") or response.headers.get("location")
@@ -1917,6 +1926,8 @@ async def get_tus_upload_url(
                 "protocol": "tus"
             }
             
+    except HTTPException:
+        raise
     except httpx.HTTPError as e:
         logger.error(f"TUS URL error: {e}")
         raise HTTPException(status_code=500, detail=f"Error de red: {str(e)}")
