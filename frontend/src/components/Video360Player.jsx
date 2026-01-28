@@ -738,22 +738,28 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
               {vrSupported && (
                 <button
                   data-testid="vr-mode-btn"
-                  onClick={() => {
-                    // The VRButton handles entering VR, but we can also trigger it
-                    if (vrButtonRef.current) {
-                      vrButtonRef.current.click();
-                    }
-                  }}
+                  onClick={toggleVR}
                   className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium transition-all ${
                     isInVR 
-                      ? 'bg-green-500 text-white' 
+                      ? 'bg-red-500 text-white hover:bg-red-600' 
                       : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700'
                   }`}
                 >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.74 6H3.21C1.99 6 1 6.99 1 8.21v7.58C1 17.01 1.99 18 3.21 18h5.35c.63 0 1.22-.35 1.52-.91l.81-1.52c.26-.49.71-.79 1.22-.79h1.78c.51 0 .97.3 1.22.79l.81 1.52c.3.56.88.91 1.52.91h5.35c1.22 0 2.21-.99 2.21-2.21V8.21C23 6.99 22.01 6 20.74 6zM7.75 14c-1.24 0-2.25-1.01-2.25-2.25S6.51 9.5 7.75 9.5 10 10.51 10 11.75 8.99 14 7.75 14zm8.5 0c-1.24 0-2.25-1.01-2.25-2.25s1.01-2.25 2.25-2.25 2.25 1.01 2.25 2.25S17.49 14 16.25 14z"/>
-                  </svg>
-                  <span className="hidden sm:inline">{isInVR ? 'En VR' : 'Meta VR'}</span>
+                  {isInVR ? (
+                    <>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                      </svg>
+                      <span className="hidden sm:inline">Salir VR</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M20.74 6H3.21C1.99 6 1 6.99 1 8.21v7.58C1 17.01 1.99 18 3.21 18h5.35c.63 0 1.22-.35 1.52-.91l.81-1.52c.26-.49.71-.79 1.22-.79h1.78c.51 0 .97.3 1.22.79l.81 1.52c.3.56.88.91 1.52.91h5.35c1.22 0 2.21-.99 2.21-2.21V8.21C23 6.99 22.01 6 20.74 6zM7.75 14c-1.24 0-2.25-1.01-2.25-2.25S6.51 9.5 7.75 9.5 10 10.51 10 11.75 8.99 14 7.75 14zm8.5 0c-1.24 0-2.25-1.01-2.25-2.25s1.01-2.25 2.25-2.25 2.25 1.01 2.25 2.25S17.49 14 16.25 14z"/>
+                      </svg>
+                      <span className="hidden sm:inline">Meta VR</span>
+                    </>
+                  )}
                 </button>
               )}
               
