@@ -1872,12 +1872,13 @@ async def stream_tus_create(
         raise HTTPException(status_code=500, detail=str(e))
 
 # Proxy upload endpoint - uploads file through backend to avoid CORS
+# Uses streaming to handle large files without loading them into memory
 @api_router.post("/stream/proxy-upload")
 async def stream_proxy_upload(
-    file: UploadFile = File(...),
+    request: Request,
     current_user: User = Depends(get_current_user)
 ):
-    """Upload video to Cloudflare Stream through backend proxy (avoids CORS)"""
+    """Upload video to Cloudflare Stream through backend proxy (streaming, supports large files)"""
     if current_user.role != 'admin':
         raise HTTPException(status_code=403, detail="Solo administradores pueden subir videos")
     
@@ -1885,9 +1886,7 @@ async def stream_proxy_upload(
         raise HTTPException(status_code=500, detail="Cloudflare Stream no está configurado")
     
     try:
-        import httpx
-        
-        # Step 1: Create direct upload URL
+        # Step 1: Create direct upload URL from Cloudflare
         async with httpx.AsyncClient() as client:
             create_response = await client.post(
                 f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/stream/direct_upload",
@@ -1896,7 +1895,7 @@ async def stream_proxy_upload(
                     "Content-Type": "application/json"
                 },
                 json={
-                    "maxDurationSeconds": 7200,
+                    "maxDurationSeconds": 14400,  # 4 hours max for large 360 videos
                     "creator": current_user.email
                 },
                 timeout=30
@@ -1904,31 +1903,48 @@ async def stream_proxy_upload(
             
             data = create_response.json()
             if not data.get("success"):
-                raise HTTPException(status_code=500, detail="Error creating upload")
+                error_msg = data.get("errors", [{}])[0].get("message", "Unknown error")
+                raise HTTPException(status_code=500, detail=f"Error creating upload: {error_msg}")
             
             result = data.get("result", {})
             upload_url = result.get("uploadURL")
             video_id = result.get("uid")
         
-        logger.info(f"Created Cloudflare upload: {video_id}")
+        logger.info(f"Created Cloudflare upload URL for video: {video_id}")
         
-        # Step 2: Read file content and upload to Cloudflare
-        file_content = await file.read()
+        # Step 2: Stream the request body directly to Cloudflare
+        # This avoids loading the entire file into memory
+        content_type = request.headers.get("content-type", "")
+        content_length = request.headers.get("content-length")
         
-        async with httpx.AsyncClient(timeout=httpx.Timeout(600.0, connect=60.0)) as client:
-            # Upload using multipart form
-            files = {'file': (file.filename, file_content, file.content_type or 'video/mp4')}
-            
+        logger.info(f"Streaming upload: content-type={content_type}, content-length={content_length}")
+        
+        # Create async generator to stream chunks from request body
+        async def stream_body():
+            async for chunk in request.stream():
+                yield chunk
+        
+        # Stream directly to Cloudflare with long timeout for large files
+        async with httpx.AsyncClient(timeout=httpx.Timeout(7200.0, connect=120.0)) as client:
             upload_response = await client.post(
                 upload_url,
-                files=files
+                content=stream_body(),
+                headers={
+                    "Content-Type": content_type,
+                    "Content-Length": content_length
+                } if content_length else {
+                    "Content-Type": content_type
+                }
             )
             
             if upload_response.status_code >= 400:
                 logger.error(f"Upload failed: {upload_response.status_code} - {upload_response.text}")
-                raise HTTPException(status_code=500, detail=f"Error uploading to Cloudflare: {upload_response.status_code}")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Error uploading to Cloudflare: {upload_response.status_code}"
+                )
         
-        logger.info(f"Successfully uploaded video {video_id}")
+        logger.info(f"Successfully streamed video {video_id} to Cloudflare")
         
         return {
             "success": True,
@@ -1937,10 +1953,10 @@ async def stream_proxy_upload(
         }
         
     except httpx.HTTPError as e:
-        logger.error(f"HTTP error during upload: {e}")
+        logger.error(f"HTTP error during streaming upload: {e}")
         raise HTTPException(status_code=500, detail=f"Error de red: {str(e)}")
     except Exception as e:
-        logger.error(f"Upload error: {e}")
+        logger.error(f"Streaming upload error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/stream/video/{video_id}")
