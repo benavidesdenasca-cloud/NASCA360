@@ -1932,6 +1932,142 @@ async def get_tus_upload_url(
         logger.error(f"TUS URL error: {e}")
         raise HTTPException(status_code=500, detail=f"Error de red: {str(e)}")
 
+# New endpoint: Upload with automatic metadata fix using ffmpeg
+@api_router.post("/stream/upload-fixed")
+async def stream_upload_with_fix(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload video with automatic metadata/timescale fix using ffmpeg"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores pueden subir videos")
+    
+    if not CF_ACCOUNT_ID or not CF_STREAM_TOKEN:
+        raise HTTPException(status_code=500, detail="Cloudflare Stream no está configurado")
+    
+    import subprocess
+    import tempfile
+    import os as temp_os
+    
+    temp_input = None
+    temp_output = None
+    
+    try:
+        # Step 1: Save uploaded file to temp location
+        logger.info(f"Receiving video file: {file.filename}")
+        
+        temp_input = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+        temp_output_path = temp_input.name.replace('.mp4', '_fixed.mp4')
+        
+        # Write uploaded file to temp
+        chunk_size = 1024 * 1024  # 1MB chunks
+        total_written = 0
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            temp_input.write(chunk)
+            total_written += len(chunk)
+        
+        temp_input.close()
+        logger.info(f"Saved {total_written / (1024*1024):.1f}MB to temp file")
+        
+        # Step 2: Fix metadata with ffmpeg (remux without re-encoding)
+        logger.info("Fixing video metadata with ffmpeg...")
+        
+        ffmpeg_cmd = [
+            'ffmpeg', '-y',
+            '-i', temp_input.name,
+            '-c', 'copy',           # Copy streams without re-encoding
+            '-map', '0',            # Map all streams
+            '-movflags', '+faststart',  # Optimize for web streaming
+            temp_output_path
+        ]
+        
+        result = subprocess.run(
+            ffmpeg_cmd,
+            capture_output=True,
+            text=True,
+            timeout=600  # 10 min timeout
+        )
+        
+        if result.returncode != 0:
+            logger.error(f"ffmpeg error: {result.stderr}")
+            raise HTTPException(status_code=500, detail="Error procesando video con ffmpeg")
+        
+        # Get fixed file size
+        fixed_size = temp_os.path.getsize(temp_output_path)
+        logger.info(f"Fixed video size: {fixed_size / (1024*1024):.1f}MB")
+        
+        # Step 3: Upload fixed video to Cloudflare
+        logger.info("Uploading fixed video to Cloudflare Stream...")
+        
+        # Create upload URL
+        async with httpx.AsyncClient() as client:
+            create_response = await client.post(
+                f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/stream/direct_upload",
+                headers={
+                    "Authorization": f"Bearer {CF_STREAM_TOKEN}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "maxDurationSeconds": 36000,
+                    "creator": current_user.email
+                },
+                timeout=30
+            )
+            
+            data = create_response.json()
+            if not data.get("success"):
+                errors = data.get("errors", [{}])
+                error_msg = errors[0].get("message", "Unknown error") if errors else "Unknown error"
+                
+                if "Storage capacity exceeded" in str(data) or "10011" in str(data):
+                    raise HTTPException(
+                        status_code=507,
+                        detail="⚠️ CUOTA EXCEDIDA: Tu cuenta de Cloudflare Stream está llena."
+                    )
+                
+                raise HTTPException(status_code=500, detail=f"Cloudflare error: {error_msg}")
+            
+            result_data = data.get("result", {})
+            upload_url = result_data.get("uploadURL")
+            video_id = result_data.get("uid")
+        
+        # Upload the fixed file
+        with open(temp_output_path, 'rb') as f:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(7200.0, connect=120.0)) as client:
+                upload_response = await client.post(
+                    upload_url,
+                    files={'file': (file.filename or 'video.mp4', f, 'video/mp4')}
+                )
+                
+                if upload_response.status_code >= 400:
+                    logger.error(f"Upload failed: {upload_response.status_code}")
+                    raise HTTPException(status_code=500, detail="Error subiendo a Cloudflare")
+        
+        logger.info(f"Successfully uploaded fixed video: {video_id}")
+        
+        return {
+            "success": True,
+            "video_id": video_id,
+            "message": "Video procesado y subido correctamente. Metadata corregido."
+        }
+        
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail="Timeout procesando video")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Upload with fix error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Cleanup temp files
+        if temp_input and temp_os.path.exists(temp_input.name):
+            temp_os.unlink(temp_input.name)
+        if temp_output_path and temp_os.path.exists(temp_output_path):
+            temp_os.unlink(temp_output_path)
+
 # Proxy upload endpoint - for files under 200MB (streams through backend)
 @api_router.post("/stream/proxy-upload")
 async def stream_proxy_upload(
