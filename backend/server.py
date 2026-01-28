@@ -1980,7 +1980,16 @@ async def stream_proxy_upload(
             
             data = create_response.json()
             if not data.get("success"):
-                error_msg = data.get("errors", [{}])[0].get("message", "Unknown error")
+                errors = data.get("errors", [{}])
+                error_msg = errors[0].get("message", "Unknown error") if errors else "Unknown error"
+                
+                # Check for quota exceeded
+                if "Storage capacity exceeded" in str(data) or "10011" in str(data):
+                    raise HTTPException(
+                        status_code=507,
+                        detail="⚠️ CUOTA EXCEDIDA: Tu cuenta de Cloudflare Stream está llena. Elimina videos viejos o compra más minutos en tu panel de Cloudflare."
+                    )
+                
                 raise HTTPException(status_code=500, detail=f"Error creating upload: {error_msg}")
             
             result = data.get("result", {})
