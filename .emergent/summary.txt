@@ -1,0 +1,171 @@
+<analysis>**original_problem_statement:**
+The user's objective is to build Nazca360, a premium virtual tourism platform.
+Initial requirements included:
+1.  **Superuser Role:** An  user with full privileges ().
+2.  **Admin Panel:** A dashboard for the superuser to manage users (view, block/unblock) and videos (CRUD).
+3.  **Video Upload System:** Shift from URL-based video additions to direct MP4 file uploads.
+4.  **Netflix Model:** Restrict platform access, including login, to users with an active, paid subscription.
+5.  **Video Security:** Protect video content from unauthorized downloads.
+6.  **Large File Support:** Handle uploads of very large video files (5GB to 12GB).
+7.  **360° Video Playback:** Implement a player that supports interactive 360-degree video experiences.
+8.  **Performance:** Ensure that large videos stream quickly and without excessive buffering.
+
+**User's preferred language**:
+The user communicates in **Spanish**. The next agent MUST respond in Spanish only.
+
+**what currently exists?**
+The application is a full-stack platform (React, FastAPI, MongoDB) that has pivoted from AWS S3 to **Cloudflare Stream** for video hosting and delivery. It features JWT and Google authentication, Stripe subscriptions, and a paywall.
+
+The video pipeline is now almost fully integrated with Cloudflare Stream:
+*   **Admin Panel:** The UI has been simplified. Users can now upload videos directly to Cloudflare. The logic attempts to handle large files by proxying them through the backend.
+*   **Backend:** Includes endpoints to communicate with the Cloudflare Stream API to get upload URLs, check video processing status, and serve video details. A proxy endpoint was created to handle uploads from the frontend to Cloudflare to bypass browser CORS issues.
+*   **Video Playback:** For videos hosted on Cloudflare Stream, the frontend dynamically checks if the video is processed. If ready, it renders the video using Cloudflare's provided  embed, which handles HLS adaptive streaming and avoids all CORS issues. If the video is still processing, it displays a processing status to the user.
+
+**Last working item**:
+*   **Last item agent was working:** Fixing a critical server crash caused by a memory overload when uploading large files. The agent implemented a backend proxy endpoint () to solve a CORS issue, but this implementation reads the entire uploaded file into memory (), causing the server to run out of RAM and crash for files >1GB.
+*   **Status:** BLOCKED
+*   **Agent Testing Done:** N
+*   **Which testing method agent to use?** Both. First, the backend developer must fix the proxy endpoint. This can be tested with  by streaming a large dummy file. After the backend is fixed, the frontend testing agent should be used to verify the end-to-end upload flow from the Admin Panel.
+*   **User Testing Done:** N
+
+**All Pending/In progress Issue list**:
+*   **Issue 1 (P0):** Large file uploads (>1GB) crash the server.
+*   **Issue 2 (P1):** Systemic frontend API error handling is incomplete.
+
+**Issues Detail:**
+*   **Issue 1: Large File Uploads Crash the Server due to Memory Overload**
+    *   **Attempted fixes:** The agent created a proxy endpoint () to stream uploads from the browser to Cloudflare via the backend. This successfully bypassed CORS errors but introduced a new, more severe problem: the implementation () loads the entire file into memory, causing the pod to exceed its memory limit and terminate when uploading large files.
+    *   **Next debug checklist:**
+        1.  Modify the  endpoint in .
+        2.  **Do not use **.
+        3.  Instead, stream the request body directly. The  object from FastAPI () can be treated like a file-like object. Use an HTTP client library like  to stream the  object's content directly in the  request to Cloudflare. This will send the data in chunks without loading the entire file into server memory.
+        4.  Verify the fix by attempting to upload a large file again from the frontend.
+    *   **Why fix this issue and what will be achieved with the fix?** This is the primary blocker preventing the user from uploading their large 360° videos, which is a core requirement of the application.
+    *   **Status:** IN PROGRESS
+    *   **Is recurring issue?** Y (The upload process has failed in many different ways).
+    *   **Should Test frontend/backend/both after fix?** Both.
+    *   **Blocked on other issue:** None. This is the main blocker.
+
+*   **Issue 2: Recurring React Object Render Error**
+    *   **Attempted fixes:** A utility file () was created but not integrated globally.
+    *   **Next debug checklist:**
+        1.  Use  in  to identify all components with API error handling.
+        2.  In each identified file, import the error handling utility and refactor the  blocks to use it.
+    *   **Why fix this issue and what will be achieved with the fix?** This will improve application stability and prevent UI crashes from unhandled API error formats.
+    *   **Status:** NOT STARTED
+    *   **Is recurring issue?** Y
+    *   **Should Test frontend/backend/both after fix?** Frontend.
+    *   **Blocked on other issue:** Issue 1 has higher priority.
+
+**In progress Task List**:
+*   **Task 1: Implement a Memory-Efficient Backend Upload Proxy**
+    *   **Where to resume:** , inside the  function.
+    *   **What will be achieved with this?** A stable and reliable way to upload very large video files to Cloudflare Stream without crashing the server.
+    *   **Status:** IN PROGRESS
+    *   **Should Test frontend/backend/both after fix?** Both.
+    *   **Blocked on something:** None.
+
+**Upcoming and Future Tasks**
+*   **(P2) Implement HLS/DASH Streaming:** (Partially done via Cloudflare Stream) The next step would be to expose quality selection controls to the user by interacting with the Cloudflare Stream player API or manifest, if possible.
+*   **(Future) DRM Integration:** The user has expressed interest in Digital Rights Management (e.g., Widevine) for maximum security. This is a complex, long-term feature.
+*   **(Future) Deprecate and Remove AWS S3 Code:** The backend still contains code and credentials for AWS S3. This should be removed to simplify the codebase.
+
+**Completed work in this session**
+*   **Fixed 360° Video Player:** Resolved the initial issue where the S3-based 360° video player would freeze, and successfully validated it with the testing agent.
+*   **Pivoted to Cloudflare:** Migrated the entire video pipeline from AWS S3 to **Cloudflare Stream** in response to user feedback about performance and complexity.
+*   **Integrated Cloudflare Stream:**
+    *   Added backend endpoints to get one-time upload URLs and check video processing status.
+    *   Refactored the Admin Panel UI to provide a simple upload interface dedicated to Cloudflare Stream.
+    *   Successfully implemented video playback using Cloudflare's  embed, which solves CORS and provides adaptive streaming.
+*   **Iterative Upload Debugging:** Went through multiple failed upload strategies (TUS, basic POST, XHR vs. ) before settling on the backend proxy approach.
+*   **Backend Crash Recovery:** Diagnosed and fixed an  in  that was crashing the backend and preventing login.
+
+**Earlier issues found/mentioned but not fixed**
+*   The systemic frontend error handling () was identified in a previous session and remains unresolved.
+
+**Known issue recurrence from previous fork**
+*   **Issue:** .
+*   **Recurrence count:** High.
+*   **Status:** NOT STARTED.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+*   **Cloudflare Stream:** A video-on-demand platform that handles transcoding, storage, and adaptive (HLS) streaming delivery via a global CDN.
+*   **Backend Streaming Proxy:** The currently broken approach to upload large files. The goal is to stream an incoming HTTP request body to an outgoing request without loading it all into memory.
+*   **Cloudflare Iframe Embed:** The method used for video playback. It's the simplest way to play Cloudflare Stream videos, avoiding CORS and player complexity.
+*   **HLS (HTTP Live Streaming):** The adaptive bitrate streaming protocol used by Cloudflare Stream to deliver video efficiently.
+
+**key DB schema**
+*   **videos:** 
+    *   The  field is now polymorphic and primarily uses a new scheme: . The backend and frontend logic are designed to handle this.
+
+**All files of reference**
+*   : **This is the critical file.** The  function needs to be rewritten to use streaming.
+*   : Contains the frontend logic that calls the broken proxy endpoint.
+*   : Contains the logic for rendering the Cloudflare Stream .
+*   : Contains the necessary  and .
+
+**Areas that need refactoring**:
+*   The  upload logic has been changed many times and could be simplified.
+*    is over 1900 lines long and should be broken down into smaller, more manageable modules (e.g., , ).
+*   All deprecated AWS S3 code should be removed from  and the frontend.
+
+**key api endpoints**
+*   : Generates a direct upload URL from Cloudflare.
+*   : **(BROKEN)** The endpoint that receives a file from the browser and is supposed to stream it to Cloudflare.
+*   : Gets video details from Cloudflare, including processing status and the  embed URL.
+
+**Critical Info for New Agent**
+*   The immediate and only priority is to fix the memory overload in the  endpoint in . The solution is to **stream the file**, not read it into memory. FastAPI's  object can be iterated over or passed to a streaming-capable HTTP client like .
+*   The user's workflow is completely blocked by this bug.
+*   The project has fully committed to Cloudflare Stream. Do not re-introduce AWS S3 or other storage solutions. The current architecture (upload via backend, play via iframe) is the correct path forward once the memory issue is resolved.
+
+**documents and test reports created in this job**
+*   
+*    (updated multiple times)
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **User:** Reports  and  when trying to upload la arana. **Status: ADDRESSED**, led to removing tus-js-client.
+2.  **User:** Reports CORS error and 502 Bad Gateway when uploading. **Status: ADDRESSED**, led to the implementation of the backend proxy.
+3.  **User:** Implicitly reports server crash by stating login is failing with a 520 error. **Status: ADDRESSED**, agent found and fixed a backend indentation error.
+4.  **User:** Reports  when trying to upload a large file again. **Status: IN PROGRESS**, this is the core issue caused by the server crashing from memory overload due to the proxy implementation.
+5.  **User:** Reports  and . **Status: ADDRESSED**, this was part of the iterative debugging of the upload protocol.
+6.  **User:** Reports decoding error and TUS failure. **Status: ADDRESSED**, led to simplifying the upload logic.
+7.  **User:** Reports  and . **Status: ADDRESSED**, another TUS-related error.
+8.  **User:** elimina el s3 ya no trabajamos con aws. **Status: PARTIALLY DONE**, frontend UI was removed, but backend code remains.
+9.  **User:** Confirms upload to Cloudflare works, but playback fails with CORS error and 404. **Status: COMPLETED**, led to the implementation of the  embed and status checking.
+10. **User:** Provides Cloudflare Stream credentials. **Status: COMPLETED**.
+
+**Project Health Check:**
+*   **Broken:**
+    *   The core video upload functionality in  is non-functional for large files due to the backend memory crash.
+
+*   **Mocked:**
+    *   None.
+
+**3rd Party Integrations**
+*   **Cloudflare Stream (Video)** — requires User API Key.
+*   **Stripe (Payments)** — requires User API Key.
+*   **SendGrid (Email)** — requires User API Key.
+*   **Emergent Google Auth (Authentication)** — uses Emergent LLM Key.
+*   **AWS S3 (Storage)** — **DEPRECATED**, requires User API Key.
+
+**Testing status**
+*   **Testing agent used after significant changes:** YES, but before the latest Cloudflare upload implementations.
+*   **Troubleshoot agent used after agent stuck in loop:** NO.
+*   **Test files created:** None.
+*   **Known regressions:** The login functionality temporarily broke due to a backend crash but was restored. The large file upload, which once worked with S3 multipart, is now broken with the new Cloudflare proxy implementation.
+
+**Credentials to test flow:**
+*   **Superuser:**
+    *   **Email:** 
+    *   **Password:** 
+*   **Cloudflare Credentials (in ):**
+    *   
+    *   
+
+**What agent forgot to execute**
+*   The agent did not perform a global refactor of frontend error handling using the  utility.
+*   The agent did not remove the now-deprecated AWS S3 integration code from the backend () or the AWS credentials from the  file, leaving technical debt.</analysis>
