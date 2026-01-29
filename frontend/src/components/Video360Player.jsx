@@ -431,7 +431,7 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd }) => {
         container.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [createVRUI, onVideoEnd]);
 
   // Main effect
   useEffect(() => {
