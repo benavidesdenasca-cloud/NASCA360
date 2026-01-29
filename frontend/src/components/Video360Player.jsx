@@ -255,11 +255,19 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd }) => {
           container.appendChild(vrButton);
           vrButtonRef.current = vrButton;
           
+          // Create VR UI (floating panel for when video ends)
+          const vrUISetup = createVRUI(scene, renderer);
+          
           // Track VR session state
           renderer.xr.addEventListener('sessionstart', () => {
             currentSession = renderer.xr.getSession();
             setIsInVR(true);
             console.log('VR session started');
+            
+            // Hide VR UI initially
+            if (vrUIRef.current) {
+              vrUIRef.current.visible = false;
+            }
             
             // Listen for session end from Meta menu button
             if (currentSession) {
@@ -279,6 +287,9 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd }) => {
           renderer.xr.addEventListener('sessionend', () => {
             setIsInVR(false);
             currentSession = null;
+            if (vrUIRef.current) {
+              vrUIRef.current.visible = false;
+            }
             console.log('VR session ended');
           });
         }
