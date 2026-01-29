@@ -60,6 +60,150 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd }) => {
     }
   }, []);
 
+  // Create VR UI Panel with interactive buttons
+  const createVRUI = useCallback((scene, renderer) => {
+    const vrUI = new THREE.Group();
+    vrUI.visible = false;
+    vrUIRef.current = vrUI;
+
+    // Panel background
+    const panelGeometry = new THREE.PlaneGeometry(2, 1.2);
+    const panelMaterial = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.85,
+      side: THREE.DoubleSide
+    });
+    const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+    vrUI.add(panel);
+
+    // Title text using canvas texture
+    const createTextTexture = (text, fontSize = 64, color = '#ffffff', bgColor = null) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      if (bgColor) {
+        ctx.fillStyle = bgColor;
+        ctx.roundRect(0, 0, 512, 128, 20);
+        ctx.fill();
+      }
+      ctx.fillStyle = color;
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 256, 64);
+      const texture = new THREE.CanvasTexture(canvas);
+      return texture;
+    };
+
+    // "Video Finalizado" title
+    const titleGeometry = new THREE.PlaneGeometry(1.6, 0.3);
+    const titleMaterial = new THREE.MeshBasicMaterial({
+      map: createTextTexture('Video Finalizado', 48),
+      transparent: true
+    });
+    const titleMesh = new THREE.Mesh(titleGeometry, titleMaterial);
+    titleMesh.position.set(0, 0.35, 0.01);
+    vrUI.add(titleMesh);
+
+    // Exit button (red)
+    const exitBtnGeometry = new THREE.PlaneGeometry(0.7, 0.35);
+    const exitBtnMaterial = new THREE.MeshBasicMaterial({
+      map: createTextTexture('SALIR', 40, '#ffffff', '#dc2626'),
+      transparent: true
+    });
+    const exitBtn = new THREE.Mesh(exitBtnGeometry, exitBtnMaterial);
+    exitBtn.position.set(-0.45, -0.15, 0.01);
+    exitBtn.userData = { action: 'exit', isButton: true };
+    vrUI.add(exitBtn);
+
+    // Replay button (green)
+    const replayBtnGeometry = new THREE.PlaneGeometry(0.7, 0.35);
+    const replayBtnMaterial = new THREE.MeshBasicMaterial({
+      map: createTextTexture('REPETIR', 40, '#ffffff', '#16a34a'),
+      transparent: true
+    });
+    const replayBtn = new THREE.Mesh(replayBtnGeometry, replayBtnMaterial);
+    replayBtn.position.set(0.45, -0.15, 0.01);
+    replayBtn.userData = { action: 'replay', isButton: true };
+    vrUI.add(replayBtn);
+
+    // Position panel in front of user
+    vrUI.position.set(0, 1.6, -3);
+
+    scene.add(vrUI);
+
+    // Setup controller for interaction
+    const controller = renderer.xr.getController(0);
+    controllerRef.current = controller;
+    
+    // Controller visual (ray line)
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, -5)
+    ]);
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+    const line = new THREE.Line(lineGeometry, lineMaterial);
+    line.visible = false;
+    controller.add(line);
+    
+    // Controller model
+    const controllerModelFactory = new XRControllerModelFactory();
+    const controllerGrip = renderer.xr.getControllerGrip(0);
+    controllerGrip.add(controllerModelFactory.createControllerModel(controllerGrip));
+    scene.add(controllerGrip);
+    scene.add(controller);
+
+    // Handle controller select (trigger press)
+    const onSelect = () => {
+      if (!vrUIRef.current?.visible) return;
+      
+      tempMatrixRef.current.identity().extractRotation(controller.matrixWorld);
+      raycasterRef.current.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+      raycasterRef.current.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrixRef.current);
+
+      const buttons = vrUIRef.current.children.filter(c => c.userData?.isButton);
+      const intersects = raycasterRef.current.intersectObjects(buttons);
+
+      if (intersects.length > 0) {
+        const action = intersects[0].object.userData.action;
+        console.log('VR button pressed:', action);
+        
+        if (action === 'exit') {
+          // Exit VR and go back
+          const session = renderer.xr.getSession();
+          if (session) {
+            session.end().then(() => {
+              if (onVideoEnd) onVideoEnd();
+              else window.history.back();
+            });
+          }
+        } else if (action === 'replay') {
+          // Replay video
+          if (videoRef.current) {
+            videoRef.current.currentTime = 0;
+            videoRef.current.play();
+            vrUIRef.current.visible = false;
+            line.visible = false;
+            setVideoEnded(false);
+          }
+        }
+      }
+    };
+
+    controller.addEventListener('select', onSelect);
+
+    // Show ray line when UI is visible
+    const updateControllerVisual = () => {
+      if (line && vrUIRef.current) {
+        line.visible = vrUIRef.current.visible;
+      }
+    };
+
+    return { vrUI, controller, line, updateControllerVisual, onSelect };
+  }, [onVideoEnd]);
+
   // Initialize Three.js scene
   const initThreeJS = useCallback((video) => {
     if (!containerRef.current || rendererRef.current) return null;
