@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import Hls from 'hls.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
+import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 
 const QUALITY_SETTINGS = {
   auto: { label: 'Auto', pixelRatio: -1, segments: 60 },
@@ -10,7 +11,7 @@ const QUALITY_SETTINGS = {
   low: { label: 'Baja (720p)', pixelRatio: 1, segments: 32 },
 };
 
-const Video360Player = ({ videoUrl, posterUrl, title }) => {
+const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd }) => {
   const containerRef = useRef(null);
   const videoRef = useRef(null);
   const rendererRef = useRef(null);
@@ -22,6 +23,10 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const sphereRef = useRef(null);
   const hlsRef = useRef(null);
   const vrButtonRef = useRef(null);
+  const vrUIRef = useRef(null);
+  const controllerRef = useRef(null);
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const tempMatrixRef = useRef(new THREE.Matrix4());
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -37,6 +42,7 @@ const Video360Player = ({ videoUrl, posterUrl, title }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [vrSupported, setVrSupported] = useState(false);
   const [isInVR, setIsInVR] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
   
   const lonRef = useRef(0);
   const latRef = useRef(0);
