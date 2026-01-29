@@ -493,7 +493,21 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd }) => {
     };
 
     video.onended = () => {
-      if (mountedRef.current) setIsPlaying(false);
+      if (mountedRef.current) {
+        setIsPlaying(false);
+        setVideoEnded(true);
+        
+        // If in VR mode, show the VR UI panel
+        if (rendererRef.current?.xr?.isPresenting && vrUIRef.current) {
+          console.log('Video ended in VR - showing exit panel');
+          vrUIRef.current.visible = true;
+        } else if (!rendererRef.current?.xr?.isPresenting) {
+          // Not in VR - call onVideoEnd callback if provided
+          if (onVideoEnd) {
+            onVideoEnd();
+          }
+        }
+      }
     };
 
     video.onerror = (e) => {
