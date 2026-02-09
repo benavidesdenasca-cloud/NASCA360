@@ -20,6 +20,7 @@ import AuthCallback from '@/pages/auth/AuthCallback';
 // Protected pages
 import Gallery from '@/pages/Gallery';
 import VideoPlayer from '@/pages/VideoPlayer';
+import Map3D from '@/pages/Map3D';
 import Subscription from '@/pages/Subscription';
 import SubscriptionSuccess from '@/pages/SubscriptionSuccess';
 import Reservations from '@/pages/Reservations';
