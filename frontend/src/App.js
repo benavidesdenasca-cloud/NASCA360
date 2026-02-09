@@ -139,6 +139,14 @@ function App() {
           } 
         />
         <Route 
+          path="/map3d" 
+          element={
+            <ProtectedRoute>
+              <Map3D />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
           path="/video/:id" 
           element={
             <ProtectedRoute>
