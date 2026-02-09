@@ -39,8 +39,35 @@ const webpackConfig = {
   webpack: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
+      'cesium': path.resolve(__dirname, cesiumSource),
     },
     configure: (webpackConfig) => {
+      // Cesium configuration
+      webpackConfig.plugins.push(
+        new CopyWebpackPlugin({
+          patterns: [
+            { from: path.join(cesiumSource, cesiumWorkers), to: 'Workers' },
+            { from: path.join(cesiumSource, 'Assets'), to: 'Assets' },
+            { from: path.join(cesiumSource, 'Widgets'), to: 'Widgets' },
+            { from: path.join(cesiumSource, 'ThirdParty'), to: 'ThirdParty' },
+          ],
+        }),
+        new webpack.DefinePlugin({
+          CESIUM_BASE_URL: JSON.stringify(''),
+        })
+      );
+      
+      // Add rule for Cesium
+      webpackConfig.module.rules.push({
+        test: /\.js$/,
+        include: /cesium/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env'],
+          },
+        },
+      });
 
       // Disable hot reload completely if environment variable is set
       if (config.disableHotReload) {
