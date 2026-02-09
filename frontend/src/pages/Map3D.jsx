@@ -7,25 +7,7 @@ import { MapPin, Eye, Info, X, ChevronLeft, ChevronRight, Play, Compass, ZoomIn,
 import { toast } from 'sonner';
 import axios from 'axios';
 
-// Cesium imports
-import { Viewer, Entity, PointGraphics, BillboardGraphics, LabelGraphics, Camera, CameraFlyTo } from 'resium';
-import { 
-  Ion, 
-  Cartesian3, 
-  Color, 
-  VerticalOrigin, 
-  HorizontalOrigin,
-  Math as CesiumMath,
-  Rectangle,
-  HeadingPitchRange,
-  Cartographic
-} from 'cesium';
-import 'cesium/Build/Cesium/Widgets/widgets.css';
-
 const API = process.env.REACT_APP_BACKEND_URL;
-
-// Cesium Ion access token (free tier)
-Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWMxMzcyYy0zZjJkLTQwODctODNlNi01MDRkZTUzMjU2NmMiLCJpZCI6MjU5LCJpYXQiOjE0ODkyOTM2OTR9.EuHMR1Lti0BjJkYNjsxO4bDxoWLbNQoNEhJLq8I-SLA';
 
 // Nazca Lines area boundaries (restricted navigation)
 const NAZCA_CENTER = {
@@ -44,7 +26,7 @@ const NAZCA_BOUNDS = {
 // Default Points of Interest for Nazca Lines
 const DEFAULT_POIS = [
   {
-    id: 'colibrí',
+    id: 'colibri',
     name: 'El Colibrí',
     description: 'El colibrí es uno de los geoglifos más reconocidos, mide aproximadamente 96 metros de largo. Representa al ave sagrada asociada con la fertilidad.',
     longitude: -75.1067,
@@ -138,14 +120,15 @@ const DEFAULT_POIS = [
 const Map3D = () => {
   const navigate = useNavigate();
   const { user, token } = useContext(AuthContext);
-  const viewerRef = useRef(null);
+  const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
   
   const [pois, setPois] = useState(DEFAULT_POIS);
   const [selectedPoi, setSelectedPoi] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [videos, setVideos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [cameraPosition, setCameraPosition] = useState(NAZCA_CENTER);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const [hoveredPoi, setHoveredPoi] = useState(null);
 
   // Fetch videos to link with POIs
@@ -164,103 +147,146 @@ const Map3D = () => {
     fetchData();
   }, [token]);
 
-  // Restrict camera to Nazca area
-  const restrictCamera = () => {
-    if (!viewerRef.current?.cesiumElement) return;
-    
-    const viewer = viewerRef.current.cesiumElement;
-    const camera = viewer.camera;
-    const position = camera.positionCartographic;
-    
-    let needsUpdate = false;
-    let newLon = position.longitude;
-    let newLat = position.latitude;
-    let newHeight = position.height;
-    
-    // Clamp longitude
-    if (CesiumMath.toDegrees(position.longitude) < NAZCA_BOUNDS.west) {
-      newLon = CesiumMath.toRadians(NAZCA_BOUNDS.west);
-      needsUpdate = true;
-    } else if (CesiumMath.toDegrees(position.longitude) > NAZCA_BOUNDS.east) {
-      newLon = CesiumMath.toRadians(NAZCA_BOUNDS.east);
-      needsUpdate = true;
-    }
-    
-    // Clamp latitude
-    if (CesiumMath.toDegrees(position.latitude) < NAZCA_BOUNDS.south) {
-      newLat = CesiumMath.toRadians(NAZCA_BOUNDS.south);
-      needsUpdate = true;
-    } else if (CesiumMath.toDegrees(position.latitude) > NAZCA_BOUNDS.north) {
-      newLat = CesiumMath.toRadians(NAZCA_BOUNDS.north);
-      needsUpdate = true;
-    }
-    
-    // Clamp height
-    if (position.height < 500) {
-      newHeight = 500;
-      needsUpdate = true;
-    } else if (position.height > 50000) {
-      newHeight = 50000;
-      needsUpdate = true;
-    }
-    
-    if (needsUpdate) {
-      camera.setView({
-        destination: Cartesian3.fromRadians(newLon, newLat, newHeight)
+  // Initialize Leaflet map with satellite imagery
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    // Load Leaflet CSS
+    const leafletCSS = document.createElement('link');
+    leafletCSS.rel = 'stylesheet';
+    leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(leafletCSS);
+
+    // Load Leaflet JS
+    const leafletScript = document.createElement('script');
+    leafletScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    leafletScript.onload = () => {
+      initMap();
+    };
+    document.head.appendChild(leafletScript);
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  const initMap = () => {
+    const L = window.L;
+    if (!L || !mapContainerRef.current) return;
+
+    // Create map centered on Nazca
+    const map = L.map(mapContainerRef.current, {
+      center: [NAZCA_CENTER.latitude, NAZCA_CENTER.longitude],
+      zoom: 13,
+      minZoom: 11,
+      maxZoom: 18,
+      maxBounds: [
+        [NAZCA_BOUNDS.south, NAZCA_BOUNDS.west],
+        [NAZCA_BOUNDS.north, NAZCA_BOUNDS.east]
+      ],
+      maxBoundsViscosity: 1.0
+    });
+
+    // Add ESRI World Imagery (satellite)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+      maxZoom: 18,
+    }).addTo(map);
+
+    // Custom marker icon
+    const createIcon = (color) => L.divIcon({
+      className: 'custom-marker',
+      html: `<div style="
+        width: 30px;
+        height: 30px;
+        background: ${color};
+        border: 3px solid white;
+        border-radius: 50%;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+      </div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+
+    // Add markers for each POI
+    pois.forEach(poi => {
+      const color = poi.category === 'geoglifo' ? '#f59e0b' : 
+                   poi.category === 'mirador' ? '#06b6d4' : '#a855f7';
+      
+      const marker = L.marker([poi.latitude, poi.longitude], {
+        icon: createIcon(color)
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <div style="min-width: 200px;">
+          <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #92400e;">${poi.name}</h3>
+          <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">${poi.description}</p>
+          <span style="
+            display: inline-block;
+            padding: 2px 8px;
+            background: ${color};
+            color: white;
+            border-radius: 12px;
+            font-size: 11px;
+            text-transform: capitalize;
+          ">${poi.category}</span>
+        </div>
+      `);
+
+      marker.on('click', () => {
+        setSelectedPoi(poi);
       });
-    }
+    });
+
+    mapRef.current = map;
+    setMapLoaded(true);
   };
 
   // Fly to POI
   const flyToPoi = (poi) => {
-    if (!viewerRef.current?.cesiumElement) return;
+    if (!mapRef.current) return;
     
-    const viewer = viewerRef.current.cesiumElement;
-    viewer.camera.flyTo({
-      destination: Cartesian3.fromDegrees(poi.longitude, poi.latitude, 2000),
-      duration: 2,
-      orientation: {
-        heading: CesiumMath.toRadians(0),
-        pitch: CesiumMath.toRadians(-45),
-        roll: 0
-      }
+    mapRef.current.flyTo([poi.latitude, poi.longitude], 16, {
+      duration: 1.5
     });
     setSelectedPoi(poi);
   };
 
   // Reset view to default
   const resetView = () => {
-    if (!viewerRef.current?.cesiumElement) return;
+    if (!mapRef.current) return;
     
-    const viewer = viewerRef.current.cesiumElement;
-    viewer.camera.flyTo({
-      destination: Cartesian3.fromDegrees(
-        NAZCA_CENTER.longitude,
-        NAZCA_CENTER.latitude,
-        NAZCA_CENTER.height
-      ),
-      duration: 2
+    mapRef.current.flyTo([NAZCA_CENTER.latitude, NAZCA_CENTER.longitude], 13, {
+      duration: 1.5
     });
     setSelectedPoi(null);
   };
 
   // Zoom controls
   const zoomIn = () => {
-    if (!viewerRef.current?.cesiumElement) return;
-    const viewer = viewerRef.current.cesiumElement;
-    viewer.camera.zoomIn(viewer.camera.positionCartographic.height * 0.3);
+    if (!mapRef.current) return;
+    mapRef.current.zoomIn();
   };
 
   const zoomOut = () => {
-    if (!viewerRef.current?.cesiumElement) return;
-    const viewer = viewerRef.current.cesiumElement;
-    viewer.camera.zoomOut(viewer.camera.positionCartographic.height * 0.3);
+    if (!mapRef.current) return;
+    mapRef.current.zoomOut();
   };
 
   // Watch video associated with POI
   const watchVideo = (poi) => {
     const linkedVideo = videos.find(v => 
-      v.title?.toLowerCase().includes(poi.name.toLowerCase()) ||
+      v.title?.toLowerCase().includes(poi.name.toLowerCase().replace('el ', '').replace('la ', '').replace('las ', '')) ||
       poi.videoId === v.id
     );
     
@@ -268,16 +294,6 @@ const Map3D = () => {
       navigate(`/video/${linkedVideo.id}`);
     } else {
       toast.info('No hay video 360° disponible para este geoglifo aún');
-    }
-  };
-
-  // Get category color
-  const getCategoryColor = (category) => {
-    switch (category) {
-      case 'geoglifo': return Color.GOLD;
-      case 'mirador': return Color.CYAN;
-      case 'museo': return Color.MAGENTA;
-      default: return Color.WHITE;
     }
   };
 
@@ -382,71 +398,22 @@ const Map3D = () => {
 
         {/* Map Container */}
         <div className="flex-1 relative">
-          {/* Cesium Viewer */}
-          <Viewer
-            ref={viewerRef}
-            full
-            timeline={false}
-            animation={false}
-            homeButton={false}
-            sceneModePicker={false}
-            baseLayerPicker={false}
-            navigationHelpButton={false}
-            geocoder={false}
-            fullscreenButton={false}
-            infoBox={false}
-            selectionIndicator={false}
-            creditContainer={document.createElement('div')}
-            onCameraMoveEnd={restrictCamera}
-          >
-            {/* Initial Camera Position */}
-            <Camera
-              defaultLookAt={{
-                center: Cartesian3.fromDegrees(
-                  NAZCA_CENTER.longitude,
-                  NAZCA_CENTER.latitude,
-                  0
-                ),
-                range: new HeadingPitchRange(
-                  CesiumMath.toRadians(0),
-                  CesiumMath.toRadians(-45),
-                  NAZCA_CENTER.height
-                )
-              }}
-            />
+          {/* Map */}
+          <div 
+            ref={mapContainerRef} 
+            className="w-full h-full"
+            style={{ background: '#1a1a2e' }}
+          />
 
-            {/* POI Markers */}
-            {pois.map((poi) => (
-              <Entity
-                key={poi.id}
-                position={Cartesian3.fromDegrees(poi.longitude, poi.latitude, 100)}
-                name={poi.name}
-                description={poi.description}
-                onClick={() => {
-                  setSelectedPoi(poi);
-                  flyToPoi(poi);
-                }}
-              >
-                <PointGraphics
-                  pixelSize={selectedPoi?.id === poi.id || hoveredPoi?.id === poi.id ? 18 : 12}
-                  color={getCategoryColor(poi.category)}
-                  outlineColor={Color.WHITE}
-                  outlineWidth={2}
-                />
-                <LabelGraphics
-                  text={poi.name}
-                  font="14px sans-serif"
-                  fillColor={Color.WHITE}
-                  outlineColor={Color.BLACK}
-                  outlineWidth={2}
-                  style={2} // FILL_AND_OUTLINE
-                  verticalOrigin={VerticalOrigin.BOTTOM}
-                  pixelOffset={{ x: 0, y: -15 }}
-                  show={selectedPoi?.id === poi.id || hoveredPoi?.id === poi.id}
-                />
-              </Entity>
-            ))}
-          </Viewer>
+          {/* Loading overlay */}
+          {!mapLoaded && (
+            <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-10">
+              <div className="text-center text-white">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+                <p>Cargando mapa satelital...</p>
+              </div>
+            </div>
+          )}
 
           {/* Map Controls */}
           <div className="absolute right-4 top-4 flex flex-col gap-2 z-10">
