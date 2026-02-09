@@ -1,6 +1,12 @@
 // craco.config.js
 const path = require("path");
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
 require("dotenv").config();
+
+// Cesium configuration
+const cesiumSource = 'node_modules/cesium/Build/Cesium';
+const cesiumWorkers = '../Build/Cesium/Workers';
 
 // Environment variable overrides
 const config = {
