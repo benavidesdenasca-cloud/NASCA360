@@ -58,6 +58,16 @@ const Navbar = () => {
               Galería
             </Link>
             <Link 
+              to="/map3d" 
+              data-testid="nav-map3d"
+              className="text-gray-700 hover:text-amber-900 font-medium flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/>
+              </svg>
+              Mapa 3D
+            </Link>
+            <Link 
               to="/subscription" 
               data-testid="nav-subscription"
               className="text-gray-700 hover:text-amber-900 font-medium"
