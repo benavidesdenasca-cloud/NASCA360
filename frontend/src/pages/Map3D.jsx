@@ -213,10 +213,10 @@ const Map3D = () => {
         nazcaLinesLayerRef.current = layerGroup;
         
         if (showNazcaLines && mapRef.current) {
-          geoJsonLayer.addTo(mapRef.current);
+          layerGroup.addTo(mapRef.current);
         }
         
-        toast.success(`${geoJsonData.features?.length || 0} trazos oficiales cargados`);
+        toast.success(`${successCount} trazos oficiales cargados`);
         setNazcaLinesLoaded(true);
         
       } catch (error) {
