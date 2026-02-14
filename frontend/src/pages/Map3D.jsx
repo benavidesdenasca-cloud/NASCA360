@@ -177,8 +177,8 @@ const Map3D = () => {
         const geoJsonLayer = L.geoJSON(geoJsonData, {
           style: {
             color: '#FF6600',
-            weight: 2,
-            opacity: 0.9
+            weight: 3,
+            opacity: 1
           }
         });
         
