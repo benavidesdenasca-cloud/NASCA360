@@ -123,7 +123,6 @@ const Map3D = () => {
     if (mapRef.current && mapLoaded && pois.length > 0) {
       updateMarkers();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pois, selectedPoi, mapLoaded]);
 
   const initMap = () => {
