@@ -152,7 +152,7 @@ const Map3D = () => {
     if (showNazcaLines) {
       // Load and show the layer
       if (!nazcaLinesLayerRef.current && !nazcaLinesLoaded) {
-        toast.info('Cargando trazos del Ministerio de Cultura...');
+        toast.info('Cargando trazos del Ministerio de Cultura (puede tardar unos segundos)...');
         setNazcaLinesLoaded(true);
         
         fetch('/nazca_lines.json')
@@ -161,41 +161,57 @@ const Map3D = () => {
             return response.json();
           })
           .then(data => {
-            // Use Canvas renderer for better performance
-            const canvasRenderer = L.canvas({ padding: 0.5 });
+            // Use Canvas renderer for performance with many lines
+            const canvasRenderer = L.canvas({ padding: 0.5, tolerance: 5 });
             const featureGroup = L.featureGroup();
             let addedCount = 0;
             
-            data.features.forEach((feature) => {
-              if (feature.geometry && feature.geometry.coordinates) {
-                const latLngs = feature.geometry.coordinates
-                  .filter(coord => Array.isArray(coord) && coord.length >= 2)
-                  .map(coord => {
-                    const lng = Number(coord[0]);
-                    const lat = Number(coord[1]);
-                    return [lat, lng];
-                  })
-                  .filter(([lat, lng]) => 
-                    Number.isFinite(lat) && Number.isFinite(lng) &&
-                    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
-                  );
-                
-                if (latLngs.length >= 2) {
-                  const polyline = L.polyline(latLngs, {
-                    color: '#FFD700',
-                    weight: 2,
-                    opacity: 0.9,
-                    renderer: canvasRenderer
-                  });
-                  featureGroup.addLayer(polyline);
-                  addedCount++;
+            // Process in batches for better performance
+            const batchSize = 1000;
+            let currentBatch = 0;
+            
+            const processBatch = () => {
+              const start = currentBatch * batchSize;
+              const end = Math.min(start + batchSize, data.features.length);
+              
+              for (let i = start; i < end; i++) {
+                const feature = data.features[i];
+                if (feature.geometry && feature.geometry.coordinates) {
+                  const latLngs = feature.geometry.coordinates
+                    .filter(coord => Array.isArray(coord) && coord.length >= 2)
+                    .map(coord => [Number(coord[1]), Number(coord[0])])
+                    .filter(([lat, lng]) => 
+                      Number.isFinite(lat) && Number.isFinite(lng) &&
+                      lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+                    );
+                  
+                  if (latLngs.length >= 2) {
+                    const polyline = L.polyline(latLngs, {
+                      color: '#FFA500', // Naranja como en la imagen
+                      weight: 1.5,
+                      opacity: 0.85,
+                      renderer: canvasRenderer
+                    });
+                    featureGroup.addLayer(polyline);
+                    addedCount++;
+                  }
                 }
               }
-            });
+              
+              currentBatch++;
+              
+              if (currentBatch * batchSize < data.features.length) {
+                // Process next batch
+                setTimeout(processBatch, 0);
+              } else {
+                // All batches processed
+                nazcaLinesLayerRef.current = featureGroup;
+                featureGroup.addTo(mapRef.current);
+                toast.success(`Trazos cargados (${addedCount.toLocaleString()} líneas)`);
+              }
+            };
             
-            nazcaLinesLayerRef.current = featureGroup;
-            featureGroup.addTo(mapRef.current);
-            toast.success(`Trazos cargados (${addedCount} líneas)`);
+            processBatch();
           })
           .catch(error => {
             console.error('Error loading nazca lines:', error);
