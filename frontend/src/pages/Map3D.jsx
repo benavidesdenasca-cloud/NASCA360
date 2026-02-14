@@ -153,6 +153,7 @@ const Map3D = () => {
       // Load and show the layer
       if (!nazcaLinesLayerRef.current && !nazcaLinesLoaded) {
         toast.info('Cargando trazos del Ministerio de Cultura...');
+        setNazcaLinesLoaded(true); // Set early to prevent duplicate loads
         
         fetch('/nazca_lines.json')
           .then(response => {
@@ -160,53 +161,48 @@ const Map3D = () => {
             return response.json();
           })
           .then(data => {
-            try {
-              // Create layer group to hold all polylines
-              const layerGroup = L.layerGroup();
-              let addedCount = 0;
-              
-              // Add each feature as a polyline
-              data.features.forEach(feature => {
-                if (feature.geometry && feature.geometry.coordinates && Array.isArray(feature.geometry.coordinates)) {
-                  // Convert and validate coordinates
-                  const latLngs = [];
-                  for (const coord of feature.geometry.coordinates) {
-                    if (Array.isArray(coord) && coord.length >= 2) {
-                      const lng = parseFloat(coord[0]);
-                      const lat = parseFloat(coord[1]);
-                      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                        latLngs.push(L.latLng(lat, lng));
-                      }
+            const polylines = [];
+            let addedCount = 0;
+            
+            // Process each feature
+            data.features.forEach(feature => {
+              if (feature.geometry && feature.geometry.coordinates && Array.isArray(feature.geometry.coordinates)) {
+                const latLngs = [];
+                for (const coord of feature.geometry.coordinates) {
+                  if (Array.isArray(coord) && coord.length >= 2) {
+                    const lng = parseFloat(coord[0]);
+                    const lat = parseFloat(coord[1]);
+                    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                      latLngs.push([lat, lng]);
                     }
                   }
-                  
-                  if (latLngs.length >= 2) {
-                    const polyline = L.polyline(latLngs, {
-                      color: '#FFD700',
-                      weight: 2,
-                      opacity: 0.85,
-                      smoothFactor: 1
-                    });
-                    layerGroup.addLayer(polyline);
-                    addedCount++;
-                  }
                 }
-              });
-              
-              nazcaLinesLayerRef.current = layerGroup;
-              layerGroup.addTo(mapRef.current);
-              setNazcaLinesLoaded(true);
-              toast.success(`Trazos cargados (${addedCount} líneas)`);
-            } catch (err) {
-              console.error('Error creating layer:', err);
-              toast.error('Error al procesar los trazos');
-            }
+                
+                if (latLngs.length >= 2) {
+                  polylines.push(latLngs);
+                  addedCount++;
+                }
+              }
+            });
+            
+            // Create a single multiPolyline for better performance
+            const multiPolyline = L.polyline(polylines, {
+              color: '#FFD700',
+              weight: 2,
+              opacity: 0.9,
+              smoothFactor: 1.5
+            });
+            
+            nazcaLinesLayerRef.current = multiPolyline;
+            multiPolyline.addTo(mapRef.current);
+            toast.success(`Trazos cargados (${addedCount} líneas)`);
           })
           .catch(error => {
             console.error('Error loading nazca lines:', error);
             toast.error('Error al cargar los trazos');
+            setNazcaLinesLoaded(false);
           });
-      } else if (nazcaLinesLayerRef.current) {
+      } else if (nazcaLinesLayerRef.current && !mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
         nazcaLinesLayerRef.current.addTo(mapRef.current);
       }
     } else {
