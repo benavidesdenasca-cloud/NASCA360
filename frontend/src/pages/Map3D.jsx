@@ -177,9 +177,12 @@ const Map3D = () => {
         const geoJsonData = await response.json();
         const polylines = [];
         
+        console.log('GeoJSON features:', geoJsonData.features?.length);
+        
         for (const feature of geoJsonData.features || []) {
           try {
             const coords = feature.geometry?.coordinates;
+            console.log('Processing feature with', coords?.length, 'coords');
             if (!Array.isArray(coords) || coords.length < 2) continue;
             
             // Use markers at coordinate points instead of polylines
@@ -200,7 +203,7 @@ const Map3D = () => {
                     marker.addTo(mapRef.current);
                     polylines.push(marker);
                   } catch (addError) {
-                    // Skip
+                    console.warn('Error adding marker:', addError.message);
                   }
                 }
               }
@@ -209,6 +212,8 @@ const Map3D = () => {
             console.warn('Error processing feature:', e.message);
           }
         }
+        
+        console.log('Total markers created:', polylines.length);
         
         nazcaPolylinesRef.current = polylines;
         nazcaLinesLayerRef.current = { _leaflet_id: 1 }; // Dummy reference
