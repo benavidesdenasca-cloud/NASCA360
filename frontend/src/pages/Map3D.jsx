@@ -182,11 +182,62 @@ const Map3D = () => {
     // Add click handler for admin to add/edit POIs
     map.on('click', (e) => {
       if (isAdminRef.current && adminPanelOpenRef.current) {
+        const L = window.L;
+        
+        // Update form coordinates
         setPoiForm(prev => ({
           ...prev,
           latitude: e.latlng.lat,
           longitude: e.latlng.lng
         }));
+        
+        // Create or move temporary marker
+        if (tempMarkerRef.current) {
+          tempMarkerRef.current.setLatLng(e.latlng);
+        } else {
+          // Create a red pulsing marker for the new/edited position
+          const tempIcon = L.divIcon({
+            className: 'temp-marker',
+            html: `<div style="
+              position: relative;
+              width: 40px;
+              height: 40px;
+            ">
+              <div style="
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                background: #ef4444;
+                border-radius: 50%;
+                opacity: 0.4;
+                animation: pulse 1s ease-out infinite;
+              "></div>
+              <div style="
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 32px;
+                height: 32px;
+                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                border: 3px solid white;
+                border-radius: 50%;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+              </div>
+            </div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+          });
+          tempMarkerRef.current = L.marker(e.latlng, { icon: tempIcon }).addTo(map);
+        }
+        
         toast.info(`Coordenadas actualizadas: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`);
       }
     });
