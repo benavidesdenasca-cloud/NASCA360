@@ -144,6 +144,8 @@ const Map3D = () => {
   }, [pois, selectedPoi, mapLoaded]);
 
   // Toggle Nazca Lines layer
+  const nazcaLinesLoadingRef = useRef(false);
+  
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
     
@@ -151,25 +153,19 @@ const Map3D = () => {
     if (!L) return;
     
     const loadNazcaLines = async () => {
-      // If layer exists and is valid, just add it to the map
-      if (nazcaLinesLayerRef.current && nazcaLinesLoaded) {
-        try {
-          if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
-            nazcaLinesLayerRef.current.addTo(mapRef.current);
-            toast.success('Capa de trazos activada');
-          }
-          return;
-        } catch (e) {
-          console.warn('Layer needs recreation');
-          nazcaLinesLayerRef.current = null;
-          setNazcaLinesLoaded(false);
+      // If layer exists, just toggle visibility
+      if (nazcaLinesLayerRef.current) {
+        if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+          nazcaLinesLayerRef.current.addTo(mapRef.current);
         }
+        return;
       }
       
-      if (nazcaLinesLoaded) return;
+      // Prevent multiple loads
+      if (nazcaLinesLoadingRef.current) return;
+      nazcaLinesLoadingRef.current = true;
       
       toast.info('Cargando trazos del Ministerio...');
-      setNazcaLinesLoaded(true);
       
       try {
         const response = await fetch('/nazca_lines_test.json');
@@ -177,18 +173,12 @@ const Map3D = () => {
         
         const geoJsonData = await response.json();
         
-        // Wait for map to be fully ready
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Use L.geoJSON which is the native way to handle GeoJSON in Leaflet
+        // Use L.geoJSON for native GeoJSON handling
         const geoJsonLayer = L.geoJSON(geoJsonData, {
-          style: function(feature) {
-            return {
-              color: '#FF6600',
-              weight: 2,
-              opacity: 0.9,
-              fillOpacity: 0
-            };
+          style: {
+            color: '#FF6600',
+            weight: 2,
+            opacity: 0.9
           }
         });
         
@@ -198,20 +188,19 @@ const Map3D = () => {
           geoJsonLayer.addTo(mapRef.current);
         }
         
-        const count = geoJsonData.features?.length || 0;
-        toast.success(`${count} trazos oficiales cargados`);
+        toast.success(`${geoJsonData.features?.length || 0} trazos oficiales cargados`);
+        setNazcaLinesLoaded(true);
         
       } catch (error) {
         console.error('Error loading Nazca lines:', error);
         toast.error('Error al cargar los trazos');
-        setNazcaLinesLoaded(false);
-        nazcaLinesLayerRef.current = null;
+        nazcaLinesLoadingRef.current = false;
       }
     };
     
-    const removeNazcaLines = () => {
-      if (!nazcaLinesLayerRef.current || !mapRef.current) return;
-      
+    if (showNazcaLines) {
+      loadNazcaLines();
+    } else if (nazcaLinesLayerRef.current && mapRef.current) {
       try {
         if (mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
           mapRef.current.removeLayer(nazcaLinesLayerRef.current);
@@ -219,14 +208,8 @@ const Map3D = () => {
       } catch (e) {
         // Silently handle removal errors
       }
-    };
-    
-    if (showNazcaLines) {
-      loadNazcaLines();
-    } else {
-      removeNazcaLines();
     }
-  }, [showNazcaLines, mapLoaded, nazcaLinesLoaded]);
+  }, [showNazcaLines, mapLoaded]);
 
   const initMap = () => {
     const L = window.L;
