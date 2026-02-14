@@ -168,7 +168,7 @@ const Map3D = () => {
       toast.info('Cargando trazos del Ministerio...');
       
       try {
-        const response = await fetch('/nazca_lines_test.json');
+        const response = await fetch('/nazca_simple.json');
         if (!response.ok) throw new Error('Error de red');
         
         const geoJsonData = await response.json();
