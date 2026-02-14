@@ -564,6 +564,7 @@ const Map3D = () => {
                   variant="outline"
                   onClick={() => {
                     setEditingPoi(null);
+                    clearTempMarker();
                     setPoiForm({
                       name: '',
                       description: '',
