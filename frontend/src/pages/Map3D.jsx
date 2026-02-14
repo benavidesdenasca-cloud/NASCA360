@@ -151,21 +151,21 @@ const Map3D = () => {
     if (!L) return;
     
     const loadNazcaLines = async () => {
+      // If layer exists and is valid, just toggle visibility
       if (nazcaLinesLayerRef.current) {
-        // Layer already loaded, just add to map
         try {
           if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
             nazcaLinesLayerRef.current.addTo(mapRef.current);
           }
+          return;
         } catch (e) {
-          console.warn('Error adding existing layer, will recreate');
+          console.warn('Layer invalid, recreating...');
           nazcaLinesLayerRef.current = null;
           setNazcaLinesLoaded(false);
         }
-        if (nazcaLinesLayerRef.current) return;
       }
       
-      if (nazcaLinesLoaded) return; // Already loading
+      if (nazcaLinesLoaded) return;
       
       toast.info('Cargando trazos del Ministerio...');
       setNazcaLinesLoaded(true);
@@ -176,25 +176,42 @@ const Map3D = () => {
         
         const geoJsonData = await response.json();
         
-        // Use L.geoJSON with default SVG renderer (more stable for add/remove)
-        const geoJsonLayer = L.geoJSON(geoJsonData, {
-          style: {
-            color: '#FF6600',
-            weight: 2,
-            opacity: 0.85,
-            interactive: false // Prevent hover events for better performance
+        // Create a simple FeatureGroup with polylines (more stable than L.geoJSON)
+        const featureGroup = L.featureGroup();
+        let loadedCount = 0;
+        
+        for (const feature of geoJsonData.features || []) {
+          try {
+            const coords = feature?.geometry?.coordinates;
+            if (!coords || !Array.isArray(coords) || coords.length < 2) continue;
+            
+            // Convert [lng, lat] to [lat, lng] for Leaflet
+            const latLngs = coords
+              .filter(c => Array.isArray(c) && c.length >= 2 && typeof c[0] === 'number' && typeof c[1] === 'number')
+              .map(c => [c[1], c[0]]);
+            
+            if (latLngs.length >= 2) {
+              const polyline = L.polyline(latLngs, {
+                color: '#FF6600',
+                weight: 2,
+                opacity: 0.85,
+                interactive: false
+              });
+              featureGroup.addLayer(polyline);
+              loadedCount++;
+            }
+          } catch (e) {
+            // Skip invalid features silently
           }
-        });
-        
-        nazcaLinesLayerRef.current = geoJsonLayer;
-        
-        // Add to map if still toggled on
-        if (showNazcaLines && mapRef.current) {
-          geoJsonLayer.addTo(mapRef.current);
         }
         
-        const featureCount = geoJsonData.features?.length || 0;
-        toast.success(`${featureCount} trazos oficiales cargados`);
+        nazcaLinesLayerRef.current = featureGroup;
+        
+        if (showNazcaLines && mapRef.current) {
+          featureGroup.addTo(mapRef.current);
+        }
+        
+        toast.success(`${loadedCount} trazos oficiales cargados`);
         
       } catch (error) {
         console.error('Error loading Nazca lines:', error);
@@ -203,19 +220,23 @@ const Map3D = () => {
       }
     };
     
-    if (showNazcaLines) {
-      loadNazcaLines();
-    } else if (nazcaLinesLayerRef.current) {
-      // Safely remove the layer
+    const removeNazcaLines = () => {
+      if (!nazcaLinesLayerRef.current || !mapRef.current) return;
+      
       try {
-        if (mapRef.current && mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+        if (mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
           mapRef.current.removeLayer(nazcaLinesLayerRef.current);
         }
       } catch (e) {
-        console.warn('Error removing layer:', e);
-        // Force cleanup
+        console.warn('Error removing layer, clearing reference');
         nazcaLinesLayerRef.current = null;
       }
+    };
+    
+    if (showNazcaLines) {
+      loadNazcaLines();
+    } else {
+      removeNazcaLines();
     }
   }, [showNazcaLines, mapLoaded]);
 
