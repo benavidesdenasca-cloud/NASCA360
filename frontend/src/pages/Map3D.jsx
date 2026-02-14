@@ -155,7 +155,18 @@ const Map3D = () => {
     const loadNazcaLines = async () => {
       // If layer exists, just toggle visibility
       if (nazcaLinesLayerRef.current) {
-        if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+        if (nazcaLinesLayerRef.current.isArray && nazcaLinesLayerRef.current.polylines) {
+          // Re-add each polyline
+          nazcaLinesLayerRef.current.polylines.forEach(polyline => {
+            try {
+              if (!mapRef.current.hasLayer(polyline)) {
+                polyline.addTo(mapRef.current);
+              }
+            } catch (e) {
+              // Silently handle errors
+            }
+          });
+        } else if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
           nazcaLinesLayerRef.current.addTo(mapRef.current);
         }
         return;
