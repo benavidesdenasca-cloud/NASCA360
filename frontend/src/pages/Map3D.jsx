@@ -316,7 +316,21 @@ const Map3D = () => {
   const flyToPoi = (poi) => {
     if (!mapRef.current) return;
     
-    const zoomLevel = Math.max(14, Math.min(18, Math.floor(20 - (poi.altitude || 2000) / 500)));
+    // Calculate zoom level based on altitude (viewing height)
+    // Lower altitude = closer view, but limit max zoom to 17 to avoid missing tiles
+    const altitude = poi.altitude || 2000;
+    let zoomLevel;
+    
+    if (altitude <= 500) {
+      zoomLevel = 17; // Very close view
+    } else if (altitude <= 1500) {
+      zoomLevel = 16; // Close view
+    } else if (altitude <= 3000) {
+      zoomLevel = 15; // Medium view
+    } else {
+      zoomLevel = 14; // Far view
+    }
+    
     mapRef.current.flyTo([poi.latitude, poi.longitude], zoomLevel, {
       duration: 1.5
     });
