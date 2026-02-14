@@ -180,9 +180,9 @@ const Map3D = () => {
     // Create map centered on Nazca
     const map = L.map(mapContainerRef.current, {
       center: [NAZCA_CENTER.latitude, NAZCA_CENTER.longitude],
-      zoom: 13,
-      minZoom: 11,
-      maxZoom: 18,
+      zoom: 14,
+      minZoom: 12,
+      maxZoom: 20,
       maxBounds: [
         [NAZCA_BOUNDS.south, NAZCA_BOUNDS.west],
         [NAZCA_BOUNDS.north, NAZCA_BOUNDS.east]
