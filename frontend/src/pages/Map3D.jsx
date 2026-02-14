@@ -227,6 +227,9 @@ const Map3D = () => {
               // Add to map directly to avoid group issues
               if (mapRef.current) {
                 polyline.addTo(mapRef.current);
+                if (loadedCount === 0) {
+                  console.log('First polyline bounds:', polyline.getBounds());
+                }
               }
               polylines.push(polyline);
               loadedCount++;
