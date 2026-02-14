@@ -172,7 +172,7 @@ const Map3D = () => {
       setNazcaLinesLoaded(true);
       
       try {
-        const response = await fetch('/nazca_lines_filtered.json');
+        const response = await fetch('/nazca_lines_test.json');
         if (!response.ok) throw new Error('Error de red');
         
         const geoJsonData = await response.json();
