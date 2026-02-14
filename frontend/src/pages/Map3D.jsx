@@ -171,33 +171,45 @@ const Map3D = () => {
       setNazcaLinesLoaded(true);
       
       try {
-        const response = await fetch('/nazca_lines.json');
+        const response = await fetch('/nazca_lines_clean.json');
         if (!response.ok) throw new Error('Error de red');
         
         const geoJsonData = await response.json();
+        console.log('GeoJSON loaded:', geoJsonData.features?.length, 'features');
         
-        // Use L.geoJSON with a simple style function
-        const geoJsonLayer = L.geoJSON(geoJsonData, {
-          style: function() {
-            return {
+        // Create layer group manually for better control
+        const layerGroup = L.layerGroup();
+        let count = 0;
+        
+        for (const feature of geoJsonData.features || []) {
+          try {
+            const coords = feature.geometry?.coordinates;
+            if (!coords || coords.length < 2) continue;
+            
+            // Convert [lng, lat] to Leaflet's [lat, lng]
+            const latLngs = coords.map(c => L.latLng(c[1], c[0]));
+            
+            const polyline = L.polyline(latLngs, {
               color: '#FF6600',
               weight: 2,
-              opacity: 0.85
-            };
-          },
-          onEachFeature: function(feature, layer) {
-            // No-op - just ensure features are processed
+              opacity: 0.9
+            });
+            
+            layerGroup.addLayer(polyline);
+            count++;
+          } catch (err) {
+            // Skip invalid feature
           }
-        });
-        
-        nazcaLinesLayerRef.current = geoJsonLayer;
-        
-        if (showNazcaLines && mapRef.current) {
-          geoJsonLayer.addTo(mapRef.current);
         }
         
-        const featureCount = geoJsonData.features?.length || 0;
-        toast.success(`${featureCount} trazos oficiales cargados`);
+        console.log('Created', count, 'polylines');
+        nazcaLinesLayerRef.current = layerGroup;
+        
+        if (showNazcaLines && mapRef.current) {
+          layerGroup.addTo(mapRef.current);
+        }
+        
+        toast.success(`${count} trazos oficiales cargados`);
         
       } catch (error) {
         console.error('Error loading Nazca lines:', error);
