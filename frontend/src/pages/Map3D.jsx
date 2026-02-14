@@ -92,7 +92,8 @@ const Map3D = () => {
 
   // Initialize Leaflet map
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
+    // Prevent re-initialization
+    if (mapRef.current) return;
 
     const leafletCSS = document.createElement('link');
     leafletCSS.rel = 'stylesheet';
@@ -101,7 +102,12 @@ const Map3D = () => {
 
     const leafletScript = document.createElement('script');
     leafletScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    leafletScript.onload = () => initMap();
+    leafletScript.onload = () => {
+      // Double check map isn't already initialized
+      if (!mapRef.current && mapContainerRef.current) {
+        initMap();
+      }
+    };
     document.head.appendChild(leafletScript);
 
     return () => {
