@@ -859,8 +859,8 @@ const Map3D = () => {
             </div>
           )}
 
-          {/* Map Controls - Inside map area, away from sidebar */}
-          <div className="absolute left-4 top-4 z-20 flex flex-col gap-2">
+          {/* Map Controls - Top left, next to Nueva Figura */}
+          <div className="absolute left-48 top-4 z-20 flex gap-1">
             <Button onClick={zoomIn} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Acercar">
               <ZoomIn className="w-5 h-5" />
             </Button>
@@ -870,7 +870,6 @@ const Map3D = () => {
             <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Restablecer vista">
               <RotateCcw className="w-5 h-5" />
             </Button>
-            <div className="w-full h-px bg-gray-300 my-1"></div>
             <Button 
               onClick={() => setShowNazcaLines(!showNazcaLines)} 
               className={`shadow-lg border ${showNazcaLines ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-600' : 'bg-white hover:bg-gray-100 text-gray-800'}`}
@@ -883,12 +882,8 @@ const Map3D = () => {
 
           {/* Nazca Lines Layer Info */}
           {showNazcaLines && (
-            <div className="absolute left-4 top-56 z-20 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-[180px]">
-              <div className="flex items-center gap-2 font-semibold mb-1">
-                <Layers className="w-4 h-4" />
-                Capa Activa
-              </div>
-              <p>Trazos del Ministerio de Cultura del Perú</p>
+            <div className="absolute left-48 top-16 z-20 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg">
+              <span className="font-semibold">Capa Activa:</span> Trazos del Ministerio de Cultura
             </div>
           )}
 
