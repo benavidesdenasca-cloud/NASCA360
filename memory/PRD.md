@@ -6,7 +6,7 @@ Plataforma de turismo virtual premium para administrar y mostrar videos 360° de
 ## Alcance Ampliado
 1. **VR Inmersivo:** Soporte para videos 360° en Meta Quest
 2. **Mapa 3D:** Sección interactiva con POIs y panel admin
-3. **Capa KML/GeoJSON:** Trazos oficiales del Ministerio de Cultura ✅
+3. **Capa KML/GeoJSON:** Trazos oficiales del Ministerio de Cultura ✅ FUNCIONANDO
 
 ## Arquitectura
 ```
@@ -15,9 +15,7 @@ Plataforma de turismo virtual premium para administrar y mostrar videos 360° de
 │   └── server.py          # FastAPI + MongoDB + Cloudflare Stream
 └── frontend/
     ├── public/
-    │   ├── nazca_lines_test.json    # 150 trazos filtrados (en uso)
-    │   ├── nazca_lines_filtered.json # 150 trazos área central
-    │   └── nazca_lines_clean.json   # 300 trazos limpios
+    │   └── nazca_lines_filtered.json # 150 trazos del área central (7076 puntos)
     └── src/
         └── pages/
             └── Map3D.jsx   # Mapa interactivo con Leaflet
@@ -40,7 +38,7 @@ Plataforma de turismo virtual premium para administrar y mostrar videos 360° de
 - Panel admin para CRUD de POIs
 - Controles de mapa personalizados
 - Sidebar con scroll independiente
-- **Capa de trazos del Ministerio de Cultura** ← NUEVO
+- **Capa de trazos del Ministerio de Cultura** ✅ (7076 markers divIcon)
 
 ### 🟡 Pendiente
 - Integrar apiErrorHandler.js globalmente
@@ -60,5 +58,6 @@ Plataforma de turismo virtual premium para administrar y mostrar videos 360° de
 - `DELETE /api/pois/{id}` - Eliminar POI (admin)
 
 ## Notas Técnicas
-- La capa GeoJSON usa polilíneas manuales en lugar de `L.geoJSON()` para evitar bug de clipping en Leaflet 1.9.4
+- Bug de Leaflet 1.9.4: `L.polyline` y `L.circleMarker` fallan con error `reading 'x'`
+- **Workaround:** Usar `L.divIcon` markers en lugar de polilíneas
 - Las líneas están filtradas al área central: lat [-14.73, -14.69], lng [-75.14, -75.04]
