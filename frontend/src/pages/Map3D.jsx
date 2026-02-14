@@ -56,8 +56,22 @@ const Map3D = () => {
     video_id: ''
   });
 
+  // Refs to track current state for map click handler
+  const adminPanelOpenRef = useRef(adminPanelOpen);
+  const setPoiFormRef = useRef(setPoiForm);
+
+  // Keep refs updated
+  useEffect(() => {
+    adminPanelOpenRef.current = adminPanelOpen;
+  }, [adminPanelOpen]);
+
   // Check if user is admin (check both role and email for safety)
   const isAdmin = user?.role === 'admin' || user?.email === 'benavidesdenasca@gmail.com';
+  const isAdminRef = useRef(isAdmin);
+  
+  useEffect(() => {
+    isAdminRef.current = isAdmin;
+  }, [isAdmin]);
   
   // Debug log
   useEffect(() => {
