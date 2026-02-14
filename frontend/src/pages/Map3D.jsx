@@ -174,11 +174,16 @@ const Map3D = () => {
         const geoJsonData = await response.json();
         
         // Use simple L.geoJSON with basic styling
+        // noClip: true prevents the clipPoints bug in Leaflet
         const geoJsonLayer = L.geoJSON(geoJsonData, {
           style: {
             color: '#FF6600',
             weight: 2,
             opacity: 0.8
+          },
+          coordsToLatLng: function(coords) {
+            // Convert [lng, lat] to Leaflet LatLng
+            return L.latLng(coords[1], coords[0]);
           }
         });
         
