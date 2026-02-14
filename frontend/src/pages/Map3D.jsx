@@ -150,71 +150,47 @@ const Map3D = () => {
     const L = window.L;
     
     if (showNazcaLines) {
-      // Load and show the layer
       if (!nazcaLinesLayerRef.current && !nazcaLinesLoaded) {
-        toast.info('Cargando trazos del Ministerio de Cultura...');
+        toast.info('Cargando trazos...');
         setNazcaLinesLoaded(true);
         
         fetch('/nazca_lines.json')
-          .then(response => {
-            if (!response.ok) throw new Error('Failed to fetch');
-            return response.json();
-          })
+          .then(response => response.json())
           .then(data => {
-            // Use Canvas renderer with noClip to avoid bounds errors
-            const canvasRenderer = L.canvas({ padding: 0.5, tolerance: 10 });
             const layerGroup = L.layerGroup();
-            let addedCount = 0;
+            let count = 0;
             
-            data.features.forEach((feature) => {
+            for (const feature of data.features) {
               try {
-                if (feature.geometry && feature.geometry.coordinates && feature.geometry.coordinates.length >= 2) {
-                  const latLngs = [];
-                  
-                  for (const coord of feature.geometry.coordinates) {
-                    if (Array.isArray(coord) && coord.length >= 2) {
-                      const lng = Number(coord[0]);
-                      const lat = Number(coord[1]);
-                      if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                        latLngs.push([lat, lng]);
-                      }
-                    }
-                  }
-                  
-                  if (latLngs.length >= 2) {
-                    const polyline = L.polyline(latLngs, {
-                      color: '#FFA500',
-                      weight: 1.5,
-                      opacity: 0.8,
-                      renderer: canvasRenderer,
-                      noClip: true
-                    });
-                    layerGroup.addLayer(polyline);
-                    addedCount++;
-                  }
+                const coords = feature.geometry.coordinates;
+                if (coords && coords.length >= 2) {
+                  const latLngs = coords.map(c => [c[1], c[0]]);
+                  const line = L.polyline(latLngs, {
+                    color: '#FF6600',
+                    weight: 2,
+                    opacity: 0.8
+                  });
+                  layerGroup.addLayer(line);
+                  count++;
                 }
               } catch (e) {
-                // Skip problematic features silently
+                // Skip invalid features
               }
-            });
+            }
             
             nazcaLinesLayerRef.current = layerGroup;
             layerGroup.addTo(mapRef.current);
-            toast.success(`Trazos cargados (${addedCount.toLocaleString()} líneas)`);
+            toast.success(`${count} trazos cargados`);
           })
-          .catch(error => {
-            console.error('Error loading nazca lines:', error);
-            toast.error('Error al cargar los trazos');
+          .catch(() => {
+            toast.error('Error al cargar trazos');
             setNazcaLinesLoaded(false);
           });
-      } else if (nazcaLinesLayerRef.current && !mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+      } else if (nazcaLinesLayerRef.current) {
         nazcaLinesLayerRef.current.addTo(mapRef.current);
       }
-    } else {
-      // Hide the layer
-      if (nazcaLinesLayerRef.current && mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
-        mapRef.current.removeLayer(nazcaLinesLayerRef.current);
-      }
+    } else if (nazcaLinesLayerRef.current && mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+      mapRef.current.removeLayer(nazcaLinesLayerRef.current);
     }
   }, [showNazcaLines, mapLoaded]);
 
