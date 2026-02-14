@@ -173,45 +173,45 @@ const Map3D = () => {
         
         const geoJsonData = await response.json();
         
-        // Use L.geoJSON for native GeoJSON handling
-        // Filter out any features with invalid geometries
-        const validFeatures = geoJsonData.features.filter(feature => {
-          const coords = feature.geometry?.coordinates;
-          if (!coords || coords.length < 2) return false;
-          // Check all coordinates are valid
-          return coords.every(c => 
-            Array.isArray(c) && 
-            c.length >= 2 && 
-            typeof c[0] === 'number' && 
-            typeof c[1] === 'number' &&
-            !isNaN(c[0]) && !isNaN(c[1])
-          );
-        });
+        // Create a layer group to hold all polylines
+        const layerGroup = L.layerGroup();
+        let loadedCount = 0;
         
-        const filteredData = {
-          type: 'FeatureCollection',
-          features: validFeatures
-        };
-        
-        const geoJsonLayer = L.geoJSON(filteredData, {
-          style: {
-            color: '#FF6600',
-            weight: 3,
-            opacity: 1
-          },
-          // Ensure proper coordinate handling
-          coordsToLatLng: function(coords) {
-            return L.latLng(coords[1], coords[0]);
+        // Process each feature and create polylines manually
+        // This avoids Leaflet's GeoJSON clipping issues
+        geoJsonData.features.forEach(feature => {
+          try {
+            const coords = feature.geometry?.coordinates;
+            if (!coords || coords.length < 2) return;
+            
+            // Convert GeoJSON coordinates [lng, lat] to Leaflet [lat, lng]
+            const latLngs = coords
+              .filter(c => Array.isArray(c) && c.length >= 2 && 
+                          typeof c[0] === 'number' && typeof c[1] === 'number' &&
+                          !isNaN(c[0]) && !isNaN(c[1]))
+              .map(c => [c[1], c[0]]);
+            
+            if (latLngs.length >= 2) {
+              const polyline = L.polyline(latLngs, {
+                color: '#FF6600',
+                weight: 3,
+                opacity: 1
+              });
+              layerGroup.addLayer(polyline);
+              loadedCount++;
+            }
+          } catch (e) {
+            // Skip problematic features silently
           }
         });
         
-        nazcaLinesLayerRef.current = geoJsonLayer;
+        nazcaLinesLayerRef.current = layerGroup;
         
         if (showNazcaLines && mapRef.current) {
-          geoJsonLayer.addTo(mapRef.current);
+          layerGroup.addTo(mapRef.current);
         }
         
-        toast.success(`${filteredData.features?.length || 0} trazos oficiales cargados`);
+        toast.success(`${loadedCount} trazos oficiales cargados`);
         setNazcaLinesLoaded(true);
         
       } catch (error) {
