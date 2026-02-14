@@ -476,10 +476,6 @@ const Map3D = () => {
                         </div>
                       </div>
                     </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
                   );
                 })
               )}
