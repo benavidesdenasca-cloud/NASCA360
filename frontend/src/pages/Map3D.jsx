@@ -194,11 +194,15 @@ const Map3D = () => {
                 opacity: 1
               });
               // Add each line directly to map
-              line.addTo(mapRef.current);
-              polylines.push(line);
+              try {
+                line.addTo(mapRef.current);
+                polylines.push(line);
+              } catch (addError) {
+                console.warn('Error adding line to map:', addError.message);
+              }
             }
           } catch (e) {
-            // Skip problematic features
+            console.warn('Error processing feature:', e.message);
           }
         }
         
