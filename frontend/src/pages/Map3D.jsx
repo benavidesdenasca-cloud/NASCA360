@@ -859,15 +859,15 @@ const Map3D = () => {
             </div>
           )}
 
-          {/* Map Controls - Bottom right corner */}
-          <div className="absolute bottom-20 z-20 flex flex-col gap-1" style={{ right: '80px' }}>
+          {/* Map Controls - Right side, visible */}
+          <div className="absolute top-4 z-30 flex flex-col gap-1" style={{ right: '16px' }}>
             <Button onClick={zoomIn} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Acercar">
               <ZoomIn className="w-5 h-5" />
             </Button>
             <Button onClick={zoomOut} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Alejar">
               <ZoomOut className="w-5 h-5" />
             </Button>
-            <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Restablecer vista">
+            <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Restablecer">
               <RotateCcw className="w-5 h-5" />
             </Button>
             <div className="w-full h-px bg-gray-300 my-1"></div>
@@ -881,10 +881,10 @@ const Map3D = () => {
             </Button>
           </div>
 
-          {/* Nazca Lines Layer Info - Bottom right, above controls */}
+          {/* Nazca Lines Layer Info */}
           {showNazcaLines && (
-            <div className="absolute bottom-48 z-20 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg" style={{ right: '80px' }}>
-              <span className="font-semibold">Capa:</span> Trazos Ministerio de Cultura
+            <div className="absolute top-52 z-30 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg" style={{ right: '16px' }}>
+              <span className="font-semibold">Capa:</span> Ministerio de Cultura
             </div>
           )}
 
