@@ -155,18 +155,7 @@ const Map3D = () => {
     const loadNazcaLines = async () => {
       // If layer exists, just toggle visibility
       if (nazcaLinesLayerRef.current) {
-        if (nazcaLinesLayerRef.current.isArray && nazcaLinesLayerRef.current.polylines) {
-          // Re-add each polyline
-          nazcaLinesLayerRef.current.polylines.forEach(polyline => {
-            try {
-              if (!mapRef.current.hasLayer(polyline)) {
-                polyline.addTo(mapRef.current);
-              }
-            } catch (e) {
-              // Silently handle errors
-            }
-          });
-        } else if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+        if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
           nazcaLinesLayerRef.current.addTo(mapRef.current);
         }
         return;
@@ -177,6 +166,37 @@ const Map3D = () => {
       nazcaLinesLoadingRef.current = true;
       
       toast.info('Cargando trazos del Ministerio...');
+      
+      try {
+        const response = await fetch('/nazca_lines_test.json');
+        if (!response.ok) throw new Error('Error de red');
+        
+        const geoJsonData = await response.json();
+        
+        // Use simple L.geoJSON with basic styling
+        const geoJsonLayer = L.geoJSON(geoJsonData, {
+          style: {
+            color: '#FF6600',
+            weight: 2,
+            opacity: 0.8
+          }
+        });
+        
+        nazcaLinesLayerRef.current = geoJsonLayer;
+        
+        if (showNazcaLines && mapRef.current) {
+          geoJsonLayer.addTo(mapRef.current);
+        }
+        
+        toast.success(`${geoJsonData.features?.length || 0} trazos oficiales cargados`);
+        setNazcaLinesLoaded(true);
+        
+      } catch (error) {
+        console.error('Error loading Nazca lines:', error);
+        toast.error('Error al cargar los trazos');
+        nazcaLinesLoadingRef.current = false;
+      }
+    };
       
       try {
         const response = await fetch('/nazca_lines_test.json');
