@@ -155,19 +155,39 @@ const Map3D = () => {
         toast.info('Cargando trazos del Ministerio de Cultura...');
         
         fetch('/nazca_lines.json')
-          .then(response => response.json())
+          .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch');
+            return response.json();
+          })
           .then(data => {
-            const layer = L.geoJSON(data, {
-              style: {
-                color: '#FFD700', // Dorado
-                weight: 2,
-                opacity: 0.8
-              }
-            });
-            nazcaLinesLayerRef.current = layer;
-            layer.addTo(mapRef.current);
-            setNazcaLinesLoaded(true);
-            toast.success('Trazos del Ministerio de Cultura cargados');
+            try {
+              // Create layer group to hold all polylines
+              const layerGroup = L.layerGroup();
+              
+              // Add each feature as a polyline
+              data.features.forEach(feature => {
+                if (feature.geometry && feature.geometry.coordinates) {
+                  // Swap coordinates from [lng, lat] to [lat, lng] for Leaflet
+                  const latLngs = feature.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                  if (latLngs.length >= 2) {
+                    const polyline = L.polyline(latLngs, {
+                      color: '#FFD700',
+                      weight: 2,
+                      opacity: 0.85
+                    });
+                    layerGroup.addLayer(polyline);
+                  }
+                }
+              });
+              
+              nazcaLinesLayerRef.current = layerGroup;
+              layerGroup.addTo(mapRef.current);
+              setNazcaLinesLoaded(true);
+              toast.success(`Trazos cargados (${data.features.length} líneas)`);
+            } catch (err) {
+              console.error('Error creating layer:', err);
+              toast.error('Error al procesar los trazos');
+            }
           })
           .catch(error => {
             console.error('Error loading nazca lines:', error);
