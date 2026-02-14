@@ -151,15 +151,16 @@ const Map3D = () => {
     if (!L) return;
     
     const loadNazcaLines = async () => {
-      // If layer exists, just toggle visibility
-      if (nazcaLinesLayerRef.current) {
+      // If layer exists and is valid, just add it to the map
+      if (nazcaLinesLayerRef.current && nazcaLinesLoaded) {
         try {
           if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
             nazcaLinesLayerRef.current.addTo(mapRef.current);
+            toast.success('Capa de trazos activada');
           }
           return;
         } catch (e) {
-          console.warn('Layer invalid, recreating...');
+          console.warn('Layer needs recreation');
           nazcaLinesLayerRef.current = null;
           setNazcaLinesLoaded(false);
         }
@@ -175,9 +176,8 @@ const Map3D = () => {
         if (!response.ok) throw new Error('Error de red');
         
         const geoJsonData = await response.json();
-        console.log('GeoJSON loaded:', geoJsonData.features?.length, 'features');
         
-        // Create layer group manually for better control
+        // Create layer group with polylines
         const layerGroup = L.layerGroup();
         let count = 0;
         
@@ -186,8 +186,8 @@ const Map3D = () => {
             const coords = feature.geometry?.coordinates;
             if (!coords || coords.length < 2) continue;
             
-            // Convert [lng, lat] to Leaflet's [lat, lng]
-            const latLngs = coords.map(c => L.latLng(c[1], c[0]));
+            // Convert [lng, lat] to [lat, lng] for Leaflet
+            const latLngs = coords.map(c => [c[1], c[0]]);
             
             const polyline = L.polyline(latLngs, {
               color: '#FF6600',
@@ -202,7 +202,6 @@ const Map3D = () => {
           }
         }
         
-        console.log('Created', count, 'polylines');
         nazcaLinesLayerRef.current = layerGroup;
         
         if (showNazcaLines && mapRef.current) {
@@ -215,6 +214,7 @@ const Map3D = () => {
         console.error('Error loading Nazca lines:', error);
         toast.error('Error al cargar los trazos');
         setNazcaLinesLoaded(false);
+        nazcaLinesLayerRef.current = null;
       }
     };
     
@@ -226,8 +226,7 @@ const Map3D = () => {
           mapRef.current.removeLayer(nazcaLinesLayerRef.current);
         }
       } catch (e) {
-        console.warn('Error removing layer, clearing reference');
-        nazcaLinesLayerRef.current = null;
+        // Silently handle removal errors
       }
     };
     
@@ -236,7 +235,7 @@ const Map3D = () => {
     } else {
       removeNazcaLines();
     }
-  }, [showNazcaLines, mapLoaded]);
+  }, [showNazcaLines, mapLoaded, nazcaLinesLoaded]);
 
   const initMap = () => {
     const L = window.L;
