@@ -180,7 +180,7 @@ const Map3D = () => {
     
     // Add click handler for admin to add/edit POIs
     map.on('click', (e) => {
-      if (isAdmin && adminPanelOpen) {
+      if (isAdminRef.current && adminPanelOpenRef.current) {
         setPoiForm(prev => ({
           ...prev,
           latitude: e.latlng.lat,
