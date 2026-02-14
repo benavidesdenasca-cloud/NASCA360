@@ -374,14 +374,30 @@ const Map3D = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-bold">Líneas de Nazca</h2>
-                  <p className="text-amber-100 text-sm">Patrimonio de la Humanidad</p>
+                  <p className="text-amber-100 text-sm">
+                    {isAdmin ? '🔧 Modo Administrador' : 'Patrimonio de la Humanidad'}
+                  </p>
                 </div>
                 <div className="flex gap-1">
                   {isAdmin && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setAdminPanelOpen(!adminPanelOpen)}
+                      onClick={() => {
+                        setAdminPanelOpen(!adminPanelOpen);
+                        if (!adminPanelOpen) {
+                          setEditingPoi(null);
+                          setPoiForm({
+                            name: '',
+                            description: '',
+                            longitude: -75.0298,
+                            latitude: -14.7391,
+                            altitude: 2000,
+                            category: 'geoglifo',
+                            video_id: ''
+                          });
+                        }
+                      }}
                       className="text-white hover:bg-white/20"
                       title="Panel de Administración"
                     >
