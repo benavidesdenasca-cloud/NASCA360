@@ -197,113 +197,12 @@ const Map3D = () => {
         nazcaLinesLoadingRef.current = false;
       }
     };
-      
-      try {
-        const response = await fetch('/nazca_lines_test.json');
-        if (!response.ok) throw new Error('Error de red');
-        
-        const geoJsonData = await response.json();
-        
-        // Create an array to hold all polylines
-        const polylines = [];
-        let loadedCount = 0;
-        let errorCount = 0;
-        
-        console.log('Processing', geoJsonData.features.length, 'features');
-        
-        // Process each feature and create polylines manually
-        // This avoids Leaflet's GeoJSON clipping issues
-        for (const feature of geoJsonData.features) {
-          try {
-            const coords = feature.geometry?.coordinates;
-            if (!coords || coords.length < 2) {
-              console.log('Skipping feature - no coords or too few');
-              continue;
-            }
-            
-            // Convert GeoJSON coordinates [lng, lat] to Leaflet [lat, lng]
-            // Also remove consecutive duplicates
-            const latLngs = [];
-            let lastCoord = null;
-            
-            for (const c of coords) {
-              if (!Array.isArray(c) || c.length < 2) continue;
-              if (typeof c[0] !== 'number' || typeof c[1] !== 'number') continue;
-              if (isNaN(c[0]) || isNaN(c[1])) continue;
-              
-              // Use array format instead of L.latLng to avoid potential issues
-              const newCoord = [c[1], c[0]];
-              // Skip if same as last coordinate
-              if (lastCoord && lastCoord[0] === newCoord[0] && lastCoord[1] === newCoord[1]) continue;
-              
-              latLngs.push(newCoord);
-              lastCoord = newCoord;
-            }
-            
-            if (latLngs.length >= 2) {
-              // Create polyline with Canvas renderer to avoid SVG clipping issues
-              const polyline = L.polyline(latLngs, {
-                color: '#FF6600',
-                weight: 3,
-                opacity: 1,
-                renderer: L.canvas({ padding: 0.5 })
-              });
-              
-              // Add to map directly to avoid group issues
-              if (mapRef.current) {
-                polyline.addTo(mapRef.current);
-                if (loadedCount === 0) {
-                  console.log('First polyline bounds:', polyline.getBounds());
-                }
-              }
-              polylines.push(polyline);
-              loadedCount++;
-            } else {
-              console.log('Skipping feature - not enough valid coords:', latLngs.length);
-            }
-          } catch (e) {
-            errorCount++;
-            console.log('Error processing feature:', e.message);
-            // Skip problematic features silently
-          }
-        }
-        
-        // Store polylines array for later removal
-        nazcaLinesLayerRef.current = { polylines, isArray: true };
-        
-        console.log('Loaded', loadedCount, 'polylines, errors:', errorCount);
-        
-        if (loadedCount > 0) {
-          toast.success(`${loadedCount} trazos oficiales cargados`);
-        } else {
-          toast.error('No se pudieron cargar los trazos');
-        }
-        setNazcaLinesLoaded(true);
-        
-      } catch (error) {
-        console.error('Error loading Nazca lines:', error);
-        toast.error('Error al cargar los trazos');
-        nazcaLinesLoadingRef.current = false;
-      }
-    };
     
     if (showNazcaLines) {
       loadNazcaLines();
     } else if (nazcaLinesLayerRef.current && mapRef.current) {
       try {
-        // Handle both array of polylines and single layer
-        if (nazcaLinesLayerRef.current.isArray && nazcaLinesLayerRef.current.polylines) {
-          // Remove each polyline individually
-          nazcaLinesLayerRef.current.polylines.forEach(polyline => {
-            try {
-              if (mapRef.current.hasLayer(polyline)) {
-                mapRef.current.removeLayer(polyline);
-              }
-            } catch (e) {
-              // Silently handle removal errors
-            }
-          });
-        } else if (mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+        if (mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
           mapRef.current.removeLayer(nazcaLinesLayerRef.current);
         }
       } catch (e) {
