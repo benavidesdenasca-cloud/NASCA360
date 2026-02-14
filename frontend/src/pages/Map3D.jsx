@@ -896,7 +896,7 @@ const Map3D = () => {
           {isAdmin && !adminPanelOpen && (
             <Button
               onClick={() => setAdminPanelOpen(true)}
-              className="absolute left-4 top-4 z-10 bg-amber-600 hover:bg-amber-700 shadow-lg"
+              className="absolute left-4 top-4 z-20 bg-amber-600 hover:bg-amber-700 shadow-lg"
             >
               <Plus className="w-4 h-4 mr-2" />
               Nueva Figura
