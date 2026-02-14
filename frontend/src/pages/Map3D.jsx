@@ -211,7 +211,7 @@ const Map3D = () => {
           geoJsonLayer.addTo(mapRef.current);
         }
         
-        toast.success(`${geoJsonData.features?.length || 0} trazos oficiales cargados`);
+        toast.success(`${filteredData.features?.length || 0} trazos oficiales cargados`);
         setNazcaLinesLoaded(true);
         
       } catch (error) {
