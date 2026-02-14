@@ -434,7 +434,7 @@ const Map3D = () => {
                     <div
                       key={poi.id}
                       data-testid={`poi-item-${poi.id}`}
-                      className={`p-3 border-b cursor-pointer transition-all ${
+                      className={`p-3 border-b cursor-pointer transition-all group ${
                         selectedPoi?.id === poi.id 
                           ? 'bg-amber-100 border-l-4 border-l-amber-600' 
                           : 'hover:bg-amber-50'
@@ -449,25 +449,33 @@ const Map3D = () => {
                           <MapPin className="w-5 h-5" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-800 truncate">{poi.name}</h3>
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-gray-800 truncate">{poi.name}</h3>
+                            {isAdmin && (
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleEditPoi(poi); }}
+                                  className="p-1.5 bg-blue-100 hover:bg-blue-200 rounded text-blue-600"
+                                  title="Editar"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeletePoi(poi); }}
+                                  className="p-1.5 bg-red-100 hover:bg-red-200 rounded text-red-600"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
                           <p className="text-xs text-gray-500 capitalize">{category.label}</p>
                           <p className="text-xs text-gray-600 mt-1 line-clamp-2">{poi.description}</p>
-                          <p className="text-xs text-gray-400 mt-1">Alt: {poi.altitude}m</p>
+                          <p className="text-xs text-gray-400 mt-1">Altura visión: {poi.altitude || 2000}m</p>
                         </div>
-                        {isAdmin && (
-                          <div className="flex flex-col gap-1">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleEditPoi(poi); }}
-                              className="p-1 hover:bg-blue-100 rounded text-blue-600"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeletePoi(poi); }}
-                              className="p-1 hover:bg-red-100 rounded text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                      </div>
+                    </div>
                           </div>
                         )}
                       </div>
