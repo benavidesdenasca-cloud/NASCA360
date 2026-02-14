@@ -182,23 +182,27 @@ const Map3D = () => {
             const coords = feature.geometry?.coordinates;
             if (!Array.isArray(coords) || coords.length < 2) continue;
             
-            // Convert [lng, lat] to [lat, lng] array for Leaflet
-            const latLngs = coords
-              .filter(c => Array.isArray(c) && c.length >= 2)
-              .map(c => [Number(c[1]), Number(c[0])]);
-            
-            if (latLngs.length >= 2) {
-              const line = L.polyline(latLngs, {
-                color: '#FF6600',
-                weight: 3,
-                opacity: 1
-              });
-              // Add each line directly to map
-              try {
-                line.addTo(mapRef.current);
-                polylines.push(line);
-              } catch (addError) {
-                console.warn('Error adding line to map:', addError.message);
+            // Use markers at coordinate points instead of polylines
+            for (const c of coords) {
+              if (Array.isArray(c) && c.length >= 2) {
+                const lat = Number(c[1]);
+                const lng = Number(c[0]);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                  try {
+                    const marker = L.circleMarker([lat, lng], {
+                      radius: 2,
+                      fillColor: '#FF6600',
+                      color: '#FF6600',
+                      weight: 1,
+                      opacity: 1,
+                      fillOpacity: 1
+                    });
+                    marker.addTo(mapRef.current);
+                    polylines.push(marker);
+                  } catch (addError) {
+                    // Skip
+                  }
+                }
               }
             }
           } catch (e) {
