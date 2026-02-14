@@ -1,53 +1,56 @@
 <analysis>**original_problem_statement:**
-The user's objective is to build Nazca360, a premium virtual tourism platform.
-Initial requirements included:
-1.  **Superuser Role:** An  user with full privileges ().
-2.  **Admin Panel:** A dashboard for the superuser to manage users (view, block/unblock) and videos (CRUD).
-3.  **Video Upload System:** Shift from URL-based video additions to direct MP4 file uploads.
-4.  **Netflix Model:** Restrict platform access, including login, to users with an active, paid subscription.
-5.  **Video Security:** Protect video content from unauthorized downloads.
-6.  **Large File Support:** Handle uploads of very large video files (5GB to 12GB).
-7.  **360° Video Playback:** Implement a player that supports interactive 360-degree video experiences.
-8.  **Performance:** Ensure that large videos stream quickly and without excessive buffering.
+The user's initial goal was to build Nazca360, a premium virtual tourism platform, with a focus on allowing an admin to upload and manage large (5-12GB) 360° videos. The platform required a paywall and secure video streaming.
+
+During this session, the user expanded the scope with several major feature requests:
+1.  **Immersive VR:** Add support for watching 360° videos in an immersive VR mode using Meta Quest headsets.
+2.  **VR Usability:** Ensure users can exit VR mode easily (via the controller's menu button) and are not left in an empty scene when a video finishes.
+3.  **3D Map:** Create a new Mapa 3D section to display the Nazca Lines on an interactive map.
+4.  **Map Admin Panel:** The administrator () must have a panel within the map page to create, edit, and delete Points of Interest (POIs), including their coordinates and viewing altitude.
+5.  **Map Imagery:** Use high-resolution satellite imagery (e.g., Google) and remove default provider labels.
 
 **User's preferred language**:
 The user communicates in **Spanish**. The next agent MUST respond in Spanish only.
 
 **what currently exists?**
-The application is a full-stack platform (React, FastAPI, MongoDB) that has pivoted from AWS S3 to **Cloudflare Stream** for video hosting and delivery. It features JWT and Google authentication, Stripe subscriptions, and a paywall.
+The application is a full-stack platform (React, FastAPI, MongoDB) using Cloudflare Stream for video hosting.
 
-The video pipeline is now almost fully integrated with Cloudflare Stream:
-*   **Admin Panel:** The UI has been simplified. Users can now upload videos directly to Cloudflare. The logic attempts to handle large files by proxying them through the backend.
-*   **Backend:** Includes endpoints to communicate with the Cloudflare Stream API to get upload URLs, check video processing status, and serve video details. A proxy endpoint was created to handle uploads from the frontend to Cloudflare to bypass browser CORS issues.
-*   **Video Playback:** For videos hosted on Cloudflare Stream, the frontend dynamically checks if the video is processed. If ready, it renders the video using Cloudflare's provided  embed, which handles HLS adaptive streaming and avoids all CORS issues. If the video is still processing, it displays a processing status to the user.
+Major components are:
+*   **Authentication:** JWT-based login, including a superuser role.
+*   **Video Pipeline:** The previous blocker with large file uploads crashing the server has been resolved. The system now supports a simplified workflow where the admin can either upload a file directly through the app (which now uses  on the backend to correct 360° video metadata) or, more efficiently, upload to the Cloudflare dashboard and link the video in the app using its ID.
+*   **Video Player:** A custom  component using Three.js and HLS.js handles playback of Cloudflare videos. It now includes full WebXR support for an immersive VR experience on Meta Quest devices. It also features a floating UI panel in VR that appears when a video ends, allowing the user to replay or exit.
+*   **3D Map Page:** A new  route has been created using **Leaflet** (pivoted from CesiumJS due to complexity). It displays Nazca Lines POIs on a high-resolution Google Maps satellite layer.
+*   **Map Admin Panel:** The map page includes a complete, admin-only interface for CRUD operations on POIs. Admins can add, edit, and delete map markers directly from the frontend. The backend has corresponding protected API endpoints to manage POIs in the MongoDB database.
 
 **Last working item**:
-*   **Last item agent was working:** Fixing a critical server crash caused by a memory overload when uploading large files. The agent implemented a backend proxy endpoint () to solve a CORS issue, but this implementation reads the entire uploaded file into memory (), causing the server to run out of RAM and crash for files >1GB.
-*   **Status:** BLOCKED
+*   **Last item agent was working:** Debugging the new Mapa 3D page. After the user reported a blank page, the agent diagnosed and fixed two critical bugs revealed by the user's console logs:
+    1.  : The Leaflet map was being initialized multiple times.
+    2.  : API calls to the new POI endpoints were missing the  prefix.
+    After fixing these, the user provided a screenshot of a new ESLint warning in the browser console (). The agent was about to fix this linting warning.
+*   **Status:** IN PROGRESS
 *   **Agent Testing Done:** N
-*   **Which testing method agent to use?** Both. First, the backend developer must fix the proxy endpoint. This can be tested with  by streaming a large dummy file. After the backend is fixed, the frontend testing agent should be used to verify the end-to-end upload flow from the Admin Panel.
+*   **Which testing method agent to use?** Frontend testing agent. After fixing the ESLint warning, the agent should use the testing agent to perform a full E2E test of the Map Admin Panel functionality: log in as admin, create a new POI, edit it, and delete it, verifying that the map updates correctly at each step.
 *   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1 (P0):** Large file uploads (>1GB) crash the server.
+*   **Issue 1 (P0):** ESLint warning in .
 *   **Issue 2 (P1):** Systemic frontend API error handling is incomplete.
 
 **Issues Detail:**
-*   **Issue 1: Large File Uploads Crash the Server due to Memory Overload**
-    *   **Attempted fixes:** The agent created a proxy endpoint () to stream uploads from the browser to Cloudflare via the backend. This successfully bypassed CORS errors but introduced a new, more severe problem: the implementation () loads the entire file into memory, causing the pod to exceed its memory limit and terminate when uploading large files.
+*   **Issue 1: ESLint Warning  in **
+    *   **Attempted fixes:** None yet. The agent acknowledged the issue right before the session ended. This was likely introduced when fixing the double-initialization bug.
     *   **Next debug checklist:**
-        1.  Modify the  endpoint in .
-        2.  **Do not use **.
-        3.  Instead, stream the request body directly. The  object from FastAPI () can be treated like a file-like object. Use an HTTP client library like  to stream the  object's content directly in the  request to Cloudflare. This will send the data in chunks without loading the entire file into server memory.
-        4.  Verify the fix by attempting to upload a large file again from the frontend.
-    *   **Why fix this issue and what will be achieved with the fix?** This is the primary blocker preventing the user from uploading their large 360° videos, which is a core requirement of the application.
-    *   **Status:** IN PROGRESS
-    *   **Is recurring issue?** Y (The upload process has failed in many different ways).
-    *   **Should Test frontend/backend/both after fix?** Both.
-    *   **Blocked on other issue:** None. This is the main blocker.
+        1.  View .
+        2.  Identify the  hook that is missing a dependency (likely  or another function).
+        3.  Add the missing dependency to the dependency array. If this causes an infinite loop, wrap the function in a  hook.
+        4.  Verify that the frontend compiles without warnings and that the map page functions as expected.
+    *   **Why fix this issue and what will be achieved with the fix?** Resolves a code quality issue that could lead to stale data or unexpected re-renders on the map page.
+    *   **Status:** NOT STARTED
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** Frontend.
+    *   **Blocked on other issue:** None. This is the highest priority.
 
 *   **Issue 2: Recurring React Object Render Error**
-    *   **Attempted fixes:** A utility file () was created but not integrated globally.
+    *   **Attempted fixes:** (From previous fork) A utility file () was created but not integrated globally.
     *   **Next debug checklist:**
         1.  Use  in  to identify all components with API error handling.
         2.  In each identified file, import the error handling utility and refactor the  blocks to use it.
@@ -58,27 +61,28 @@ The video pipeline is now almost fully integrated with Cloudflare Stream:
     *   **Blocked on other issue:** Issue 1 has higher priority.
 
 **In progress Task List**:
-*   **Task 1: Implement a Memory-Efficient Backend Upload Proxy**
-    *   **Where to resume:** , inside the  function.
-    *   **What will be achieved with this?** A stable and reliable way to upload very large video files to Cloudflare Stream without crashing the server.
-    *   **Status:** IN PROGRESS
-    *   **Should Test frontend/backend/both after fix?** Both.
-    *   **Blocked on something:** None.
+None.
 
 **Upcoming and Future Tasks**
-*   **(P2) Implement HLS/DASH Streaming:** (Partially done via Cloudflare Stream) The next step would be to expose quality selection controls to the user by interacting with the Cloudflare Stream player API or manifest, if possible.
+*   **(P2) Deprecate and Remove AWS S3 Code:** The backend still contains code and credentials for AWS S3. This should be removed to simplify the codebase.
 *   **(Future) DRM Integration:** The user has expressed interest in Digital Rights Management (e.g., Widevine) for maximum security. This is a complex, long-term feature.
-*   **(Future) Deprecate and Remove AWS S3 Code:** The backend still contains code and credentials for AWS S3. This should be removed to simplify the codebase.
 
 **Completed work in this session**
-*   **Fixed 360° Video Player:** Resolved the initial issue where the S3-based 360° video player would freeze, and successfully validated it with the testing agent.
-*   **Pivoted to Cloudflare:** Migrated the entire video pipeline from AWS S3 to **Cloudflare Stream** in response to user feedback about performance and complexity.
-*   **Integrated Cloudflare Stream:**
-    *   Added backend endpoints to get one-time upload URLs and check video processing status.
-    *   Refactored the Admin Panel UI to provide a simple upload interface dedicated to Cloudflare Stream.
-    *   Successfully implemented video playback using Cloudflare's  embed, which solves CORS and provides adaptive streaming.
-*   **Iterative Upload Debugging:** Went through multiple failed upload strategies (TUS, basic POST, XHR vs. ) before settling on the backend proxy approach.
-*   **Backend Crash Recovery:** Diagnosed and fixed an  in  that was crashing the backend and preventing login.
+- **Fixed Large File Uploads:** Resolved the server memory crash by rewriting the backend proxy to stream files to Cloudflare instead of reading them into memory.
+- **Diagnosed Cloudflare Quota Issue:** Identified that the user's Cloudflare account had exceeded its storage limit and that 360° video metadata was causing incorrect duration calculations.
+- **Implemented FFmpeg Metadata Correction:** Added a backend process to automatically fix video metadata with  during upload, ensuring correct quota usage.
+- **Simplified Video Workflow:** Added an admin feature to link videos directly by pasting a Cloudflare Video ID, as requested by the user.
+- **Enabled 360° Playback for Cloudflare Videos:** Modified the  to prioritize the custom  component, enabling 360° playback.
+- **Implemented Full VR Support (WebXR):**
+  - Integrated Three.js with WebXR to allow immersive viewing on Meta Quest devices.
+  - Added a UI button to enter/exit VR mode.
+  - Fixed VR session handling to allow exiting via the controller's menu button.
+  - Created a floating UI panel in VR (using ) that appears when a video ends, offering Replay and Exit options, operable with a single controller.
+- **Built Mapa 3D Page:**
+  - Created a new page using Leaflet with high-resolution Google satellite tiles.
+  - Implemented a full admin panel for CRUD operations on map POIs.
+  - Built corresponding protected backend endpoints for managing POIs.
+- **Fixed Multiple Map Page Bugs:** Resolved critical errors related to double map initialization and missing API prefixes that were preventing the map page from rendering.
 
 **Earlier issues found/mentioned but not fixed**
 *   The systemic frontend error handling () was identified in a previous session and remains unresolved.
@@ -92,55 +96,58 @@ The video pipeline is now almost fully integrated with Cloudflare Stream:
 
 
 **Key Technical Concepts**
-*   **Cloudflare Stream:** A video-on-demand platform that handles transcoding, storage, and adaptive (HLS) streaming delivery via a global CDN.
-*   **Backend Streaming Proxy:** The currently broken approach to upload large files. The goal is to stream an incoming HTTP request body to an outgoing request without loading it all into memory.
-*   **Cloudflare Iframe Embed:** The method used for video playback. It's the simplest way to play Cloudflare Stream videos, avoiding CORS and player complexity.
-*   **HLS (HTTP Live Streaming):** The adaptive bitrate streaming protocol used by Cloudflare Stream to deliver video efficiently.
+*   **Cloudflare Stream:** Video-on-demand platform for storage and HLS delivery.
+*   **Backend Streaming Proxy:** The implemented solution to upload large files without memory overload, using .
+*   **FFmpeg:** Command-line tool used on the backend to correct video metadata before upload.
+*   **WebXR:** Standard for accessing virtual and augmented reality devices, used for the Meta Quest integration.
+*   **Three.js:** 3D graphics library used for the .
+*   **three-mesh-ui:** A library for creating user interfaces within a Three.js scene, used for the VR panel.
+*   **Leaflet:** A lightweight, open-source JavaScript library for interactive maps. Used instead of CesiumJS.
 
 **key DB schema**
 *   **videos:** 
-    *   The  field is now polymorphic and primarily uses a new scheme: . The backend and frontend logic are designed to handle this.
+*   **pois:**  (NEW)
 
 **All files of reference**
-*   : **This is the critical file.** The  function needs to be rewritten to use streaming.
-*   : Contains the frontend logic that calls the broken proxy endpoint.
-*   : Contains the logic for rendering the Cloudflare Stream .
-*   : Contains the necessary  and .
+*   : **This is the critical file.** It has the pending ESLint issue and contains all logic for the map and admin panel.
+*   : Contains the new CRUD API endpoints for POIs ().
+*   : Contains the complex WebXR and VR UI implementation.
+*   : Defines the routing, including the new  route.
+*   : Contains the UI links to the new map page.
 
 **Areas that need refactoring**:
-*   The  upload logic has been changed many times and could be simplified.
-*    is over 1900 lines long and should be broken down into smaller, more manageable modules (e.g., , ).
+*    is now over 2600 lines and should be broken down into smaller modules (e.g., , , ).
 *   All deprecated AWS S3 code should be removed from  and the frontend.
 
 **key api endpoints**
-*   : Generates a direct upload URL from Cloudflare.
-*   : **(BROKEN)** The endpoint that receives a file from the browser and is supposed to stream it to Cloudflare.
-*   : Gets video details from Cloudflare, including processing status and the  embed URL.
+*   : Uploads a file, corrects metadata with ffmpeg, and sends to Cloudflare.
+*   : Links a video that was already uploaded to Cloudflare.
+*   , : Fetch map points of interest.
+*   : Create a new map POI (admin only).
+*   : Update a map POI (admin only).
+*   : Delete a map POI (admin only).
 
 **Critical Info for New Agent**
-*   The immediate and only priority is to fix the memory overload in the  endpoint in . The solution is to **stream the file**, not read it into memory. FastAPI's  object can be iterated over or passed to a streaming-capable HTTP client like .
-*   The user's workflow is completely blocked by this bug.
-*   The project has fully committed to Cloudflare Stream. Do not re-introduce AWS S3 or other storage solutions. The current architecture (upload via backend, play via iframe) is the correct path forward once the memory issue is resolved.
+*   The immediate priority is to fix the ESLint warning in . This is a small fix that will stabilize the new map page.
+*   After the fix, the entire Map Admin Panel workflow needs to be tested E2E to ensure the user's latest feature request is fully functional.
+*   The pivot from CesiumJS to Leaflet was a key decision to simplify development. Do not re-introduce CesiumJS.
+*   The VR functionality in  is complex. Be cautious if making changes there.
 
 **documents and test reports created in this job**
-*   
-*    (updated multiple times)
+*   None new. Previous reports are outdated by the significant feature additions.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Reports  and  when trying to upload la arana. **Status: ADDRESSED**, led to removing tus-js-client.
-2.  **User:** Reports CORS error and 502 Bad Gateway when uploading. **Status: ADDRESSED**, led to the implementation of the backend proxy.
-3.  **User:** Implicitly reports server crash by stating login is failing with a 520 error. **Status: ADDRESSED**, agent found and fixed a backend indentation error.
-4.  **User:** Reports  when trying to upload a large file again. **Status: IN PROGRESS**, this is the core issue caused by the server crashing from memory overload due to the proxy implementation.
-5.  **User:** Reports  and . **Status: ADDRESSED**, this was part of the iterative debugging of the upload protocol.
-6.  **User:** Reports decoding error and TUS failure. **Status: ADDRESSED**, led to simplifying the upload logic.
-7.  **User:** Reports  and . **Status: ADDRESSED**, another TUS-related error.
-8.  **User:** elimina el s3 ya no trabajamos con aws. **Status: PARTIALLY DONE**, frontend UI was removed, but backend code remains.
-9.  **User:** Confirms upload to Cloudflare works, but playback fails with CORS error and 404. **Status: COMPLETED**, led to the implementation of the  embed and status checking.
-10. **User:** Provides Cloudflare Stream credentials. **Status: COMPLETED**.
+1.  **User:** Asks to add a full-featured Mapa 3D page with admin controls. **Status: IN PROGRESS**.
+2.  **User:** Requests sharper satellite imagery for the map. **Status: COMPLETED**, switched to Google Maps tiles.
+3.  **User:** Requests an admin panel on the map to manage POIs and asks to remove Google's labels. **Status: IN PROGRESS**.
+4.  **User:** Reports not seeing the admin figures on the map. **Status: ADDRESSED**, led to debugging the map page.
+5.  **User:** Reports that the sidebar and menu are completely missing on the map page. **Status: ADDRESSED**, led to further debugging.
+6.  **User:** Provides critical console logs showing Map container already initialized and 404 on /pois. **Status: ADDRESSED**, agent used this to find and fix the root causes.
+7.  **User:** Provides a screenshot of a new ESLint warning ( missing dependency) after the latest fix. **Status: PENDING**, this is the current active issue.
 
 **Project Health Check:**
 *   **Broken:**
-    *   The core video upload functionality in  is non-functional for large files due to the backend memory crash.
+    *    has a code quality issue (ESLint warning) that may cause incorrect behavior and needs to be fixed. The full functionality has not been verified by the user yet.
 
 *   **Mocked:**
     *   None.
@@ -150,22 +157,20 @@ The video pipeline is now almost fully integrated with Cloudflare Stream:
 *   **Stripe (Payments)** — requires User API Key.
 *   **SendGrid (Email)** — requires User API Key.
 *   **Emergent Google Auth (Authentication)** — uses Emergent LLM Key.
-*   **AWS S3 (Storage)** — **DEPRECATED**, requires User API Key.
+*   **Leaflet (Maps)** — integrated via CDN/npm.
+*   **FFmpeg (Backend Tool)** — installed on the container.
 
 **Testing status**
-*   **Testing agent used after significant changes:** YES, but before the latest Cloudflare upload implementations.
+*   **Testing agent used after significant changes:** NO, not since the major VR and Map features were added.
 *   **Troubleshoot agent used after agent stuck in loop:** NO.
 *   **Test files created:** None.
-*   **Known regressions:** The login functionality temporarily broke due to a backend crash but was restored. The large file upload, which once worked with S3 multipart, is now broken with the new Cloudflare proxy implementation.
+*   **Known regressions:** None currently, but the map page has been unstable during development.
 
 **Credentials to test flow:**
 *   **Superuser:**
     *   **Email:** 
     *   **Password:** 
-*   **Cloudflare Credentials (in ):**
-    *   
-    *   
 
 **What agent forgot to execute**
-*   The agent did not perform a global refactor of frontend error handling using the  utility.
-*   The agent did not remove the now-deprecated AWS S3 integration code from the backend () or the AWS credentials from the  file, leaving technical debt.</analysis>
+*   The agent did not address the long-standing technical debt of refactoring frontend error handling with .
+*   The agent did not remove the deprecated AWS S3 code from the backend.</analysis>
