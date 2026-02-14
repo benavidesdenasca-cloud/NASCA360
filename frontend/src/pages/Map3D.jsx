@@ -172,43 +172,33 @@ const Map3D = () => {
       setNazcaLinesLoaded(true);
       
       try {
-        // Use filtered file with only the main Nazca Lines area
         const response = await fetch('/nazca_lines_filtered.json');
         if (!response.ok) throw new Error('Error de red');
         
         const geoJsonData = await response.json();
         
-        // Create layer group with polylines
-        const layerGroup = L.layerGroup();
-        let count = 0;
+        // Wait for map to be fully ready
+        await new Promise(resolve => setTimeout(resolve, 100));
         
-        for (const feature of geoJsonData.features || []) {
-          try {
-            const coords = feature.geometry?.coordinates;
-            if (!coords || coords.length < 2) continue;
-            
-            // Convert [lng, lat] to [lat, lng] for Leaflet
-            const latLngs = coords.map(c => [c[1], c[0]]);
-            
-            const polyline = L.polyline(latLngs, {
+        // Use L.geoJSON which is the native way to handle GeoJSON in Leaflet
+        const geoJsonLayer = L.geoJSON(geoJsonData, {
+          style: function(feature) {
+            return {
               color: '#FF6600',
               weight: 2,
-              opacity: 0.9
-            });
-            
-            layerGroup.addLayer(polyline);
-            count++;
-          } catch (err) {
-            // Skip invalid feature
+              opacity: 0.9,
+              fillOpacity: 0
+            };
           }
-        }
+        });
         
-        nazcaLinesLayerRef.current = layerGroup;
+        nazcaLinesLayerRef.current = geoJsonLayer;
         
         if (showNazcaLines && mapRef.current) {
-          layerGroup.addTo(mapRef.current);
+          geoJsonLayer.addTo(mapRef.current);
         }
         
+        const count = geoJsonData.features?.length || 0;
         toast.success(`${count} trazos oficiales cargados`);
         
       } catch (error) {
