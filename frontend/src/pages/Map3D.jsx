@@ -161,54 +161,41 @@ const Map3D = () => {
             return response.json();
           })
           .then(data => {
-            // Use FeatureGroup for better handling
+            // Use Canvas renderer for better performance
+            const canvasRenderer = L.canvas({ padding: 0.5 });
             const featureGroup = L.featureGroup();
             let addedCount = 0;
             
-            data.features.forEach((feature, index) => {
-              try {
-                if (feature.geometry && feature.geometry.coordinates && Array.isArray(feature.geometry.coordinates)) {
-                  const latLngs = [];
-                  
-                  for (const coord of feature.geometry.coordinates) {
-                    if (Array.isArray(coord) && coord.length >= 2) {
-                      const lng = Number(coord[0]);
-                      const lat = Number(coord[1]);
-                      
-                      // Strict validation
-                      if (Number.isFinite(lat) && Number.isFinite(lng) && 
-                          lat >= -90 && lat <= 90 && 
-                          lng >= -180 && lng <= 180) {
-                        latLngs.push([lat, lng]);
-                      }
-                    }
-                  }
-                  
-                  if (latLngs.length >= 2) {
-                    const polyline = L.polyline(latLngs, {
-                      color: '#FFD700',
-                      weight: 2,
-                      opacity: 0.9
-                    });
-                    featureGroup.addLayer(polyline);
-                    addedCount++;
-                  }
+            data.features.forEach((feature) => {
+              if (feature.geometry && feature.geometry.coordinates) {
+                const latLngs = feature.geometry.coordinates
+                  .filter(coord => Array.isArray(coord) && coord.length >= 2)
+                  .map(coord => {
+                    const lng = Number(coord[0]);
+                    const lat = Number(coord[1]);
+                    return [lat, lng];
+                  })
+                  .filter(([lat, lng]) => 
+                    Number.isFinite(lat) && Number.isFinite(lng) &&
+                    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+                  );
+                
+                if (latLngs.length >= 2) {
+                  const polyline = L.polyline(latLngs, {
+                    color: '#FFD700',
+                    weight: 2,
+                    opacity: 0.9,
+                    renderer: canvasRenderer
+                  });
+                  featureGroup.addLayer(polyline);
+                  addedCount++;
                 }
-              } catch (e) {
-                console.warn(`Skipping feature ${index}:`, e.message);
               }
             });
             
-            // Add to map only after all features are processed
             nazcaLinesLayerRef.current = featureGroup;
-            
-            // Add with slight delay to ensure map is ready
-            setTimeout(() => {
-              if (mapRef.current && nazcaLinesLayerRef.current) {
-                nazcaLinesLayerRef.current.addTo(mapRef.current);
-                toast.success(`Trazos cargados (${addedCount} líneas)`);
-              }
-            }, 100);
+            featureGroup.addTo(mapRef.current);
+            toast.success(`Trazos cargados (${addedCount} líneas)`);
           })
           .catch(error => {
             console.error('Error loading nazca lines:', error);
