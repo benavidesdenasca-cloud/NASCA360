@@ -153,7 +153,7 @@ const Map3D = () => {
       // Load and show the layer
       if (!nazcaLinesLayerRef.current && !nazcaLinesLoaded) {
         toast.info('Cargando trazos del Ministerio de Cultura...');
-        setNazcaLinesLoaded(true); // Set early to prevent duplicate loads
+        setNazcaLinesLoaded(true);
         
         fetch('/nazca_lines.json')
           .then(response => {
@@ -161,41 +161,54 @@ const Map3D = () => {
             return response.json();
           })
           .then(data => {
-            const polylines = [];
+            // Use FeatureGroup for better handling
+            const featureGroup = L.featureGroup();
             let addedCount = 0;
             
-            // Process each feature
-            data.features.forEach(feature => {
-              if (feature.geometry && feature.geometry.coordinates && Array.isArray(feature.geometry.coordinates)) {
-                const latLngs = [];
-                for (const coord of feature.geometry.coordinates) {
-                  if (Array.isArray(coord) && coord.length >= 2) {
-                    const lng = parseFloat(coord[0]);
-                    const lat = parseFloat(coord[1]);
-                    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                      latLngs.push([lat, lng]);
+            data.features.forEach((feature, index) => {
+              try {
+                if (feature.geometry && feature.geometry.coordinates && Array.isArray(feature.geometry.coordinates)) {
+                  const latLngs = [];
+                  
+                  for (const coord of feature.geometry.coordinates) {
+                    if (Array.isArray(coord) && coord.length >= 2) {
+                      const lng = Number(coord[0]);
+                      const lat = Number(coord[1]);
+                      
+                      // Strict validation
+                      if (Number.isFinite(lat) && Number.isFinite(lng) && 
+                          lat >= -90 && lat <= 90 && 
+                          lng >= -180 && lng <= 180) {
+                        latLngs.push([lat, lng]);
+                      }
                     }
                   }
+                  
+                  if (latLngs.length >= 2) {
+                    const polyline = L.polyline(latLngs, {
+                      color: '#FFD700',
+                      weight: 2,
+                      opacity: 0.9
+                    });
+                    featureGroup.addLayer(polyline);
+                    addedCount++;
+                  }
                 }
-                
-                if (latLngs.length >= 2) {
-                  polylines.push(latLngs);
-                  addedCount++;
-                }
+              } catch (e) {
+                console.warn(`Skipping feature ${index}:`, e.message);
               }
             });
             
-            // Create a single multiPolyline for better performance
-            const multiPolyline = L.polyline(polylines, {
-              color: '#FFD700',
-              weight: 2,
-              opacity: 0.9,
-              smoothFactor: 1.5
-            });
+            // Add to map only after all features are processed
+            nazcaLinesLayerRef.current = featureGroup;
             
-            nazcaLinesLayerRef.current = multiPolyline;
-            multiPolyline.addTo(mapRef.current);
-            toast.success(`Trazos cargados (${addedCount} líneas)`);
+            // Add with slight delay to ensure map is ready
+            setTimeout(() => {
+              if (mapRef.current && nazcaLinesLayerRef.current) {
+                nazcaLinesLayerRef.current.addTo(mapRef.current);
+                toast.success(`Trazos cargados (${addedCount} líneas)`);
+              }
+            }, 100);
           })
           .catch(error => {
             console.error('Error loading nazca lines:', error);
