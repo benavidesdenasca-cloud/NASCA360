@@ -147,8 +147,8 @@ const Map3D = () => {
     const map = L.map(mapContainerRef.current, {
       center: [NAZCA_CENTER.latitude, NAZCA_CENTER.longitude],
       zoom: 13,
-      minZoom: 11,
-      maxZoom: 16,  // Limitado para evitar áreas sin tiles
+      minZoom: 10,
+      maxZoom: 19,  // Zoom máximo aumentado para ver más detalle
       maxBounds: [
         [NAZCA_BOUNDS.south, NAZCA_BOUNDS.west],
         [NAZCA_BOUNDS.north, NAZCA_BOUNDS.east]
@@ -156,9 +156,10 @@ const Map3D = () => {
       maxBoundsViscosity: 0.8
     });
 
-    // Google Maps Satellite only (no labels)
+    // Google Maps Satellite with high zoom support
     L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-      maxZoom: 18,
+      maxZoom: 21,
+      maxNativeZoom: 19,  // Google provee hasta zoom 19-20 en esta área
       attribution: '&copy; Google Maps'
     }).addTo(map);
 
