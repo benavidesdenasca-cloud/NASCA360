@@ -447,23 +447,25 @@ const Map3D = () => {
                           <MapPin className="w-5 h-5" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-gray-800 truncate">{poi.name}</h3>
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="font-semibold text-gray-800 truncate flex-1">{poi.name}</h3>
                             {isAdmin && (
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex gap-1 flex-shrink-0">
                                 <button
+                                  data-testid={`edit-poi-${poi.id}`}
                                   onClick={(e) => { e.stopPropagation(); handleEditPoi(poi); }}
-                                  className="p-1.5 bg-blue-100 hover:bg-blue-200 rounded text-blue-600"
+                                  className="p-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white shadow-sm transition-colors"
                                   title="Editar"
                                 >
-                                  <Edit className="w-3.5 h-3.5" />
+                                  <Edit className="w-4 h-4" />
                                 </button>
                                 <button
+                                  data-testid={`delete-poi-${poi.id}`}
                                   onClick={(e) => { e.stopPropagation(); handleDeletePoi(poi); }}
-                                  className="p-1.5 bg-red-100 hover:bg-red-200 rounded text-red-600"
+                                  className="p-2 bg-red-500 hover:bg-red-600 rounded-lg text-white shadow-sm transition-colors"
                                   title="Eliminar"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
                             )}
