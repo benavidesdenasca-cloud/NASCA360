@@ -72,11 +72,11 @@ const Map3D = () => {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         
         // Fetch POIs
-        const poisRes = await axios.get(`${API}/pois`, { headers });
+        const poisRes = await axios.get(`${API}/api/pois`, { headers });
         setPois(poisRes.data || []);
         
         // Fetch videos
-        const videosRes = await axios.get(`${API}/videos`, { headers });
+        const videosRes = await axios.get(`${API}/api/videos`, { headers });
         setVideos(videosRes.data || []);
       } catch (error) {
         console.error('Error fetching data:', error);
