@@ -221,13 +221,12 @@ const Map3D = () => {
             }
             
             if (latLngs.length >= 2) {
-              // Create polyline and add directly to map
+              // Create polyline with Canvas renderer to avoid SVG clipping issues
               const polyline = L.polyline(latLngs, {
                 color: '#FF6600',
                 weight: 3,
                 opacity: 1,
-                noClip: true,
-                smoothFactor: 2
+                renderer: L.canvas({ padding: 0.5 })
               });
               
               // Add to map directly to avoid group issues
