@@ -332,7 +332,7 @@ const Map3D = () => {
     if (!window.confirm(`¿Eliminar "${poi.name}"?`)) return;
     
     try {
-      await axios.delete(`${API}/pois/${poi.id}`, {
+      await axios.delete(`${API}/api/pois/${poi.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('POI eliminado');
