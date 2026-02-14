@@ -247,7 +247,19 @@ const Map3D = () => {
       loadNazcaLines();
     } else if (nazcaLinesLayerRef.current && mapRef.current) {
       try {
-        if (mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+        // Handle both array of polylines and single layer
+        if (nazcaLinesLayerRef.current.isArray && nazcaLinesLayerRef.current.polylines) {
+          // Remove each polyline individually
+          nazcaLinesLayerRef.current.polylines.forEach(polyline => {
+            try {
+              if (mapRef.current.hasLayer(polyline)) {
+                mapRef.current.removeLayer(polyline);
+              }
+            } catch (e) {
+              // Silently handle removal errors
+            }
+          });
+        } else if (mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
           mapRef.current.removeLayer(nazcaLinesLayerRef.current);
         }
       } catch (e) {
