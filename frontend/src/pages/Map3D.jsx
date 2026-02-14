@@ -740,8 +740,8 @@ const Map3D = () => {
               )}
             </div>
 
-            {/* Stats Footer */}
-            <div className="p-3 bg-gray-50 border-t">
+            {/* Stats Footer - Fixed at bottom */}
+            <div className="flex-shrink-0 p-3 bg-gray-50 border-t">
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="bg-white rounded-lg p-2">
                   <div className="text-xl font-bold text-amber-600">{pois.length}</div>
