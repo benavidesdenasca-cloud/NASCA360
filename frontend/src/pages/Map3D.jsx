@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/App';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { MapPin, Info, X, ChevronRight, Play, ZoomIn, ZoomOut, RotateCcw, Plus, Edit, Trash2, Save, Settings } from 'lucide-react';
+import { MapPin, Info, X, ChevronRight, Play, ZoomIn, ZoomOut, RotateCcw, Plus, Edit, Trash2, Save, Settings, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
