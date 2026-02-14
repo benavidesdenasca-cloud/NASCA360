@@ -859,21 +859,21 @@ const Map3D = () => {
             </div>
           )}
 
-          {/* Map Controls */}
-          <div className="absolute right-4 top-4 flex flex-col gap-2 z-10">
-            <Button onClick={zoomIn} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg" size="icon">
+          {/* Map Controls - Right side */}
+          <div className="absolute right-4 top-4 flex flex-col gap-2 z-20">
+            <Button onClick={zoomIn} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Acercar">
               <ZoomIn className="w-5 h-5" />
             </Button>
-            <Button onClick={zoomOut} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg" size="icon">
+            <Button onClick={zoomOut} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Alejar">
               <ZoomOut className="w-5 h-5" />
             </Button>
-            <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg" size="icon">
+            <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Restablecer vista">
               <RotateCcw className="w-5 h-5" />
             </Button>
             <div className="w-full h-px bg-gray-300 my-1"></div>
             <Button 
               onClick={() => setShowNazcaLines(!showNazcaLines)} 
-              className={`shadow-lg ${showNazcaLines ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-800'}`}
+              className={`shadow-lg border ${showNazcaLines ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-600' : 'bg-white hover:bg-gray-100 text-gray-800'}`}
               size="icon"
               title="Trazos del Ministerio de Cultura"
             >
@@ -883,7 +883,7 @@ const Map3D = () => {
 
           {/* Nazca Lines Layer Info */}
           {showNazcaLines && (
-            <div className="absolute right-4 top-56 z-10 bg-yellow-500/90 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-[200px]">
+            <div className="absolute right-4 top-52 z-20 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-[180px]">
               <div className="flex items-center gap-2 font-semibold mb-1">
                 <Layers className="w-4 h-4" />
                 Capa Activa
