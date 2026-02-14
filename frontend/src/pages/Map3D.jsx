@@ -36,6 +36,7 @@ const Map3D = () => {
   const mapRef = useRef(null);
   const markersRef = useRef({});
   const tempMarkerRef = useRef(null); // Marcador temporal para edición
+  const nazcaLinesLayerRef = useRef(null); // Capa de líneas de Nazca del Ministerio
   
   const [pois, setPois] = useState([]);
   const [selectedPoi, setSelectedPoi] = useState(null);
@@ -43,6 +44,8 @@ const Map3D = () => {
   const [videos, setVideos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [showNazcaLines, setShowNazcaLines] = useState(false); // Toggle para capa de líneas
+  const [nazcaLinesLoaded, setNazcaLinesLoaded] = useState(false);
   
   // Admin Panel States
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
