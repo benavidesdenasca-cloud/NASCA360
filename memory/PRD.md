@@ -82,18 +82,19 @@ Plataforma de turismo virtual premium para explorar las Líneas de Nasca y Palpa
 - Panel Admin funcionando ✓
 - Upload de videos grandes a S3 funcionando ✓
 - Reservas funcionando ✓
+- **Mapa 3D funcionando** ✓ (Corregido Feb 2026)
+  - Panel de admin para CRUD de POIs ✓
+  - Navbar visible ✓
+  - Botones editar/eliminar siempre visibles ✓
 
 ## Tareas Pendientes (P1-P2)
 1. **(P1)** Refactorizar manejo de errores API en frontend (usar `/app/frontend/src/utils/apiErrorHandler.js`)
-2. **(P1)** Integración AWS CloudFront para mejor rendimiento CDN
-3. **(P2)** Implementar streaming HLS/DASH para calidad adaptativa
+2. **(P1)** Eliminar código AWS S3 deprecado del backend
+3. **(P2)** Refactorizar `server.py` (>2600 líneas) en módulos separados
 4. **(Futuro)** Integración DRM (Widevine) para máxima seguridad
 
-## Última actualización: 27 Enero 2026
-- ✅ Integración con Cloudflare R2 (CDN) para streaming más rápido
-- ✅ Panel Admin con opción de elegir almacenamiento (R2 vs S3)
-- ✅ Agregado selector de calidad de video (Auto, 4K, 1080p, 720p)
-- ✅ Agregado control de volumen con slider expandible
-- ✅ Corregido reproductor de video 360° 
-- ✅ Videos grandes de S3 se reproducen correctamente
-- ✅ Navegación 360° con drag funcionando
+## Última actualización: 14 Febrero 2026
+- ✅ Corregido bug del Navbar no visible en página Mapa 3D
+- ✅ Corregido botones Editar/Eliminar ahora siempre visibles (no solo hover)
+- ✅ Corregido panel de edición de POIs (z-index: 9999 para aparecer encima de Leaflet)
+- ✅ Testing completo del flujo admin CRUD de POIs (100% pass rate)
