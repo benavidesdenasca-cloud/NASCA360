@@ -152,7 +152,7 @@ const Map3D = () => {
     if (showNazcaLines) {
       // Load and show the layer
       if (!nazcaLinesLayerRef.current && !nazcaLinesLoaded) {
-        toast.info('Cargando trazos del Ministerio de Cultura (puede tardar unos segundos)...');
+        toast.info('Cargando trazos del Ministerio de Cultura...');
         setNazcaLinesLoaded(true);
         
         fetch('/nazca_lines.json')
@@ -161,57 +161,46 @@ const Map3D = () => {
             return response.json();
           })
           .then(data => {
-            // Use Canvas renderer for performance with many lines
-            const canvasRenderer = L.canvas({ padding: 0.5, tolerance: 5 });
-            const featureGroup = L.featureGroup();
+            // Use Canvas renderer with noClip to avoid bounds errors
+            const canvasRenderer = L.canvas({ padding: 0.5, tolerance: 10 });
+            const layerGroup = L.layerGroup();
             let addedCount = 0;
             
-            // Process in batches for better performance
-            const batchSize = 1000;
-            let currentBatch = 0;
-            
-            const processBatch = () => {
-              const start = currentBatch * batchSize;
-              const end = Math.min(start + batchSize, data.features.length);
-              
-              for (let i = start; i < end; i++) {
-                const feature = data.features[i];
-                if (feature.geometry && feature.geometry.coordinates) {
-                  const latLngs = feature.geometry.coordinates
-                    .filter(coord => Array.isArray(coord) && coord.length >= 2)
-                    .map(coord => [Number(coord[1]), Number(coord[0])])
-                    .filter(([lat, lng]) => 
-                      Number.isFinite(lat) && Number.isFinite(lng) &&
-                      lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
-                    );
+            data.features.forEach((feature) => {
+              try {
+                if (feature.geometry && feature.geometry.coordinates && feature.geometry.coordinates.length >= 2) {
+                  const latLngs = [];
+                  
+                  for (const coord of feature.geometry.coordinates) {
+                    if (Array.isArray(coord) && coord.length >= 2) {
+                      const lng = Number(coord[0]);
+                      const lat = Number(coord[1]);
+                      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                        latLngs.push([lat, lng]);
+                      }
+                    }
+                  }
                   
                   if (latLngs.length >= 2) {
                     const polyline = L.polyline(latLngs, {
-                      color: '#FFA500', // Naranja como en la imagen
+                      color: '#FFA500',
                       weight: 1.5,
-                      opacity: 0.85,
-                      renderer: canvasRenderer
+                      opacity: 0.8,
+                      renderer: canvasRenderer,
+                      noClip: true
                     });
-                    featureGroup.addLayer(polyline);
+                    layerGroup.addLayer(polyline);
                     addedCount++;
                   }
                 }
+              } catch (e) {
+                // Skip problematic features silently
               }
-              
-              currentBatch++;
-              
-              if (currentBatch * batchSize < data.features.length) {
-                // Process next batch
-                setTimeout(processBatch, 0);
-              } else {
-                // All batches processed
-                nazcaLinesLayerRef.current = featureGroup;
-                featureGroup.addTo(mapRef.current);
-                toast.success(`Trazos cargados (${addedCount.toLocaleString()} líneas)`);
-              }
-            };
+            });
             
-            processBatch();
+            nazcaLinesLayerRef.current = layerGroup;
+            layerGroup.addTo(mapRef.current);
+            toast.success(`Trazos cargados (${addedCount.toLocaleString()} líneas)`);
           })
           .catch(error => {
             console.error('Error loading nazca lines:', error);
