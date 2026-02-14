@@ -195,9 +195,9 @@ const Map3D = () => {
                     // Use divIcon for small dots
                     const icon = L.divIcon({
                       className: 'nazca-point',
-                      html: '<div style="width:4px;height:4px;background:#FF6600;border-radius:50%;"></div>',
-                      iconSize: [4, 4],
-                      iconAnchor: [2, 2]
+                      html: '<div style="width:6px;height:6px;background:#FF6600;border-radius:50%;box-shadow:0 0 3px #FF6600;"></div>',
+                      iconSize: [6, 6],
+                      iconAnchor: [3, 3]
                     });
                     const marker = L.marker([lat, lng], { icon: icon });
                     marker.addTo(mapRef.current);
