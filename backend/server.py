@@ -181,6 +181,44 @@ class PaymentTransaction(BaseModel):
     payment_status: str = "initiated"  # initiated, paid, failed
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+# POI (Point of Interest) for Map 3D
+class POI(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str
+    longitude: float
+    latitude: float
+    altitude: float = 2000  # Default view altitude in meters
+    category: str = "geoglifo"  # geoglifo, mirador, museo
+    image_url: Optional[str] = None
+    video_id: Optional[str] = None  # Link to 360 video
+    is_active: bool = True
+    created_by: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class POICreate(BaseModel):
+    name: str
+    description: str
+    longitude: float
+    latitude: float
+    altitude: float = 2000
+    category: str = "geoglifo"
+    image_url: Optional[str] = None
+    video_id: Optional[str] = None
+
+class POIUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    longitude: Optional[float] = None
+    latitude: Optional[float] = None
+    altitude: Optional[float] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    video_id: Optional[str] = None
+    is_active: Optional[bool] = None
+
 # ==================== REQUEST/RESPONSE MODELS ====================
 
 class RegisterRequest(BaseModel):
