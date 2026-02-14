@@ -145,6 +145,7 @@ const Map3D = () => {
 
   // Toggle Nazca Lines layer
   const nazcaLinesLoadingRef = useRef(false);
+  const nazcaPolylinesRef = useRef([]);
   
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
@@ -153,11 +154,13 @@ const Map3D = () => {
     if (!L) return;
     
     const loadNazcaLines = async () => {
-      // If layer exists, just toggle visibility
-      if (nazcaLinesLayerRef.current) {
-        if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
-          nazcaLinesLayerRef.current.addTo(mapRef.current);
-        }
+      // If lines exist, just toggle visibility
+      if (nazcaPolylinesRef.current.length > 0) {
+        nazcaPolylinesRef.current.forEach(line => {
+          if (!mapRef.current.hasLayer(line)) {
+            line.addTo(mapRef.current);
+          }
+        });
         return;
       }
       
@@ -172,10 +175,7 @@ const Map3D = () => {
         if (!response.ok) throw new Error('Error de red');
         
         const geoJsonData = await response.json();
-        
-        // Create polylines manually to avoid Leaflet GeoJSON parsing issues
-        const layerGroup = L.layerGroup();
-        let successCount = 0;
+        const polylines = [];
         
         for (const feature of geoJsonData.features || []) {
           try {
@@ -183,40 +183,29 @@ const Map3D = () => {
             if (!Array.isArray(coords) || coords.length < 2) continue;
             
             // Convert [lng, lat] to [lat, lng] array for Leaflet
-            const latLngs = [];
-            for (let i = 0; i < coords.length; i++) {
-              const c = coords[i];
-              if (Array.isArray(c) && c.length >= 2) {
-                const lat = Number(c[1]);
-                const lng = Number(c[0]);
-                if (!isNaN(lat) && !isNaN(lng)) {
-                  latLngs.push([lat, lng]);
-                }
-              }
-            }
+            const latLngs = coords
+              .filter(c => Array.isArray(c) && c.length >= 2)
+              .map(c => [Number(c[1]), Number(c[0])]);
             
             if (latLngs.length >= 2) {
               const line = L.polyline(latLngs, {
                 color: '#FF6600',
                 weight: 3,
-                opacity: 1,
-                smoothFactor: 1
+                opacity: 1
               });
-              layerGroup.addLayer(line);
-              successCount++;
+              // Add each line directly to map
+              line.addTo(mapRef.current);
+              polylines.push(line);
             }
           } catch (e) {
             // Skip problematic features
           }
         }
         
-        nazcaLinesLayerRef.current = layerGroup;
+        nazcaPolylinesRef.current = polylines;
+        nazcaLinesLayerRef.current = { _leaflet_id: 1 }; // Dummy reference
         
-        if (showNazcaLines && mapRef.current) {
-          layerGroup.addTo(mapRef.current);
-        }
-        
-        toast.success(`${successCount} trazos oficiales cargados`);
+        toast.success(`${polylines.length} trazos oficiales cargados`);
         setNazcaLinesLoaded(true);
         
       } catch (error) {
@@ -226,16 +215,18 @@ const Map3D = () => {
       }
     };
     
+    const removeNazcaLines = () => {
+      nazcaPolylinesRef.current.forEach(line => {
+        if (mapRef.current && mapRef.current.hasLayer(line)) {
+          mapRef.current.removeLayer(line);
+        }
+      });
+    };
+    
     if (showNazcaLines) {
       loadNazcaLines();
-    } else if (nazcaLinesLayerRef.current && mapRef.current) {
-      try {
-        if (mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
-          mapRef.current.removeLayer(nazcaLinesLayerRef.current);
-        }
-      } catch (e) {
-        // Silently handle removal errors
-      }
+    } else {
+      removeNazcaLines();
     }
   }, [showNazcaLines, mapLoaded]);
 
