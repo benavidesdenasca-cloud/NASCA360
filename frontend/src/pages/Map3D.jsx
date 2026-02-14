@@ -358,10 +358,10 @@ const Map3D = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col">
       <Navbar />
       
-      <div className="relative h-[calc(100vh-80px)] flex">
+      <div className="relative flex-1 flex overflow-hidden">
         {/* Sidebar - POI List */}
         <div className={`absolute md:relative z-20 h-full bg-white/95 backdrop-blur-lg shadow-2xl transition-all duration-300 ${
           sidebarOpen ? 'w-80' : 'w-0 overflow-hidden'
