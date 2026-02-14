@@ -56,7 +56,14 @@ const Map3D = () => {
     video_id: ''
   });
 
-  const isAdmin = user?.role === 'admin';
+  // Check if user is admin (check both role and email for safety)
+  const isAdmin = user?.role === 'admin' || user?.email === 'benavidesdenasca@gmail.com';
+  
+  // Debug log
+  useEffect(() => {
+    console.log('Map3D - User:', user);
+    console.log('Map3D - isAdmin:', isAdmin);
+  }, [user, isAdmin]);
 
   // Fetch POIs and videos
   useEffect(() => {
