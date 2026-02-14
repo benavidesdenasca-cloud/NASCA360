@@ -195,7 +195,8 @@ const Map3D = () => {
               const polyline = L.polyline(latLngs, {
                 color: '#FF6600',
                 weight: 3,
-                opacity: 1
+                opacity: 1,
+                noClip: true  // Bypass clipping to avoid Leaflet bug
               });
               layerGroup.addLayer(polyline);
               loadedCount++;
