@@ -835,7 +835,27 @@ const Map3D = () => {
             <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg" size="icon">
               <RotateCcw className="w-5 h-5" />
             </Button>
+            <div className="w-full h-px bg-gray-300 my-1"></div>
+            <Button 
+              onClick={() => setShowNazcaLines(!showNazcaLines)} 
+              className={`shadow-lg ${showNazcaLines ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-800'}`}
+              size="icon"
+              title="Trazos del Ministerio de Cultura"
+            >
+              <Layers className="w-5 h-5" />
+            </Button>
           </div>
+
+          {/* Nazca Lines Layer Info */}
+          {showNazcaLines && (
+            <div className="absolute right-4 top-56 z-10 bg-yellow-500/90 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-[200px]">
+              <div className="flex items-center gap-2 font-semibold mb-1">
+                <Layers className="w-4 h-4" />
+                Capa Activa
+              </div>
+              <p>Trazos del Ministerio de Cultura del Perú</p>
+            </div>
+          )}
 
           {/* Admin Add Button */}
           {isAdmin && !adminPanelOpen && (
