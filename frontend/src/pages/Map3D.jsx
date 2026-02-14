@@ -747,7 +747,7 @@ const Map3D = () => {
 
         {/* Map Container */}
         <div className="flex-1 relative">
-          <div ref={mapContainerRef} className="w-full h-full" style={{ background: '#1a1a2e' }} />
+          <div ref={mapContainerRef} className="w-full h-full" style={{ background: '#c4a76e' }} />
 
           {/* Loading overlay */}
           {!mapLoaded && (
