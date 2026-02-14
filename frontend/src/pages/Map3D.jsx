@@ -286,15 +286,15 @@ const Map3D = () => {
       const headers = { Authorization: `Bearer ${token}` };
       
       if (editingPoi) {
-        await axios.put(`${API}/pois/${editingPoi.id}`, poiForm, { headers });
+        await axios.put(`${API}/api/pois/${editingPoi.id}`, poiForm, { headers });
         toast.success('POI actualizado correctamente');
       } else {
-        await axios.post(`${API}/pois`, poiForm, { headers });
+        await axios.post(`${API}/api/pois`, poiForm, { headers });
         toast.success('POI creado correctamente');
       }
       
       // Refresh POIs
-      const response = await axios.get(`${API}/pois`, { headers });
+      const response = await axios.get(`${API}/api/pois`, { headers });
       setPois(response.data || []);
       
       // Reset form
