@@ -859,35 +859,6 @@ const Map3D = () => {
             </div>
           )}
 
-          {/* Map Controls - Right side, visible */}
-          <div className="absolute top-4 right-4 z-30 flex flex-col gap-1 mr-8">
-            <Button onClick={zoomIn} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Acercar">
-              <ZoomIn className="w-5 h-5" />
-            </Button>
-            <Button onClick={zoomOut} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Alejar">
-              <ZoomOut className="w-5 h-5" />
-            </Button>
-            <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Restablecer">
-              <RotateCcw className="w-5 h-5" />
-            </Button>
-            <div className="w-full h-px bg-gray-300 my-1"></div>
-            <Button 
-              onClick={() => setShowNazcaLines(!showNazcaLines)} 
-              className={`shadow-lg border ${showNazcaLines ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-600' : 'bg-white hover:bg-gray-100 text-gray-800'}`}
-              size="icon"
-              title="Trazos del Ministerio de Cultura"
-            >
-              <Layers className="w-5 h-5" />
-            </Button>
-          </div>
-
-          {/* Nazca Lines Layer Info */}
-          {showNazcaLines && (
-            <div className="absolute top-52 right-4 z-30 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg mr-8">
-              <span className="font-semibold">Capa:</span> Ministerio de Cultura
-            </div>
-          )}
-
           {/* Admin Add Button */}
           {isAdmin && !adminPanelOpen && (
             <Button
@@ -897,6 +868,34 @@ const Map3D = () => {
               <Plus className="w-4 h-4 mr-2" />
               Nueva Figura
             </Button>
+          )}
+
+          {/* Map Controls - Next to Admin Button */}
+          <div className="absolute left-44 top-4 z-30 flex gap-1">
+            <Button onClick={zoomIn} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Acercar">
+              <ZoomIn className="w-5 h-5" />
+            </Button>
+            <Button onClick={zoomOut} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Alejar">
+              <ZoomOut className="w-5 h-5" />
+            </Button>
+            <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Restablecer">
+              <RotateCcw className="w-5 h-5" />
+            </Button>
+            <Button 
+              onClick={() => setShowNazcaLines(!showNazcaLines)} 
+              className={`shadow-lg border ${showNazcaLines ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-600' : 'bg-white hover:bg-gray-100 text-gray-800'}`}
+              size="icon"
+              title="Capas - Ministerio de Cultura"
+            >
+              <Layers className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Nazca Lines Layer Info */}
+          {showNazcaLines && (
+            <div className="absolute left-44 top-16 z-30 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg">
+              <span className="font-semibold">Capa activa:</span> Ministerio de Cultura
+            </div>
           )}
 
           {/* Selected POI Info Panel */}
