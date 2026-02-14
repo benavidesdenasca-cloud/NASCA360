@@ -361,7 +361,8 @@ const Map3D = () => {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col">
       <Navbar />
       
-      <div className="relative flex-1 flex overflow-hidden">
+      {/* Add padding-top to account for fixed navbar */}
+      <div className="relative flex-1 flex overflow-hidden" style={{ marginTop: '64px' }}>
         {/* Sidebar - POI List */}
         <div className={`absolute md:relative z-20 h-full bg-white/95 backdrop-blur-lg shadow-2xl transition-all duration-300 ${
           sidebarOpen ? 'w-80' : 'w-0 overflow-hidden'
