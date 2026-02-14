@@ -80,23 +80,15 @@ const Map3D = () => {
         setVideos(videosRes.data || []);
       } catch (error) {
         console.error('Error fetching data:', error);
-        // If no POIs exist, seed default ones for admin
-        if (isAdmin && error.response?.status !== 401) {
-          try {
-            await axios.post(`${API}/pois/seed`, {}, { headers: { Authorization: `Bearer ${token}` } });
-            const poisRes = await axios.get(`${API}/pois`, { headers: { Authorization: `Bearer ${token}` } });
-            setPois(poisRes.data || []);
-            toast.success('POIs por defecto creados');
-          } catch (seedError) {
-            console.error('Error seeding POIs:', seedError);
-          }
-        }
       } finally {
         setIsLoading(false);
       }
     };
-    fetchData();
-  }, [token, isAdmin]);
+    
+    if (token) {
+      fetchData();
+    }
+  }, [token]);
 
   // Initialize Leaflet map
   useEffect(() => {
