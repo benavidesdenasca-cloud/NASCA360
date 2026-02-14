@@ -226,12 +226,13 @@ const Map3D = () => {
       center: [NAZCA_CENTER.latitude, NAZCA_CENTER.longitude],
       zoom: 13,
       minZoom: 10,
-      maxZoom: 21,  // Zoom máximo para máximo detalle
+      maxZoom: 21,
       maxBounds: [
         [NAZCA_BOUNDS.south, NAZCA_BOUNDS.west],
         [NAZCA_BOUNDS.north, NAZCA_BOUNDS.east]
       ],
-      maxBoundsViscosity: 0.8
+      maxBoundsViscosity: 0.8,
+      zoomControl: false  // Disable default zoom controls, we use custom ones
     });
 
     // Google Maps Satellite with maximum zoom support
