@@ -143,52 +143,63 @@ const Map3D = () => {
     }
   }, [pois, selectedPoi, mapLoaded]);
 
-  // Toggle Nazca Lines layer
+  // Toggle Nazca Lines layer - using L.geoJSON for better performance
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
     
     const L = window.L;
+    if (!L) return;
+    
+    const loadNazcaLines = async () => {
+      if (nazcaLinesLayerRef.current) {
+        // Layer already loaded, just add to map
+        if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+          nazcaLinesLayerRef.current.addTo(mapRef.current);
+        }
+        return;
+      }
+      
+      if (nazcaLinesLoaded) return; // Already loading
+      
+      toast.info('Cargando trazos del Ministerio...');
+      setNazcaLinesLoaded(true);
+      
+      try {
+        const response = await fetch('/nazca_lines.json');
+        if (!response.ok) throw new Error('Error de red');
+        
+        const geoJsonData = await response.json();
+        
+        // Use L.geoJSON for efficient batch rendering
+        const geoJsonLayer = L.geoJSON(geoJsonData, {
+          style: {
+            color: '#FF6600',
+            weight: 2,
+            opacity: 0.85
+          },
+          // Use Canvas renderer for better performance with many features
+          renderer: L.canvas({ padding: 0.5 })
+        });
+        
+        nazcaLinesLayerRef.current = geoJsonLayer;
+        
+        // Add to map if still toggled on
+        if (showNazcaLines && mapRef.current) {
+          geoJsonLayer.addTo(mapRef.current);
+        }
+        
+        const featureCount = geoJsonData.features?.length || 0;
+        toast.success(`${featureCount} trazos oficiales cargados`);
+        
+      } catch (error) {
+        console.error('Error loading Nazca lines:', error);
+        toast.error('Error al cargar los trazos');
+        setNazcaLinesLoaded(false);
+      }
+    };
     
     if (showNazcaLines) {
-      if (!nazcaLinesLayerRef.current && !nazcaLinesLoaded) {
-        toast.info('Cargando trazos...');
-        setNazcaLinesLoaded(true);
-        
-        fetch('/nazca_lines.json')
-          .then(response => response.json())
-          .then(data => {
-            const layerGroup = L.layerGroup();
-            let count = 0;
-            
-            for (const feature of data.features) {
-              try {
-                const coords = feature.geometry.coordinates;
-                if (coords && coords.length >= 2) {
-                  const latLngs = coords.map(c => [c[1], c[0]]);
-                  const line = L.polyline(latLngs, {
-                    color: '#FF6600',
-                    weight: 2,
-                    opacity: 0.8
-                  });
-                  layerGroup.addLayer(line);
-                  count++;
-                }
-              } catch (e) {
-                // Skip invalid features
-              }
-            }
-            
-            nazcaLinesLayerRef.current = layerGroup;
-            layerGroup.addTo(mapRef.current);
-            toast.success(`${count} trazos cargados`);
-          })
-          .catch(() => {
-            toast.error('Error al cargar trazos');
-            setNazcaLinesLoaded(false);
-          });
-      } else if (nazcaLinesLayerRef.current) {
-        nazcaLinesLayerRef.current.addTo(mapRef.current);
-      }
+      loadNazcaLines();
     } else if (nazcaLinesLayerRef.current && mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
       mapRef.current.removeLayer(nazcaLinesLayerRef.current);
     }
