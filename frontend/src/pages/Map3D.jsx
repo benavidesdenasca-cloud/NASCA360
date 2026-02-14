@@ -860,7 +860,7 @@ const Map3D = () => {
           )}
 
           {/* Map Controls - Right side, visible */}
-          <div className="absolute top-4 z-30 flex flex-col gap-1" style={{ right: '16px' }}>
+          <div className="absolute top-4 right-4 z-30 flex flex-col gap-1 mr-8">
             <Button onClick={zoomIn} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Acercar">
               <ZoomIn className="w-5 h-5" />
             </Button>
@@ -883,7 +883,7 @@ const Map3D = () => {
 
           {/* Nazca Lines Layer Info */}
           {showNazcaLines && (
-            <div className="absolute top-52 z-30 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg" style={{ right: '16px' }}>
+            <div className="absolute top-52 right-4 z-30 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg mr-8">
               <span className="font-semibold">Capa:</span> Ministerio de Cultura
             </div>
           )}
