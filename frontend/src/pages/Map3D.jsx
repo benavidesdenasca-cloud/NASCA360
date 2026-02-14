@@ -859,8 +859,8 @@ const Map3D = () => {
             </div>
           )}
 
-          {/* Map Controls - Top left, next to Nueva Figura */}
-          <div className="absolute left-48 top-4 z-20 flex gap-1">
+          {/* Map Controls - Bottom right corner */}
+          <div className="absolute bottom-20 right-4 z-20 flex flex-col gap-1">
             <Button onClick={zoomIn} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Acercar">
               <ZoomIn className="w-5 h-5" />
             </Button>
@@ -870,6 +870,7 @@ const Map3D = () => {
             <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Restablecer vista">
               <RotateCcw className="w-5 h-5" />
             </Button>
+            <div className="w-full h-px bg-gray-300 my-1"></div>
             <Button 
               onClick={() => setShowNazcaLines(!showNazcaLines)} 
               className={`shadow-lg border ${showNazcaLines ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-600' : 'bg-white hover:bg-gray-100 text-gray-800'}`}
@@ -880,10 +881,10 @@ const Map3D = () => {
             </Button>
           </div>
 
-          {/* Nazca Lines Layer Info */}
+          {/* Nazca Lines Layer Info - Bottom right, above controls */}
           {showNazcaLines && (
-            <div className="absolute left-48 top-16 z-20 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg">
-              <span className="font-semibold">Capa Activa:</span> Trazos del Ministerio de Cultura
+            <div className="absolute bottom-48 right-4 z-20 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg">
+              <span className="font-semibold">Capa:</span> Trazos Ministerio de Cultura
             </div>
           )}
 
