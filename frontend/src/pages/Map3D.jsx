@@ -372,8 +372,17 @@ const Map3D = () => {
 
   // Admin functions
   const handleSavePoi = async () => {
+    // Verificar que hay token antes de intentar guardar
+    if (!token) {
+      toast.error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+      return;
+    }
+    
     try {
-      const headers = { Authorization: `Bearer ${token}` };
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
       
       if (editingPoi) {
         await axios.put(`${API}/api/pois/${editingPoi.id}`, poiForm, { headers });
@@ -389,6 +398,7 @@ const Map3D = () => {
       
       // Clear temp marker and reset form
       clearTempMarker();
+      setAdminPanelOpen(false);
       setEditingPoi(null);
       setPoiForm({
         name: '',
@@ -400,8 +410,12 @@ const Map3D = () => {
         video_id: ''
       });
     } catch (error) {
-      toast.error('Error al guardar POI');
-      console.error(error);
+      console.error('Error saving POI:', error);
+      if (error.response?.status === 401) {
+        toast.error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+      } else {
+        toast.error('Error al guardar POI: ' + (error.response?.data?.detail || error.message));
+      }
     }
   };
 
