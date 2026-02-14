@@ -114,10 +114,11 @@ const Map3D = () => {
 
   // Update markers when POIs change
   useEffect(() => {
-    if (mapRef.current && pois.length > 0) {
+    if (mapRef.current && mapLoaded && pois.length > 0) {
       updateMarkers();
     }
-  }, [pois, selectedPoi]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pois, selectedPoi, mapLoaded]);
 
   const initMap = () => {
     const L = window.L;
