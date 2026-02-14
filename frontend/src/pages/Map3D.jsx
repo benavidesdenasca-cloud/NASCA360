@@ -317,18 +317,18 @@ const Map3D = () => {
     if (!mapRef.current) return;
     
     // Calculate zoom level based on altitude (viewing height)
-    // Lower altitude = closer view, but limit max zoom to 17 to avoid missing tiles
+    // Limit max zoom to 16 to avoid missing satellite tiles
     const altitude = poi.altitude || 2000;
     let zoomLevel;
     
     if (altitude <= 500) {
-      zoomLevel = 17; // Very close view
+      zoomLevel = 16; // Close view (max)
     } else if (altitude <= 1500) {
-      zoomLevel = 16; // Close view
+      zoomLevel = 15; // Medium-close view
     } else if (altitude <= 3000) {
-      zoomLevel = 15; // Medium view
+      zoomLevel = 14; // Medium view
     } else {
-      zoomLevel = 14; // Far view
+      zoomLevel = 13; // Far view
     }
     
     mapRef.current.flyTo([poi.latitude, poi.longitude], zoomLevel, {
