@@ -860,7 +860,7 @@ const Map3D = () => {
           )}
 
           {/* Admin Add Button and Map Controls - Top left of map area */}
-          <div className="absolute left-4 top-4 z-30 flex items-center gap-2">
+          <div className="absolute left-4 top-4 z-[9999] flex items-center gap-2">
             {isAdmin && !adminPanelOpen && (
               <Button
                 onClick={() => setAdminPanelOpen(true)}
@@ -871,19 +871,20 @@ const Map3D = () => {
               </Button>
             )}
             
-            <div className="flex gap-1">
-              <Button onClick={zoomIn} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Acercar">
+            <div className="flex gap-1 bg-white/80 backdrop-blur-sm p-1 rounded-lg shadow-lg">
+              <Button onClick={zoomIn} className="bg-white hover:bg-gray-100 text-gray-800 border" size="icon" title="Acercar">
                 <ZoomIn className="w-5 h-5" />
               </Button>
-              <Button onClick={zoomOut} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Alejar">
+              <Button onClick={zoomOut} className="bg-white hover:bg-gray-100 text-gray-800 border" size="icon" title="Alejar">
                 <ZoomOut className="w-5 h-5" />
               </Button>
-              <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Restablecer">
+              <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 border" size="icon" title="Restablecer">
                 <RotateCcw className="w-5 h-5" />
               </Button>
+              <div className="w-px h-8 bg-gray-300 mx-1 self-center"></div>
               <Button 
                 onClick={() => setShowNazcaLines(!showNazcaLines)} 
-                className={`shadow-lg border ${showNazcaLines ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-600' : 'bg-white hover:bg-gray-100 text-gray-800'}`}
+                className={`border ${showNazcaLines ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-600' : 'bg-white hover:bg-gray-100 text-gray-800'}`}
                 size="icon"
                 title="Capas - Ministerio de Cultura"
               >
@@ -894,7 +895,7 @@ const Map3D = () => {
 
           {/* Nazca Lines Layer Info */}
           {showNazcaLines && (
-            <div className="absolute left-4 top-16 z-30 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg">
+            <div className="absolute left-4 top-20 z-[9999] bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg">
               <span className="font-semibold">Capa activa:</span> Ministerio de Cultura
             </div>
           )}
