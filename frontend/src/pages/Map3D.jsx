@@ -172,7 +172,8 @@ const Map3D = () => {
       setNazcaLinesLoaded(true);
       
       try {
-        const response = await fetch('/nazca_lines_clean.json');
+        // Use filtered file with only the main Nazca Lines area
+        const response = await fetch('/nazca_lines_filtered.json');
         if (!response.ok) throw new Error('Error de red');
         
         const geoJsonData = await response.json();
