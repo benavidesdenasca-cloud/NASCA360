@@ -318,18 +318,20 @@ const Map3D = () => {
     if (!mapRef.current) return;
     
     // Calculate zoom level based on altitude (viewing height)
-    // Limit max zoom to 16 to avoid missing satellite tiles
+    // Permitir zoom alto para ver detalle de las figuras
     const altitude = poi.altitude || 2000;
     let zoomLevel;
     
-    if (altitude <= 500) {
-      zoomLevel = 16; // Close view (max)
+    if (altitude <= 300) {
+      zoomLevel = 18; // Muy cerca - máximo detalle
+    } else if (altitude <= 800) {
+      zoomLevel = 17; // Cerca
     } else if (altitude <= 1500) {
-      zoomLevel = 15; // Medium-close view
+      zoomLevel = 16; // Medio-cerca
     } else if (altitude <= 3000) {
-      zoomLevel = 14; // Medium view
+      zoomLevel = 15; // Medio
     } else {
-      zoomLevel = 13; // Far view
+      zoomLevel = 14; // Lejos
     }
     
     mapRef.current.flyTo([poi.latitude, poi.longitude], zoomLevel, {
