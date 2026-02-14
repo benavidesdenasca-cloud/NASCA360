@@ -447,7 +447,7 @@ const Map3D = () => {
             <h3 className="font-bold text-gray-800">
               {editingPoi ? 'Editar Figura' : 'Nueva Figura'}
             </h3>
-            <button onClick={() => { setAdminPanelOpen(false); setEditingPoi(null); }} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => { setAdminPanelOpen(false); setEditingPoi(null); clearTempMarker(); }} className="text-gray-400 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
           </div>
