@@ -179,35 +179,33 @@ const Map3D = () => {
         
         console.log('GeoJSON features:', geoJsonData.features?.length);
         
+        // Use simple markers instead of polylines to work around Leaflet bug
         for (const feature of geoJsonData.features || []) {
           try {
             const coords = feature.geometry?.coordinates;
             if (!Array.isArray(coords) || coords.length < 2) continue;
             
-            // Create a polyline manually with explicit LatLng objects
-            const latLngs = [];
+            // Create markers for each coordinate point
             for (const c of coords) {
               if (Array.isArray(c) && c.length >= 2) {
                 const lat = Number(c[1]);
                 const lng = Number(c[0]);
                 if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                  latLngs.push(L.latLng(lat, lng));
+                  try {
+                    // Use divIcon for small dots
+                    const icon = L.divIcon({
+                      className: 'nazca-point',
+                      html: '<div style="width:4px;height:4px;background:#FF6600;border-radius:50%;"></div>',
+                      iconSize: [4, 4],
+                      iconAnchor: [2, 2]
+                    });
+                    const marker = L.marker([lat, lng], { icon: icon });
+                    marker.addTo(mapRef.current);
+                    polylines.push(marker);
+                  } catch (addError) {
+                    console.warn('Error adding marker:', addError.message);
+                  }
                 }
-              }
-            }
-            
-            if (latLngs.length >= 2) {
-              try {
-                // Create polyline with explicit LatLng objects
-                const line = L.polyline(latLngs, {
-                  color: '#FF6600',
-                  weight: 3,
-                  opacity: 1
-                });
-                line.addTo(mapRef.current);
-                polylines.push(line);
-              } catch (addError) {
-                console.warn('Error adding polyline:', addError.message);
               }
             }
           } catch (e) {
@@ -215,7 +213,7 @@ const Map3D = () => {
           }
         }
         
-        console.log('Total polylines created:', polylines.length);
+        console.log('Total markers created:', polylines.length);
         
         nazcaPolylinesRef.current = polylines;
         nazcaLinesLayerRef.current = { _leaflet_id: 1 }; // Dummy reference
