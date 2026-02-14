@@ -143,7 +143,7 @@ const Map3D = () => {
     }
   }, [pois, selectedPoi, mapLoaded]);
 
-  // Toggle Nazca Lines layer - using batched rendering for stability
+  // Toggle Nazca Lines layer
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
     
@@ -175,61 +175,29 @@ const Map3D = () => {
         if (!response.ok) throw new Error('Error de red');
         
         const geoJsonData = await response.json();
-        const features = geoJsonData.features || [];
         
-        // Create a layer group to hold all polylines
-        const layerGroup = L.layerGroup();
-        let loadedCount = 0;
-        
-        // Process features in batches to avoid blocking the main thread
-        const batchSize = 50;
-        for (let i = 0; i < features.length; i += batchSize) {
-          const batch = features.slice(i, i + batchSize);
-          
-          for (const feature of batch) {
-            try {
-              const coords = feature?.geometry?.coordinates;
-              if (!coords || !Array.isArray(coords) || coords.length < 2) continue;
-              
-              // Filter and convert coordinates [lng, lat] -> [lat, lng]
-              const latLngs = [];
-              for (const c of coords) {
-                if (Array.isArray(c) && c.length >= 2 && 
-                    typeof c[0] === 'number' && typeof c[1] === 'number' &&
-                    !isNaN(c[0]) && !isNaN(c[1])) {
-                  latLngs.push([c[1], c[0]]);
-                }
-              }
-              
-              if (latLngs.length >= 2) {
-                const polyline = L.polyline(latLngs, {
-                  color: '#FF6600',
-                  weight: 2,
-                  opacity: 0.85,
-                  interactive: false,
-                  smoothFactor: 1.5
-                });
-                layerGroup.addLayer(polyline);
-                loadedCount++;
-              }
-            } catch (e) {
-              // Skip invalid features
-            }
+        // Use L.geoJSON with a simple style function
+        const geoJsonLayer = L.geoJSON(geoJsonData, {
+          style: function() {
+            return {
+              color: '#FF6600',
+              weight: 2,
+              opacity: 0.85
+            };
+          },
+          onEachFeature: function(feature, layer) {
+            // No-op - just ensure features are processed
           }
-          
-          // Allow UI to breathe between batches
-          if (i + batchSize < features.length) {
-            await new Promise(resolve => setTimeout(resolve, 10));
-          }
-        }
+        });
         
-        nazcaLinesLayerRef.current = layerGroup;
+        nazcaLinesLayerRef.current = geoJsonLayer;
         
         if (showNazcaLines && mapRef.current) {
-          layerGroup.addTo(mapRef.current);
+          geoJsonLayer.addTo(mapRef.current);
         }
         
-        toast.success(`${loadedCount} trazos oficiales cargados`);
+        const featureCount = geoJsonData.features?.length || 0;
+        toast.success(`${featureCount} trazos oficiales cargados`);
         
       } catch (error) {
         console.error('Error loading Nazca lines:', error);
