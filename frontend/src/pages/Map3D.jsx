@@ -361,6 +361,153 @@ const Map3D = () => {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col">
       <Navbar />
       
+      {/* Admin Panel - Fixed position for overlay */}
+      {isAdmin && adminPanelOpen && (
+        <div 
+          data-testid="admin-panel"
+          className="fixed z-50 bg-white rounded-xl shadow-2xl p-4 w-80 max-h-[80vh] overflow-y-auto"
+          style={{ left: sidebarOpen ? '340px' : '20px', top: '84px' }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-gray-800">
+              {editingPoi ? 'Editar Figura' : 'Nueva Figura'}
+            </h3>
+            <button onClick={() => { setAdminPanelOpen(false); setEditingPoi(null); }} className="text-gray-400 hover:text-gray-600">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nombre*</label>
+              <input
+                type="text"
+                data-testid="poi-name-input"
+                value={poiForm.name}
+                onChange={(e) => setPoiForm({ ...poiForm, name: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                placeholder="El Colibrí"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Descripción*</label>
+              <textarea
+                data-testid="poi-description-input"
+                value={poiForm.description}
+                onChange={(e) => setPoiForm({ ...poiForm, description: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                rows={3}
+                placeholder="Descripción de la figura..."
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Latitud*</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  data-testid="poi-latitude-input"
+                  value={poiForm.latitude}
+                  onChange={(e) => setPoiForm({ ...poiForm, latitude: parseFloat(e.target.value) })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Longitud*</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  data-testid="poi-longitude-input"
+                  value={poiForm.longitude}
+                  onChange={(e) => setPoiForm({ ...poiForm, longitude: parseFloat(e.target.value) })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Altura de visión (metros)</label>
+              <input
+                type="number"
+                data-testid="poi-altitude-input"
+                value={poiForm.altitude}
+                onChange={(e) => setPoiForm({ ...poiForm, altitude: parseInt(e.target.value) })}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                placeholder="2000"
+              />
+              <p className="text-xs text-gray-400 mt-1">A mayor altura, más alejado se ve el mapa al seleccionar</p>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Categoría</label>
+              <select
+                data-testid="poi-category-select"
+                value={poiForm.category}
+                onChange={(e) => setPoiForm({ ...poiForm, category: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+              >
+                {CATEGORIES.map(cat => (
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Video 360° vinculado</label>
+              <select
+                data-testid="poi-video-select"
+                value={poiForm.video_id}
+                onChange={(e) => setPoiForm({ ...poiForm, video_id: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="">Sin video</option>
+                {videos.map(video => (
+                  <option key={video.id} value={video.id}>{video.title}</option>
+                ))}
+              </select>
+            </div>
+            
+            <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+              Tip: Haz clic en el mapa para seleccionar coordenadas
+            </p>
+            
+            <div className="flex gap-2">
+              <Button 
+                data-testid="save-poi-btn"
+                onClick={handleSavePoi}
+                disabled={!poiForm.name || !poiForm.description}
+                className="flex-1 bg-amber-600 hover:bg-amber-700"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {editingPoi ? 'Actualizar' : 'Guardar'}
+              </Button>
+              {editingPoi && (
+                <Button 
+                  data-testid="cancel-edit-btn"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingPoi(null);
+                    setPoiForm({
+                      name: '',
+                      description: '',
+                      longitude: -75.0298,
+                      latitude: -14.7391,
+                      altitude: 2000,
+                      category: 'geoglifo',
+                      video_id: ''
+                    });
+                  }}
+                >
+                  Cancelar
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Add padding-top to account for fixed navbar */}
       <div className="relative flex-1 flex overflow-hidden" style={{ marginTop: '64px' }}>
         {/* Sidebar - POI List */}
