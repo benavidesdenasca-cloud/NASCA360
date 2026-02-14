@@ -365,8 +365,8 @@ const Map3D = () => {
       {isAdmin && adminPanelOpen && (
         <div 
           data-testid="admin-panel"
-          className="fixed z-50 bg-white rounded-xl shadow-2xl p-4 w-80 max-h-[80vh] overflow-y-auto"
-          style={{ left: sidebarOpen ? '340px' : '20px', top: '84px' }}
+          className="fixed z-[100] bg-white rounded-xl shadow-2xl p-4 w-80 max-h-[80vh] overflow-y-auto border border-gray-200"
+          style={{ left: '330px', top: '84px' }}
         >
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-gray-800">
