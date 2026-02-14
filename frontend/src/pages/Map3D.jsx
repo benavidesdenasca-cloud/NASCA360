@@ -860,7 +860,7 @@ const Map3D = () => {
           )}
 
           {/* Map Controls - Right side */}
-          <div className="absolute right-4 top-4 flex flex-col gap-2 z-20">
+          <div className="absolute right-16 top-4 flex flex-col gap-2 z-20">
             <Button onClick={zoomIn} className="bg-white hover:bg-gray-100 text-gray-800 shadow-lg border" size="icon" title="Acercar">
               <ZoomIn className="w-5 h-5" />
             </Button>
@@ -883,7 +883,7 @@ const Map3D = () => {
 
           {/* Nazca Lines Layer Info */}
           {showNazcaLines && (
-            <div className="absolute right-4 top-52 z-20 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-[180px]">
+            <div className="absolute right-16 top-52 z-20 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-[180px]">
               <div className="flex items-center gap-2 font-semibold mb-1">
                 <Layers className="w-4 h-4" />
                 Capa Activa
