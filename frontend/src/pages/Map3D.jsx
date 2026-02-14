@@ -143,7 +143,7 @@ const Map3D = () => {
     }
   }, [pois, selectedPoi, mapLoaded]);
 
-  // Toggle Nazca Lines layer - using L.geoJSON for better performance
+  // Toggle Nazca Lines layer - using batched rendering for stability
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
     
@@ -151,7 +151,7 @@ const Map3D = () => {
     if (!L) return;
     
     const loadNazcaLines = async () => {
-      // If layer exists and is valid, just toggle visibility
+      // If layer exists, just toggle visibility
       if (nazcaLinesLayerRef.current) {
         try {
           if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
@@ -175,40 +175,58 @@ const Map3D = () => {
         if (!response.ok) throw new Error('Error de red');
         
         const geoJsonData = await response.json();
+        const features = geoJsonData.features || [];
         
-        // Create a simple FeatureGroup with polylines (more stable than L.geoJSON)
-        const featureGroup = L.featureGroup();
+        // Create a layer group to hold all polylines
+        const layerGroup = L.layerGroup();
         let loadedCount = 0;
         
-        for (const feature of geoJsonData.features || []) {
-          try {
-            const coords = feature?.geometry?.coordinates;
-            if (!coords || !Array.isArray(coords) || coords.length < 2) continue;
-            
-            // Convert [lng, lat] to [lat, lng] for Leaflet
-            const latLngs = coords
-              .filter(c => Array.isArray(c) && c.length >= 2 && typeof c[0] === 'number' && typeof c[1] === 'number')
-              .map(c => [c[1], c[0]]);
-            
-            if (latLngs.length >= 2) {
-              const polyline = L.polyline(latLngs, {
-                color: '#FF6600',
-                weight: 2,
-                opacity: 0.85,
-                interactive: false
-              });
-              featureGroup.addLayer(polyline);
-              loadedCount++;
+        // Process features in batches to avoid blocking the main thread
+        const batchSize = 50;
+        for (let i = 0; i < features.length; i += batchSize) {
+          const batch = features.slice(i, i + batchSize);
+          
+          for (const feature of batch) {
+            try {
+              const coords = feature?.geometry?.coordinates;
+              if (!coords || !Array.isArray(coords) || coords.length < 2) continue;
+              
+              // Filter and convert coordinates [lng, lat] -> [lat, lng]
+              const latLngs = [];
+              for (const c of coords) {
+                if (Array.isArray(c) && c.length >= 2 && 
+                    typeof c[0] === 'number' && typeof c[1] === 'number' &&
+                    !isNaN(c[0]) && !isNaN(c[1])) {
+                  latLngs.push([c[1], c[0]]);
+                }
+              }
+              
+              if (latLngs.length >= 2) {
+                const polyline = L.polyline(latLngs, {
+                  color: '#FF6600',
+                  weight: 2,
+                  opacity: 0.85,
+                  interactive: false,
+                  smoothFactor: 1.5
+                });
+                layerGroup.addLayer(polyline);
+                loadedCount++;
+              }
+            } catch (e) {
+              // Skip invalid features
             }
-          } catch (e) {
-            // Skip invalid features silently
+          }
+          
+          // Allow UI to breathe between batches
+          if (i + batchSize < features.length) {
+            await new Promise(resolve => setTimeout(resolve, 10));
           }
         }
         
-        nazcaLinesLayerRef.current = featureGroup;
+        nazcaLinesLayerRef.current = layerGroup;
         
         if (showNazcaLines && mapRef.current) {
-          featureGroup.addTo(mapRef.current);
+          layerGroup.addTo(mapRef.current);
         }
         
         toast.success(`${loadedCount} trazos oficiales cargados`);
