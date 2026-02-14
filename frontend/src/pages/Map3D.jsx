@@ -173,21 +173,44 @@ const Map3D = () => {
         
         const geoJsonData = await response.json();
         
-        // Use simple L.geoJSON with basic styling
-        // noClip: true prevents the clipPoints bug in Leaflet
-        const geoJsonLayer = L.geoJSON(geoJsonData, {
-          style: {
-            color: '#FF6600',
-            weight: 2,
-            opacity: 0.8
-          },
-          coordsToLatLng: function(coords) {
-            // Convert [lng, lat] to Leaflet LatLng
-            return L.latLng(coords[1], coords[0]);
-          }
-        });
+        // Create polylines manually to avoid Leaflet GeoJSON parsing issues
+        const layerGroup = L.layerGroup();
+        let successCount = 0;
         
-        nazcaLinesLayerRef.current = geoJsonLayer;
+        for (const feature of geoJsonData.features || []) {
+          try {
+            const coords = feature.geometry?.coordinates;
+            if (!Array.isArray(coords) || coords.length < 2) continue;
+            
+            // Convert [lng, lat] to [lat, lng] array for Leaflet
+            const latLngs = [];
+            for (let i = 0; i < coords.length; i++) {
+              const c = coords[i];
+              if (Array.isArray(c) && c.length >= 2) {
+                const lat = Number(c[1]);
+                const lng = Number(c[0]);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                  latLngs.push([lat, lng]);
+                }
+              }
+            }
+            
+            if (latLngs.length >= 2) {
+              const line = L.polyline(latLngs, {
+                color: '#FF6600',
+                weight: 3,
+                opacity: 1,
+                smoothFactor: 1
+              });
+              layerGroup.addLayer(line);
+              successCount++;
+            }
+          } catch (e) {
+            // Skip problematic features
+          }
+        }
+        
+        nazcaLinesLayerRef.current = layerGroup;
         
         if (showNazcaLines && mapRef.current) {
           geoJsonLayer.addTo(mapRef.current);
