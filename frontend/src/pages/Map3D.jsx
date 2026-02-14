@@ -178,45 +178,36 @@ const Map3D = () => {
         const polylines = [];
         
         console.log('GeoJSON features:', geoJsonData.features?.length);
-        console.log('Map exists:', !!mapRef.current);
-        console.log('Map is L.map:', mapRef.current instanceof L.Map);
-        
-        // Test adding a single marker first
-        try {
-          const testMarker = L.marker([-14.71, -75.10]).addTo(mapRef.current);
-          console.log('Test marker added successfully');
-          mapRef.current.removeLayer(testMarker);
-        } catch (testError) {
-          console.error('Test marker failed:', testError.message);
-        }
         
         for (const feature of geoJsonData.features || []) {
           try {
             const coords = feature.geometry?.coordinates;
-            console.log('Processing feature with', coords?.length, 'coords');
             if (!Array.isArray(coords) || coords.length < 2) continue;
             
-            // Use markers at coordinate points instead of polylines
+            // Create a polyline manually with explicit LatLng objects
+            const latLngs = [];
             for (const c of coords) {
               if (Array.isArray(c) && c.length >= 2) {
                 const lat = Number(c[1]);
                 const lng = Number(c[0]);
-                if (!isNaN(lat) && !isNaN(lng)) {
-                  try {
-                    const marker = L.circleMarker([lat, lng], {
-                      radius: 2,
-                      fillColor: '#FF6600',
-                      color: '#FF6600',
-                      weight: 1,
-                      opacity: 1,
-                      fillOpacity: 1
-                    });
-                    marker.addTo(mapRef.current);
-                    polylines.push(marker);
-                  } catch (addError) {
-                    console.warn('Error adding marker:', addError.message);
-                  }
+                if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                  latLngs.push(L.latLng(lat, lng));
                 }
+              }
+            }
+            
+            if (latLngs.length >= 2) {
+              try {
+                // Create polyline with explicit LatLng objects
+                const line = L.polyline(latLngs, {
+                  color: '#FF6600',
+                  weight: 3,
+                  opacity: 1
+                });
+                line.addTo(mapRef.current);
+                polylines.push(line);
+              } catch (addError) {
+                console.warn('Error adding polyline:', addError.message);
               }
             }
           } catch (e) {
@@ -224,7 +215,7 @@ const Map3D = () => {
           }
         }
         
-        console.log('Total markers created:', polylines.length);
+        console.log('Total polylines created:', polylines.length);
         
         nazcaPolylinesRef.current = polylines;
         nazcaLinesLayerRef.current = { _leaflet_id: 1 }; // Dummy reference
