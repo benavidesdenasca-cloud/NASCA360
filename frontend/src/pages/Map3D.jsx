@@ -148,7 +148,7 @@ const Map3D = () => {
       center: [NAZCA_CENTER.latitude, NAZCA_CENTER.longitude],
       zoom: 13,
       minZoom: 10,
-      maxZoom: 19,  // Zoom máximo aumentado para ver más detalle
+      maxZoom: 21,  // Zoom máximo para máximo detalle
       maxBounds: [
         [NAZCA_BOUNDS.south, NAZCA_BOUNDS.west],
         [NAZCA_BOUNDS.north, NAZCA_BOUNDS.east]
@@ -156,10 +156,10 @@ const Map3D = () => {
       maxBoundsViscosity: 0.8
     });
 
-    // Google Maps Satellite with high zoom support
+    // Google Maps Satellite with maximum zoom support
     L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-      maxZoom: 21,
-      maxNativeZoom: 19,  // Google provee hasta zoom 19-20 en esta área
+      maxZoom: 22,
+      maxNativeZoom: 20,
       attribution: '&copy; Google Maps'
     }).addTo(map);
 
