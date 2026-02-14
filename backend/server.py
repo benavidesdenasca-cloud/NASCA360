@@ -2624,6 +2624,231 @@ async def get_file(
     # Allow access for images (thumbnails) without auth
     return FileResponse(file_path)
 
+# ==================== POI (Points of Interest) ENDPOINTS ====================
+
+@api_router.get("/pois")
+async def get_pois():
+    """Get all active POIs for the map"""
+    pois = await db.pois.find({"is_active": True}).to_list(100)
+    for poi in pois:
+        poi.pop('_id', None)
+    return pois
+
+@api_router.get("/pois/all")
+async def get_all_pois(current_user: User = Depends(get_current_user)):
+    """Get all POIs including inactive (admin only)"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    
+    pois = await db.pois.find({}).to_list(100)
+    for poi in pois:
+        poi.pop('_id', None)
+    return pois
+
+@api_router.get("/pois/{poi_id}")
+async def get_poi(poi_id: str):
+    """Get a single POI by ID"""
+    poi = await db.pois.find_one({"id": poi_id})
+    if not poi:
+        raise HTTPException(status_code=404, detail="POI no encontrado")
+    poi.pop('_id', None)
+    return poi
+
+@api_router.post("/pois")
+async def create_poi(poi_data: POICreate, current_user: User = Depends(get_current_user)):
+    """Create a new POI (admin only)"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores pueden crear POIs")
+    
+    poi = POI(
+        **poi_data.model_dump(),
+        created_by=current_user.user_id
+    )
+    
+    await db.pois.insert_one(poi.model_dump())
+    
+    result = poi.model_dump()
+    result.pop('_id', None)
+    return result
+
+@api_router.put("/pois/{poi_id}")
+async def update_poi(poi_id: str, poi_data: POIUpdate, current_user: User = Depends(get_current_user)):
+    """Update a POI (admin only)"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores pueden editar POIs")
+    
+    existing = await db.pois.find_one({"id": poi_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="POI no encontrado")
+    
+    update_data = {k: v for k, v in poi_data.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc)
+    
+    await db.pois.update_one({"id": poi_id}, {"$set": update_data})
+    
+    updated = await db.pois.find_one({"id": poi_id})
+    updated.pop('_id', None)
+    return updated
+
+@api_router.delete("/pois/{poi_id}")
+async def delete_poi(poi_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a POI (admin only)"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores pueden eliminar POIs")
+    
+    result = await db.pois.delete_one({"id": poi_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="POI no encontrado")
+    
+    return {"message": "POI eliminado correctamente"}
+
+@api_router.post("/pois/seed")
+async def seed_default_pois(current_user: User = Depends(get_current_user)):
+    """Seed default Nazca POIs (admin only)"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    
+    # Check if POIs already exist
+    count = await db.pois.count_documents({})
+    if count > 0:
+        return {"message": f"Ya existen {count} POIs. Elimínalos primero si deseas reiniciar."}
+    
+    default_pois = [
+        {
+            "id": "colibri",
+            "name": "El Colibrí",
+            "description": "El colibrí es uno de los geoglifos más reconocidos, mide aproximadamente 96 metros de largo. Representa al ave sagrada asociada con la fertilidad.",
+            "longitude": -75.1067,
+            "latitude": -14.6922,
+            "altitude": 2000,
+            "category": "geoglifo",
+            "is_active": True,
+            "created_by": current_user.user_id,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        },
+        {
+            "id": "mono",
+            "name": "El Mono",
+            "description": "El mono tiene una cola en espiral y mide unos 110 metros. Es uno de los diseños más complejos con 9 dedos.",
+            "longitude": -75.0283,
+            "latitude": -14.7061,
+            "altitude": 2500,
+            "category": "geoglifo",
+            "is_active": True,
+            "created_by": current_user.user_id,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        },
+        {
+            "id": "arana",
+            "name": "La Araña",
+            "description": "La araña mide 46 metros y muestra una especie rara de araña conocida como Ricinulei.",
+            "longitude": -75.1225,
+            "latitude": -14.6944,
+            "altitude": 1500,
+            "category": "geoglifo",
+            "is_active": True,
+            "created_by": current_user.user_id,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        },
+        {
+            "id": "condor",
+            "name": "El Cóndor",
+            "description": "El cóndor es una de las figuras más grandes, con 134 metros de longitud. Representa al mensajero de los dioses.",
+            "longitude": -75.1278,
+            "latitude": -14.6978,
+            "altitude": 3000,
+            "category": "geoglifo",
+            "is_active": True,
+            "created_by": current_user.user_id,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        },
+        {
+            "id": "perro",
+            "name": "El Perro",
+            "description": "El perro mide aproximadamente 51 metros. Algunos investigadores creen que podría representar una llama.",
+            "longitude": -75.0775,
+            "latitude": -14.7208,
+            "altitude": 1800,
+            "category": "geoglifo",
+            "is_active": True,
+            "created_by": current_user.user_id,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        },
+        {
+            "id": "manos",
+            "name": "Las Manos",
+            "description": "Las manos muestran dos manos con diferente número de dedos, una con 4 y otra con 5.",
+            "longitude": -75.1106,
+            "latitude": -14.6961,
+            "altitude": 1500,
+            "category": "geoglifo",
+            "is_active": True,
+            "created_by": current_user.user_id,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        },
+        {
+            "id": "astronauta",
+            "name": "El Astronauta",
+            "description": "También conocido como 'El Hombre Búho', mide 32 metros y está en una ladera. Es una de las figuras más misteriosas.",
+            "longitude": -75.0689,
+            "latitude": -14.7447,
+            "altitude": 1200,
+            "category": "geoglifo",
+            "is_active": True,
+            "created_by": current_user.user_id,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        },
+        {
+            "id": "ballena",
+            "name": "La Ballena",
+            "description": "La ballena u orca mide 63 metros y representa la conexión de Nazca con el mar.",
+            "longitude": -75.0906,
+            "latitude": -14.7183,
+            "altitude": 2000,
+            "category": "geoglifo",
+            "is_active": True,
+            "created_by": current_user.user_id,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        },
+        {
+            "id": "flamenco",
+            "name": "El Flamenco",
+            "description": "El flamenco tiene 300 metros de largo, siendo una de las figuras más grandes.",
+            "longitude": -75.0833,
+            "latitude": -14.7028,
+            "altitude": 4000,
+            "category": "geoglifo",
+            "is_active": True,
+            "created_by": current_user.user_id,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        },
+        {
+            "id": "arbol",
+            "name": "El Árbol",
+            "description": "El árbol está junto a las manos y representa la conexión entre el mundo de los vivos y los muertos.",
+            "longitude": -75.1103,
+            "latitude": -14.6958,
+            "altitude": 1500,
+            "category": "geoglifo",
+            "is_active": True,
+            "created_by": current_user.user_id,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+    ]
+    
+    await db.pois.insert_many(default_pois)
+    return {"message": f"Se crearon {len(default_pois)} POIs por defecto"}
+
 # Add middlewares BEFORE including routers
 app.add_middleware(
     CORSMiddleware,
