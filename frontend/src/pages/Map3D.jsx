@@ -345,6 +345,14 @@ const Map3D = () => {
     }
   };
 
+  // Function to clear temporary marker
+  const clearTempMarker = () => {
+    if (tempMarkerRef.current && mapRef.current) {
+      mapRef.current.removeLayer(tempMarkerRef.current);
+      tempMarkerRef.current = null;
+    }
+  };
+
   // Admin functions
   const handleSavePoi = async () => {
     try {
@@ -362,7 +370,8 @@ const Map3D = () => {
       const response = await axios.get(`${API}/api/pois`, { headers });
       setPois(response.data || []);
       
-      // Reset form
+      // Clear temp marker and reset form
+      clearTempMarker();
       setEditingPoi(null);
       setPoiForm({
         name: '',
