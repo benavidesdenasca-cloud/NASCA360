@@ -181,7 +181,7 @@ const Map3D = () => {
     
     // Add click handler for admin to add/edit POIs
     map.on('click', (e) => {
-      if (isAdminRef.current && adminPanelOpenRef.current) {
+      if (isAdminRef.current && adminPanelOpenRef.current && mapRef.current) {
         const L = window.L;
         
         // Update form coordinates
@@ -200,8 +200,8 @@ const Map3D = () => {
             className: 'temp-marker',
             html: `<div style="
               position: relative;
-              width: 40px;
-              height: 40px;
+              width: 44px;
+              height: 44px;
             ">
               <div style="
                 position: absolute;
@@ -209,7 +209,7 @@ const Map3D = () => {
                 height: 100%;
                 background: #ef4444;
                 border-radius: 50%;
-                opacity: 0.4;
+                opacity: 0.5;
                 animation: pulse 1s ease-out infinite;
               "></div>
               <div style="
@@ -217,25 +217,25 @@ const Map3D = () => {
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                width: 32px;
-                height: 32px;
+                width: 36px;
+                height: 36px;
                 background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                border: 3px solid white;
+                border: 4px solid white;
                 border-radius: 50%;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+                box-shadow: 0 4px 20px rgba(239,68,68,0.6);
                 display: flex;
                 align-items: center;
                 justify-content: center;
               ">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                 </svg>
               </div>
             </div>`,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
           });
-          tempMarkerRef.current = L.marker(e.latlng, { icon: tempIcon }).addTo(map);
+          tempMarkerRef.current = L.marker(e.latlng, { icon: tempIcon, zIndexOffset: 1000 }).addTo(mapRef.current);
         }
         
         toast.info(`Coordenadas actualizadas: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`);
