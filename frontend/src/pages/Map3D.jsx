@@ -35,6 +35,7 @@ const Map3D = () => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef({});
+  const tempMarkerRef = useRef(null); // Marcador temporal para edición
   
   const [pois, setPois] = useState([]);
   const [selectedPoi, setSelectedPoi] = useState(null);
