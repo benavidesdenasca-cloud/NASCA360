@@ -146,19 +146,19 @@ const Map3D = () => {
 
     const map = L.map(mapContainerRef.current, {
       center: [NAZCA_CENTER.latitude, NAZCA_CENTER.longitude],
-      zoom: 14,
-      minZoom: 12,
-      maxZoom: 20,
+      zoom: 13,
+      minZoom: 11,
+      maxZoom: 16,  // Limitado para evitar áreas sin tiles
       maxBounds: [
         [NAZCA_BOUNDS.south, NAZCA_BOUNDS.west],
         [NAZCA_BOUNDS.north, NAZCA_BOUNDS.east]
       ],
-      maxBoundsViscosity: 1.0
+      maxBoundsViscosity: 0.8
     });
 
     // Google Maps Satellite only (no labels)
     L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
+      maxZoom: 18,
       attribution: '&copy; Google Maps'
     }).addTo(map);
 
