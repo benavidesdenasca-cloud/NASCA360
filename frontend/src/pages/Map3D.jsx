@@ -173,8 +173,8 @@ const Map3D = () => {
         
         const geoJsonData = await response.json();
         
-        // Create a layer group to hold all polylines
-        const layerGroup = L.layerGroup();
+        // Create an array to hold all polylines
+        const polylines = [];
         let loadedCount = 0;
         
         // Process each feature and create polylines manually
@@ -185,20 +185,33 @@ const Map3D = () => {
             if (!coords || coords.length < 2) return;
             
             // Convert GeoJSON coordinates [lng, lat] to Leaflet [lat, lng]
-            const latLngs = coords
-              .filter(c => Array.isArray(c) && c.length >= 2 && 
-                          typeof c[0] === 'number' && typeof c[1] === 'number' &&
-                          !isNaN(c[0]) && !isNaN(c[1]))
-              .map(c => [c[1], c[0]]);
+            // Also remove consecutive duplicates
+            const latLngs = [];
+            let lastCoord = null;
+            
+            for (const c of coords) {
+              if (!Array.isArray(c) || c.length < 2) continue;
+              if (typeof c[0] !== 'number' || typeof c[1] !== 'number') continue;
+              if (isNaN(c[0]) || isNaN(c[1])) continue;
+              
+              const newCoord = [c[1], c[0]];
+              // Skip if same as last coordinate
+              if (lastCoord && lastCoord[0] === newCoord[0] && lastCoord[1] === newCoord[1]) continue;
+              
+              latLngs.push(newCoord);
+              lastCoord = newCoord;
+            }
             
             if (latLngs.length >= 2) {
+              // Create polyline with noClip and smoothFactor to avoid clipping issues
               const polyline = L.polyline(latLngs, {
                 color: '#FF6600',
                 weight: 3,
                 opacity: 1,
-                noClip: true  // Bypass clipping to avoid Leaflet bug
+                noClip: true,
+                smoothFactor: 1.5
               });
-              layerGroup.addLayer(polyline);
+              polylines.push(polyline);
               loadedCount++;
             }
           } catch (e) {
@@ -206,10 +219,12 @@ const Map3D = () => {
           }
         });
         
-        nazcaLinesLayerRef.current = layerGroup;
+        // Create a feature group from all polylines
+        const featureGroup = L.featureGroup(polylines);
+        nazcaLinesLayerRef.current = featureGroup;
         
         if (showNazcaLines && mapRef.current) {
-          layerGroup.addTo(mapRef.current);
+          featureGroup.addTo(mapRef.current);
         }
         
         toast.success(`${loadedCount} trazos oficiales cargados`);
