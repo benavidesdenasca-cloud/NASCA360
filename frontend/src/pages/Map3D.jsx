@@ -931,6 +931,12 @@ const Map3D = () => {
                   <span className="text-xs text-gray-600">{cat.label}</span>
                 </div>
               ))}
+              {showNazcaLines && (
+                <div className="flex items-center gap-2 pt-1 border-t border-gray-200 mt-1">
+                  <div className="w-6 h-0.5 bg-yellow-500"></div>
+                  <span className="text-xs text-gray-600">Trazos Ministerio</span>
+                </div>
+              )}
             </div>
           </div>
 
