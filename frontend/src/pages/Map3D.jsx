@@ -164,9 +164,9 @@ const Map3D = () => {
     mapRef.current = map;
     setMapLoaded(true);
     
-    // Add click handler for admin to add POIs
+    // Add click handler for admin to add/edit POIs
     map.on('click', (e) => {
-      if (isAdmin && adminPanelOpen && !editingPoi) {
+      if (isAdmin && adminPanelOpen) {
         setPoiForm(prev => ({
           ...prev,
           latitude: e.latlng.lat,
