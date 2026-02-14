@@ -345,10 +345,10 @@ const Map3D = () => {
 
   const seedDefaultPois = async () => {
     try {
-      await axios.post(`${API}/pois/seed`, {}, {
+      await axios.post(`${API}/api/pois/seed`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const response = await axios.get(`${API}/pois`, {
+      const response = await axios.get(`${API}/api/pois`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPois(response.data || []);
