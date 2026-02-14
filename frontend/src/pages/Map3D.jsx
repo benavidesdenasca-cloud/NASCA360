@@ -616,14 +616,14 @@ const Map3D = () => {
       )}
       
       {/* Add padding-top to account for fixed navbar */}
-      <div className="relative flex-1 flex overflow-hidden" style={{ marginTop: '64px' }}>
+      <div className="relative flex-1 flex" style={{ marginTop: '64px', height: 'calc(100vh - 64px)', overflow: 'hidden' }}>
         {/* Sidebar - POI List */}
-        <div className={`absolute md:relative z-20 h-full bg-white/95 backdrop-blur-lg shadow-2xl transition-all duration-300 ${
+        <div className={`absolute md:relative z-20 bg-white/95 backdrop-blur-lg shadow-2xl transition-all duration-300 ${
           sidebarOpen ? 'w-80' : 'w-0 overflow-hidden'
-        }`}>
-          <div className="h-full flex flex-col">
-            {/* Sidebar Header */}
-            <div className="p-4 bg-gradient-to-r from-amber-600 to-amber-700 text-white">
+        }`} style={{ height: '100%' }}>
+          <div className="h-full flex flex-col overflow-hidden">
+            {/* Sidebar Header - Fixed */}
+            <div className="flex-shrink-0 p-4 bg-gradient-to-r from-amber-600 to-amber-700 text-white">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-bold">Líneas de Nazca</h2>
