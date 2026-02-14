@@ -143,6 +143,47 @@ const Map3D = () => {
     }
   }, [pois, selectedPoi, mapLoaded]);
 
+  // Toggle Nazca Lines layer
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded) return;
+    
+    const L = window.L;
+    
+    if (showNazcaLines) {
+      // Load and show the layer
+      if (!nazcaLinesLayerRef.current && !nazcaLinesLoaded) {
+        toast.info('Cargando trazos del Ministerio de Cultura...');
+        
+        fetch('/nazca_lines.json')
+          .then(response => response.json())
+          .then(data => {
+            const layer = L.geoJSON(data, {
+              style: {
+                color: '#FFD700', // Dorado
+                weight: 2,
+                opacity: 0.8
+              }
+            });
+            nazcaLinesLayerRef.current = layer;
+            layer.addTo(mapRef.current);
+            setNazcaLinesLoaded(true);
+            toast.success('Trazos del Ministerio de Cultura cargados');
+          })
+          .catch(error => {
+            console.error('Error loading nazca lines:', error);
+            toast.error('Error al cargar los trazos');
+          });
+      } else if (nazcaLinesLayerRef.current) {
+        nazcaLinesLayerRef.current.addTo(mapRef.current);
+      }
+    } else {
+      // Hide the layer
+      if (nazcaLinesLayerRef.current && mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+        mapRef.current.removeLayer(nazcaLinesLayerRef.current);
+      }
+    }
+  }, [showNazcaLines, mapLoaded]);
+
   const initMap = () => {
     const L = window.L;
     if (!L || !mapContainerRef.current) return;
