@@ -17,7 +17,7 @@ const NAZCA_CENTER = {
 };
 
 const NAZCA_BOUNDS = {
-  west: -75.15,
+  west: -75.20,  // Ampliado 5km hacia el oeste para que el menú no tape el mapa
   south: -14.85,
   east: -74.90,
   north: -14.60
