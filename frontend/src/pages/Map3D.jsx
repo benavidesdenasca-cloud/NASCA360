@@ -196,7 +196,10 @@ const Map3D = () => {
         for (const feature of geoJsonData.features) {
           try {
             const coords = feature.geometry?.coordinates;
-            if (!coords || coords.length < 2) continue;
+            if (!coords || coords.length < 2) {
+              console.log('Skipping feature - no coords or too few');
+              continue;
+            }
             
             // Convert GeoJSON coordinates [lng, lat] to Leaflet [lat, lng]
             // Also remove consecutive duplicates
@@ -208,9 +211,10 @@ const Map3D = () => {
               if (typeof c[0] !== 'number' || typeof c[1] !== 'number') continue;
               if (isNaN(c[0]) || isNaN(c[1])) continue;
               
-              const newCoord = L.latLng(c[1], c[0]);
+              // Use array format instead of L.latLng to avoid potential issues
+              const newCoord = [c[1], c[0]];
               // Skip if same as last coordinate
-              if (lastCoord && lastCoord.equals(newCoord)) continue;
+              if (lastCoord && lastCoord[0] === newCoord[0] && lastCoord[1] === newCoord[1]) continue;
               
               latLngs.push(newCoord);
               lastCoord = newCoord;
@@ -235,9 +239,12 @@ const Map3D = () => {
               }
               polylines.push(polyline);
               loadedCount++;
+            } else {
+              console.log('Skipping feature - not enough valid coords:', latLngs.length);
             }
           } catch (e) {
             errorCount++;
+            console.log('Error processing feature:', e.message);
             // Skip problematic features silently
           }
         }
