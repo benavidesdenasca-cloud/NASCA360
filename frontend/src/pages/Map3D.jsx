@@ -176,13 +176,14 @@ const Map3D = () => {
         // Create an array to hold all polylines
         const polylines = [];
         let loadedCount = 0;
+        let errorCount = 0;
         
         // Process each feature and create polylines manually
         // This avoids Leaflet's GeoJSON clipping issues
-        geoJsonData.features.forEach(feature => {
+        for (const feature of geoJsonData.features) {
           try {
             const coords = feature.geometry?.coordinates;
-            if (!coords || coords.length < 2) return;
+            if (!coords || coords.length < 2) continue;
             
             // Convert GeoJSON coordinates [lng, lat] to Leaflet [lat, lng]
             // Also remove consecutive duplicates
@@ -194,40 +195,45 @@ const Map3D = () => {
               if (typeof c[0] !== 'number' || typeof c[1] !== 'number') continue;
               if (isNaN(c[0]) || isNaN(c[1])) continue;
               
-              const newCoord = [c[1], c[0]];
+              const newCoord = L.latLng(c[1], c[0]);
               // Skip if same as last coordinate
-              if (lastCoord && lastCoord[0] === newCoord[0] && lastCoord[1] === newCoord[1]) continue;
+              if (lastCoord && lastCoord.equals(newCoord)) continue;
               
               latLngs.push(newCoord);
               lastCoord = newCoord;
             }
             
             if (latLngs.length >= 2) {
-              // Create polyline with noClip and smoothFactor to avoid clipping issues
+              // Create polyline and add directly to map
               const polyline = L.polyline(latLngs, {
                 color: '#FF6600',
                 weight: 3,
                 opacity: 1,
                 noClip: true,
-                smoothFactor: 1.5
+                smoothFactor: 2
               });
+              
+              // Add to map directly to avoid group issues
+              if (mapRef.current) {
+                polyline.addTo(mapRef.current);
+              }
               polylines.push(polyline);
               loadedCount++;
             }
           } catch (e) {
+            errorCount++;
             // Skip problematic features silently
           }
-        });
-        
-        // Create a feature group from all polylines
-        const featureGroup = L.featureGroup(polylines);
-        nazcaLinesLayerRef.current = featureGroup;
-        
-        if (showNazcaLines && mapRef.current) {
-          featureGroup.addTo(mapRef.current);
         }
         
-        toast.success(`${loadedCount} trazos oficiales cargados`);
+        // Store polylines array for later removal
+        nazcaLinesLayerRef.current = { polylines, isArray: true };
+        
+        if (loadedCount > 0) {
+          toast.success(`${loadedCount} trazos oficiales cargados`);
+        } else {
+          toast.error('No se pudieron cargar los trazos');
+        }
         setNazcaLinesLoaded(true);
         
       } catch (error) {
