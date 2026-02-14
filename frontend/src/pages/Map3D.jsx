@@ -190,33 +190,71 @@ const Map3D = () => {
       maxBoundsViscosity: 1.0
     });
 
-    // Add ESRI World Imagery (satellite)
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-      maxZoom: 18,
+    // Add Google Maps Satellite (higher resolution)
+    L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      attribution: '&copy; Google Maps'
     }).addTo(map);
 
-    // Custom marker icon
-    const createIcon = (color) => L.divIcon({
+    // Add labels layer on top (Google hybrid labels)
+    L.tileLayer('https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      attribution: ''
+    }).addTo(map);
+
+    // Custom marker icon with pulse animation
+    const createIcon = (color, isSelected = false) => L.divIcon({
       className: 'custom-marker',
       html: `<div style="
-        width: 30px;
-        height: 30px;
-        background: ${color};
-        border: 3px solid white;
-        border-radius: 50%;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        position: relative;
+        width: ${isSelected ? '40px' : '32px'};
+        height: ${isSelected ? '40px' : '32px'};
       ">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-        </svg>
+        ${isSelected ? `<div style="
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          background: ${color};
+          border-radius: 50%;
+          opacity: 0.3;
+          animation: pulse 1.5s ease-out infinite;
+        "></div>` : ''}
+        <div style="
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 32px;
+          height: 32px;
+          background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+        </div>
       </div>`,
-      iconSize: [30, 30],
-      iconAnchor: [15, 15]
+      iconSize: [isSelected ? 40 : 32, isSelected ? 40 : 32],
+      iconAnchor: [isSelected ? 20 : 16, isSelected ? 20 : 16]
     });
+
+    // Add CSS animation for pulse
+    if (!document.getElementById('marker-pulse-style')) {
+      const style = document.createElement('style');
+      style.id = 'marker-pulse-style';
+      style.textContent = `
+        @keyframes pulse {
+          0% { transform: scale(1); opacity: 0.3; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
     // Add markers for each POI
     pois.forEach(poi => {
