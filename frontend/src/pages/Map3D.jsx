@@ -245,6 +245,8 @@ const Map3D = () => {
         // Store polylines array for later removal
         nazcaLinesLayerRef.current = { polylines, isArray: true };
         
+        console.log('Loaded', loadedCount, 'polylines, errors:', errorCount);
+        
         if (loadedCount > 0) {
           toast.success(`${loadedCount} trazos oficiales cargados`);
         } else {
