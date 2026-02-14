@@ -178,6 +178,17 @@ const Map3D = () => {
         const polylines = [];
         
         console.log('GeoJSON features:', geoJsonData.features?.length);
+        console.log('Map exists:', !!mapRef.current);
+        console.log('Map is L.map:', mapRef.current instanceof L.Map);
+        
+        // Test adding a single marker first
+        try {
+          const testMarker = L.marker([-14.71, -75.10]).addTo(mapRef.current);
+          console.log('Test marker added successfully');
+          mapRef.current.removeLayer(testMarker);
+        } catch (testError) {
+          console.error('Test marker failed:', testError.message);
+        }
         
         for (const feature of geoJsonData.features || []) {
           try {
