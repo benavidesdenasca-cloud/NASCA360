@@ -669,8 +669,12 @@ const Map3D = () => {
               </div>
             </div>
 
-            {/* POI List */}
-            <div className="flex-1 overflow-y-auto">
+            {/* POI List - Scrollable independently */}
+            <div 
+              className="flex-1 overflow-y-auto overscroll-contain"
+              style={{ maxHeight: 'calc(100vh - 64px - 80px - 80px)' }}
+              onWheel={(e) => e.stopPropagation()}
+            >
               {pois.length === 0 ? (
                 <div className="p-4 text-center text-gray-500">
                   <p>No hay figuras registradas</p>
