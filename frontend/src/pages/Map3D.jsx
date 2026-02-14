@@ -11,16 +11,16 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 // Nazca Lines area boundaries
 const NAZCA_CENTER = {
-  longitude: -75.0298,
-  latitude: -14.7391,
+  longitude: -75.08,  // Centrado más hacia el área con mejor cobertura
+  latitude: -14.72,
   height: 15000
 };
 
 const NAZCA_BOUNDS = {
-  west: -75.25,  // Ampliado hacia el oeste
-  south: -14.92, // Ampliado 7km hacia el sur para evitar banda negra
-  east: -74.85,  // Ampliado hacia el este
-  north: -14.55  // Ampliado hacia el norte
+  west: -75.20,   
+  south: -14.82,  
+  east: -74.95,   
+  north: -14.62   
 };
 
 const CATEGORIES = [
