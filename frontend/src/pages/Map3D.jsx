@@ -189,6 +189,8 @@ const Map3D = () => {
         let loadedCount = 0;
         let errorCount = 0;
         
+        console.log('Processing', geoJsonData.features.length, 'features');
+        
         // Process each feature and create polylines manually
         // This avoids Leaflet's GeoJSON clipping issues
         for (const feature of geoJsonData.features) {
