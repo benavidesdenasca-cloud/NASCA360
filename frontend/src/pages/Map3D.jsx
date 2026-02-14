@@ -163,19 +163,32 @@ const Map3D = () => {
             try {
               // Create layer group to hold all polylines
               const layerGroup = L.layerGroup();
+              let addedCount = 0;
               
               // Add each feature as a polyline
               data.features.forEach(feature => {
-                if (feature.geometry && feature.geometry.coordinates) {
-                  // Swap coordinates from [lng, lat] to [lat, lng] for Leaflet
-                  const latLngs = feature.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                if (feature.geometry && feature.geometry.coordinates && Array.isArray(feature.geometry.coordinates)) {
+                  // Convert and validate coordinates
+                  const latLngs = [];
+                  for (const coord of feature.geometry.coordinates) {
+                    if (Array.isArray(coord) && coord.length >= 2) {
+                      const lng = parseFloat(coord[0]);
+                      const lat = parseFloat(coord[1]);
+                      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                        latLngs.push(L.latLng(lat, lng));
+                      }
+                    }
+                  }
+                  
                   if (latLngs.length >= 2) {
                     const polyline = L.polyline(latLngs, {
                       color: '#FFD700',
                       weight: 2,
-                      opacity: 0.85
+                      opacity: 0.85,
+                      smoothFactor: 1
                     });
                     layerGroup.addLayer(polyline);
+                    addedCount++;
                   }
                 }
               });
@@ -183,7 +196,7 @@ const Map3D = () => {
               nazcaLinesLayerRef.current = layerGroup;
               layerGroup.addTo(mapRef.current);
               setNazcaLinesLoaded(true);
-              toast.success(`Trazos cargados (${data.features.length} líneas)`);
+              toast.success(`Trazos cargados (${addedCount} líneas)`);
             } catch (err) {
               console.error('Error creating layer:', err);
               toast.error('Error al procesar los trazos');
