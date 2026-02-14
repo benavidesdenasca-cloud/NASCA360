@@ -153,10 +153,16 @@ const Map3D = () => {
     const loadNazcaLines = async () => {
       if (nazcaLinesLayerRef.current) {
         // Layer already loaded, just add to map
-        if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
-          nazcaLinesLayerRef.current.addTo(mapRef.current);
+        try {
+          if (!mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+            nazcaLinesLayerRef.current.addTo(mapRef.current);
+          }
+        } catch (e) {
+          console.warn('Error adding existing layer, will recreate');
+          nazcaLinesLayerRef.current = null;
+          setNazcaLinesLoaded(false);
         }
-        return;
+        if (nazcaLinesLayerRef.current) return;
       }
       
       if (nazcaLinesLoaded) return; // Already loading
@@ -170,15 +176,14 @@ const Map3D = () => {
         
         const geoJsonData = await response.json();
         
-        // Use L.geoJSON for efficient batch rendering
+        // Use L.geoJSON with default SVG renderer (more stable for add/remove)
         const geoJsonLayer = L.geoJSON(geoJsonData, {
           style: {
             color: '#FF6600',
             weight: 2,
-            opacity: 0.85
-          },
-          // Use Canvas renderer for better performance with many features
-          renderer: L.canvas({ padding: 0.5 })
+            opacity: 0.85,
+            interactive: false // Prevent hover events for better performance
+          }
         });
         
         nazcaLinesLayerRef.current = geoJsonLayer;
@@ -200,8 +205,17 @@ const Map3D = () => {
     
     if (showNazcaLines) {
       loadNazcaLines();
-    } else if (nazcaLinesLayerRef.current && mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
-      mapRef.current.removeLayer(nazcaLinesLayerRef.current);
+    } else if (nazcaLinesLayerRef.current) {
+      // Safely remove the layer
+      try {
+        if (mapRef.current && mapRef.current.hasLayer(nazcaLinesLayerRef.current)) {
+          mapRef.current.removeLayer(nazcaLinesLayerRef.current);
+        }
+      } catch (e) {
+        console.warn('Error removing layer:', e);
+        // Force cleanup
+        nazcaLinesLayerRef.current = null;
+      }
     }
   }, [showNazcaLines, mapLoaded]);
 
