@@ -535,9 +535,13 @@ const Map3D = () => {
             </Button>
           </div>
 
-          {/* Admin Panel */}
+          {/* Admin Panel - Positioned after sidebar */}
           {isAdmin && adminPanelOpen && (
-            <div className="absolute left-4 top-4 z-30 bg-white rounded-xl shadow-2xl p-4 w-80">
+            <div 
+              data-testid="admin-panel"
+              className="absolute z-30 bg-white rounded-xl shadow-2xl p-4 w-80 max-h-[90vh] overflow-y-auto"
+              style={{ left: sidebarOpen ? '340px' : '20px', top: '20px' }}
+            >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-gray-800">
                   {editingPoi ? 'Editar Figura' : 'Nueva Figura'}
