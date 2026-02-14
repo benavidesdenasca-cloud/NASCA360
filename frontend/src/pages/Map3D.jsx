@@ -174,11 +174,34 @@ const Map3D = () => {
         const geoJsonData = await response.json();
         
         // Use L.geoJSON for native GeoJSON handling
-        const geoJsonLayer = L.geoJSON(geoJsonData, {
+        // Filter out any features with invalid geometries
+        const validFeatures = geoJsonData.features.filter(feature => {
+          const coords = feature.geometry?.coordinates;
+          if (!coords || coords.length < 2) return false;
+          // Check all coordinates are valid
+          return coords.every(c => 
+            Array.isArray(c) && 
+            c.length >= 2 && 
+            typeof c[0] === 'number' && 
+            typeof c[1] === 'number' &&
+            !isNaN(c[0]) && !isNaN(c[1])
+          );
+        });
+        
+        const filteredData = {
+          type: 'FeatureCollection',
+          features: validFeatures
+        };
+        
+        const geoJsonLayer = L.geoJSON(filteredData, {
           style: {
             color: '#FF6600',
             weight: 3,
             opacity: 1
+          },
+          // Ensure proper coordinate handling
+          coordsToLatLng: function(coords) {
+            return L.latLng(coords[1], coords[0]);
           }
         });
         
