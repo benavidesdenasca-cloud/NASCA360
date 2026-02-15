@@ -102,6 +102,10 @@ const Map3D = () => {
         // Fetch videos
         const videosRes = await axios.get(`${API}/api/videos`, { headers });
         setVideos(videosRes.data || []);
+        
+        // Fetch KMZ layers
+        const kmzRes = await axios.get(`${API}/api/kmz/layers`, { headers });
+        setKmzLayers(kmzRes.data || []);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
