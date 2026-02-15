@@ -92,7 +92,7 @@ const Map3D = () => {
     console.log('Map3D - isAdmin:', isAdmin);
   }, [user, isAdmin]);
 
-  // Fetch POIs and videos
+  // Fetch POIs and KMZ layers
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -101,10 +101,6 @@ const Map3D = () => {
         // Fetch POIs
         const poisRes = await axios.get(`${API}/api/pois`, { headers });
         setPois(poisRes.data || []);
-        
-        // Fetch videos
-        const videosRes = await axios.get(`${API}/api/videos`, { headers });
-        setVideos(videosRes.data || []);
         
         // Fetch KMZ layers
         const kmzRes = await axios.get(`${API}/api/kmz/layers`, { headers });
