@@ -462,17 +462,24 @@ const Map3D = () => {
   const zoomIn = () => mapRef.current?.zoomIn();
   const zoomOut = () => mapRef.current?.zoomOut();
 
-  const watchVideo = (poi) => {
-    const linkedVideo = videos.find(v => 
-      v.title?.toLowerCase().includes(poi.name.toLowerCase().replace('el ', '').replace('la ', '').replace('las ', '')) ||
-      poi.video_id === v.id
-    );
-    
-    if (linkedVideo) {
-      navigate(`/video/${linkedVideo.id}`);
+  // Open 360° image viewer
+  const view360Image = (poi) => {
+    if (poi.image_url) {
+      setCurrent360Image({
+        url: poi.image_url,
+        name: poi.name,
+        description: poi.description
+      });
+      setShow360Viewer(true);
     } else {
-      toast.info('No hay video 360° disponible para este geoglifo aún');
+      toast.info('No hay imagen 360° disponible para este geoglifo aún');
     }
+  };
+
+  // Close 360° viewer
+  const close360Viewer = () => {
+    setShow360Viewer(false);
+    setCurrent360Image(null);
   };
 
   // Function to clear temporary marker
