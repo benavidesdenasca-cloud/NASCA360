@@ -839,18 +839,25 @@ const Map3D = () => {
             </div>
             
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Video 360° vinculado</label>
-              <select
-                data-testid="poi-video-select"
-                value={poiForm.video_id}
-                onChange={(e) => setPoiForm({ ...poiForm, video_id: e.target.value })}
+              <label className="block text-xs font-medium text-gray-600 mb-1">URL Imagen 360°</label>
+              <input
+                data-testid="poi-image-url-input"
+                type="url"
+                value={poiForm.image_url}
+                onChange={(e) => setPoiForm({ ...poiForm, image_url: e.target.value })}
+                placeholder="https://ejemplo.com/imagen360.jpg"
                 className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="">Sin video</option>
-                {videos.map(video => (
-                  <option key={video.id} value={video.id}>{video.title}</option>
-                ))}
-              </select>
+              />
+              {poiForm.image_url && (
+                <div className="mt-2 rounded-lg overflow-hidden border">
+                  <img 
+                    src={poiForm.image_url} 
+                    alt="Preview" 
+                    className="w-full h-20 object-cover"
+                    onError={(e) => e.target.style.display = 'none'}
+                  />
+                </div>
+              )}
             </div>
             
             <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
@@ -881,7 +888,7 @@ const Map3D = () => {
                       latitude: -14.7391,
                       altitude: 2000,
                       category: 'geoglifo',
-                      video_id: ''
+                      image_url: ''
                     });
                   }}
                 >
