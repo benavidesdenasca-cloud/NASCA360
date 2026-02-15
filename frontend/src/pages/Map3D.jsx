@@ -1012,6 +1012,68 @@ const Map3D = () => {
               )}
             </div>
 
+            {/* KMZ Layers Section - Admin Only */}
+            {isAdmin && (
+              <div className="flex-shrink-0 border-t bg-gray-50">
+                <div className="p-3 border-b">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-gray-700 text-sm flex items-center gap-2">
+                      <Layers className="w-4 h-4" />
+                      Capas KMZ
+                    </h3>
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".kmz"
+                        onChange={handleKmzUpload}
+                        className="hidden"
+                        disabled={uploadingKmz}
+                      />
+                      <div className={`flex items-center gap-1 px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs rounded-lg transition-colors ${uploadingKmz ? 'opacity-50' : ''}`}>
+                        <Upload className="w-3 h-3" />
+                        {uploadingKmz ? 'Subiendo...' : 'Subir KMZ'}
+                      </div>
+                    </label>
+                  </div>
+                  
+                  {kmzLayers.length === 0 ? (
+                    <p className="text-xs text-gray-400 text-center py-2">No hay capas KMZ</p>
+                  ) : (
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {kmzLayers.map(layer => (
+                        <div key={layer.id} className="flex items-center justify-between bg-white rounded-lg p-2 text-xs">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-700 truncate">{layer.name}</div>
+                            <div className="text-gray-400">{layer.feature_count} geometrías</div>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              onClick={() => toggleKmzLayer(layer.id)}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                activeKmzLayers[layer.id] 
+                                  ? 'bg-amber-500 text-white' 
+                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              }`}
+                              title={activeKmzLayers[layer.id] ? 'Ocultar' : 'Mostrar'}
+                            >
+                              {activeKmzLayers[layer.id] ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                            </button>
+                            <button
+                              onClick={() => deleteKmzLayer(layer.id)}
+                              className="p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Stats Footer - Fixed at bottom */}
             <div className="flex-shrink-0 p-3 bg-gray-50 border-t">
               <div className="grid grid-cols-2 gap-2 text-center">
