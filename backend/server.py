@@ -20,10 +20,6 @@ from botocore.exceptions import ClientError
 from botocore.config import Config
 
 import jwt
-import zipfile
-import xml.etree.ElementTree as ET
-import tempfile
-import re
 
 # Import custom auth utilities
 from auth_utils import (
