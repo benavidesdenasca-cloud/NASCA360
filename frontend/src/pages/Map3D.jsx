@@ -1197,12 +1197,25 @@ const Map3D = () => {
                   <p className="text-gray-600 text-sm mb-2">{selectedPoi.description}</p>
                   <p className="text-xs text-gray-400 mb-4">Altura de visión: {selectedPoi.altitude}m</p>
                   
+                  {/* Thumbnail of 360 image if available */}
+                  {selectedPoi.image_url && (
+                    <div className="mb-3 rounded-lg overflow-hidden border">
+                      <img 
+                        src={selectedPoi.image_url} 
+                        alt={selectedPoi.name}
+                        className="w-full h-24 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => view360Image(selectedPoi)}
+                      />
+                    </div>
+                  )}
+                  
                   <div className="flex gap-2 flex-wrap">
                     <Button
-                      onClick={() => watchVideo(selectedPoi)}
+                      onClick={() => view360Image(selectedPoi)}
                       className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
+                      disabled={!selectedPoi.image_url}
                     >
-                      <Play className="w-4 h-4 mr-2" />
+                      <Image className="w-4 h-4 mr-2" />
                       Ver en 360°
                     </Button>
                     <Button
