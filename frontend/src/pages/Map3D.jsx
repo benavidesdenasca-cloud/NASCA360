@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/App';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { MapPin, Info, X, ChevronRight, ZoomIn, ZoomOut, RotateCcw, Plus, Edit, Trash2, Save, Settings, Layers, Upload, Eye, EyeOff, Image, Maximize2 } from 'lucide-react';
+import { MapPin, Info, X, ChevronRight, ZoomIn, ZoomOut, RotateCcw, Plus, Edit, Trash2, Save, Settings, Layers, Image } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -62,12 +62,6 @@ const Map3D = () => {
     category: 'geoglifo',
     image_url: ''
   });
-
-  // KMZ Layer States
-  const [kmzLayers, setKmzLayers] = useState([]);
-  const [activeKmzLayers, setActiveKmzLayers] = useState({}); // {layerId: true/false}
-  const [uploadingKmz, setUploadingKmz] = useState(false);
-  const kmzLayerRefs = useRef({}); // Store refs to Leaflet layers for each KMZ
 
   // Refs to track current state for map click handler
   const adminPanelOpenRef = useRef(adminPanelOpen);
