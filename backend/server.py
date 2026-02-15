@@ -2882,6 +2882,246 @@ async def seed_default_pois(current_user: User = Depends(get_current_user)):
     await db.pois.insert_many(default_pois)
     return {"message": f"Se crearon {len(default_pois)} POIs por defecto"}
 
+# ==================== KMZ LAYER ENDPOINTS ====================
+
+def parse_kml_to_geojson(kml_content: str) -> tuple:
+    """Parse KML content and extract features as GeoJSON-style objects"""
+    features = []
+    bounds = {"north": -90, "south": 90, "east": -180, "west": 180}
+    
+    # Remove namespaces for easier parsing
+    kml_content = re.sub(r'\sxmlns[^"]*"[^"]*"', '', kml_content)
+    kml_content = re.sub(r'<kml[^>]*>', '<kml>', kml_content)
+    
+    try:
+        root = ET.fromstring(kml_content)
+    except ET.ParseError as e:
+        logging.error(f"KML parse error: {e}")
+        return features, bounds
+    
+    # Find all Placemark elements
+    for placemark in root.iter('Placemark'):
+        name = ""
+        name_elem = placemark.find('name')
+        if name_elem is not None and name_elem.text:
+            name = name_elem.text
+        
+        # Look for LineString
+        for linestring in placemark.iter('LineString'):
+            coords_elem = linestring.find('coordinates')
+            if coords_elem is not None and coords_elem.text:
+                coords_text = coords_elem.text.strip()
+                coordinates = []
+                for coord in coords_text.split():
+                    parts = coord.split(',')
+                    if len(parts) >= 2:
+                        try:
+                            lng = float(parts[0])
+                            lat = float(parts[1])
+                            coordinates.append([lng, lat])
+                            # Update bounds
+                            bounds["north"] = max(bounds["north"], lat)
+                            bounds["south"] = min(bounds["south"], lat)
+                            bounds["east"] = max(bounds["east"], lng)
+                            bounds["west"] = min(bounds["west"], lng)
+                        except ValueError:
+                            continue
+                
+                if len(coordinates) >= 2:
+                    features.append({
+                        "type": "Feature",
+                        "properties": {"name": name},
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": coordinates
+                        }
+                    })
+        
+        # Look for Polygon
+        for polygon in placemark.iter('Polygon'):
+            for boundary in polygon.iter('outerBoundaryIs'):
+                for linear_ring in boundary.iter('LinearRing'):
+                    coords_elem = linear_ring.find('coordinates')
+                    if coords_elem is not None and coords_elem.text:
+                        coords_text = coords_elem.text.strip()
+                        coordinates = []
+                        for coord in coords_text.split():
+                            parts = coord.split(',')
+                            if len(parts) >= 2:
+                                try:
+                                    lng = float(parts[0])
+                                    lat = float(parts[1])
+                                    coordinates.append([lng, lat])
+                                    bounds["north"] = max(bounds["north"], lat)
+                                    bounds["south"] = min(bounds["south"], lat)
+                                    bounds["east"] = max(bounds["east"], lng)
+                                    bounds["west"] = min(bounds["west"], lng)
+                                except ValueError:
+                                    continue
+                        
+                        if len(coordinates) >= 3:
+                            features.append({
+                                "type": "Feature",
+                                "properties": {"name": name},
+                                "geometry": {
+                                    "type": "Polygon",
+                                    "coordinates": [coordinates]
+                                }
+                            })
+    
+    return features, bounds
+
+@api_router.post("/kmz/upload")
+async def upload_kmz(
+    file: UploadFile = File(...),
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    color: str = "#FF6600",
+    current_user: User = Depends(get_current_user)
+):
+    """Upload and parse a KMZ file (admin only)"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores pueden subir archivos KMZ")
+    
+    if not file.filename.lower().endswith('.kmz'):
+        raise HTTPException(status_code=400, detail="El archivo debe ser .kmz")
+    
+    try:
+        # Read the uploaded file
+        content = await file.read()
+        
+        # Create a temporary file to extract the KMZ
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.kmz') as tmp_file:
+            tmp_file.write(content)
+            tmp_path = tmp_file.name
+        
+        # Extract KML from KMZ
+        kml_content = None
+        try:
+            with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
+                for name_in_zip in zip_ref.namelist():
+                    if name_in_zip.lower().endswith('.kml'):
+                        kml_content = zip_ref.read(name_in_zip).decode('utf-8')
+                        break
+        finally:
+            os.unlink(tmp_path)
+        
+        if not kml_content:
+            raise HTTPException(status_code=400, detail="No se encontró archivo KML dentro del KMZ")
+        
+        # Parse KML to GeoJSON features
+        features, bounds = parse_kml_to_geojson(kml_content)
+        
+        if not features:
+            raise HTTPException(status_code=400, detail="No se encontraron geometrías válidas en el KMZ")
+        
+        # Create KMZ layer
+        layer_name = name or file.filename.replace('.kmz', '').replace('.KMZ', '')
+        kmz_layer = KMZLayer(
+            name=layer_name,
+            description=description,
+            features=features,
+            feature_count=len(features),
+            bounds=bounds,
+            color=color,
+            created_by=current_user.user_id
+        )
+        
+        # Save to database
+        await db.kmz_layers.insert_one(kmz_layer.model_dump())
+        
+        result = kmz_layer.model_dump()
+        result.pop('features', None)  # Don't return all features in response
+        
+        return {
+            "message": f"KMZ cargado exitosamente con {len(features)} geometrías",
+            "layer": result
+        }
+        
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="Archivo KMZ corrupto o inválido")
+    except Exception as e:
+        logging.error(f"Error processing KMZ: {e}")
+        raise HTTPException(status_code=500, detail=f"Error procesando KMZ: {str(e)}")
+
+@api_router.get("/kmz/layers")
+async def get_kmz_layers():
+    """Get all active KMZ layers (without full feature data)"""
+    layers = await db.kmz_layers.find({"is_active": True}).to_list(100)
+    for layer in layers:
+        layer.pop('_id', None)
+        layer.pop('features', None)  # Don't send all features in list
+    return layers
+
+@api_router.get("/kmz/layers/all")
+async def get_all_kmz_layers(current_user: User = Depends(get_current_user)):
+    """Get all KMZ layers including inactive (admin only)"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    
+    layers = await db.kmz_layers.find({}).to_list(100)
+    for layer in layers:
+        layer.pop('_id', None)
+        layer.pop('features', None)
+    return layers
+
+@api_router.get("/kmz/layers/{layer_id}")
+async def get_kmz_layer(layer_id: str):
+    """Get a single KMZ layer with all its features"""
+    layer = await db.kmz_layers.find_one({"id": layer_id})
+    if not layer:
+        raise HTTPException(status_code=404, detail="Capa KMZ no encontrada")
+    layer.pop('_id', None)
+    return layer
+
+@api_router.get("/kmz/layers/{layer_id}/geojson")
+async def get_kmz_layer_geojson(layer_id: str):
+    """Get KMZ layer as GeoJSON FeatureCollection"""
+    layer = await db.kmz_layers.find_one({"id": layer_id})
+    if not layer:
+        raise HTTPException(status_code=404, detail="Capa KMZ no encontrada")
+    
+    return {
+        "type": "FeatureCollection",
+        "features": layer.get("features", [])
+    }
+
+@api_router.put("/kmz/layers/{layer_id}")
+async def update_kmz_layer(
+    layer_id: str,
+    update_data: KMZLayerUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update a KMZ layer (admin only)"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    
+    existing = await db.kmz_layers.find_one({"id": layer_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Capa KMZ no encontrada")
+    
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    
+    if update_dict:
+        await db.kmz_layers.update_one({"id": layer_id}, {"$set": update_dict})
+    
+    updated = await db.kmz_layers.find_one({"id": layer_id})
+    updated.pop('_id', None)
+    updated.pop('features', None)
+    return updated
+
+@api_router.delete("/kmz/layers/{layer_id}")
+async def delete_kmz_layer(layer_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a KMZ layer (admin only)"""
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    
+    result = await db.kmz_layers.delete_one({"id": layer_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Capa KMZ no encontrada")
+    
+    return {"message": "Capa KMZ eliminada correctamente"}
+
 # Add middlewares BEFORE including routers
 app.add_middleware(
     CORSMiddleware,
