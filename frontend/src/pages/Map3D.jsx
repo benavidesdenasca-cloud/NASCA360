@@ -1280,10 +1280,10 @@ const Map3D = () => {
             </div>
           </div>
           
-          {/* 360° Viewer - Using iframe with Pannellum CDN */}
+          {/* 360° Viewer - Using iframe with Pannellum CDN and proxy */}
           <div className="flex-1 relative">
             <iframe
-              src={`https://cdn.pannellum.org/2.5/pannellum.htm#panorama=${encodeURIComponent(current360Image.url)}&autoLoad=true&autoRotate=-2`}
+              src={`https://cdn.pannellum.org/2.5/pannellum.htm#panorama=${encodeURIComponent(`${API}/api/image-proxy?url=${encodeURIComponent(current360Image.url)}`)}&autoLoad=true&autoRotate=-2`}
               className="w-full h-full border-0"
               allowFullScreen
               title="360° Viewer"
