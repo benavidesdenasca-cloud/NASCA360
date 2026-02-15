@@ -932,7 +932,7 @@ const Map3D = () => {
                             latitude: -14.7391,
                             altitude: 2000,
                             category: 'geoglifo',
-                            video_id: ''
+                            image_url: ''
                           });
                         }
                       }}
