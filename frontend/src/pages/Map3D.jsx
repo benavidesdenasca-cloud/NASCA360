@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/App';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { MapPin, Info, X, ChevronRight, ZoomIn, ZoomOut, RotateCcw, Plus, Edit, Trash2, Save, Settings, Layers, Image } from 'lucide-react';
+import { MapPin, Info, X, ChevronRight, ZoomIn, ZoomOut, RotateCcw, Plus, Edit, Trash2, Save, Settings, Image } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -36,15 +36,12 @@ const Map3D = () => {
   const mapRef = useRef(null);
   const markersRef = useRef({});
   const tempMarkerRef = useRef(null); // Marcador temporal para edición
-  const nazcaLinesLayerRef = useRef(null); // Capa de líneas de Nazca del Ministerio
   
   const [pois, setPois] = useState([]);
   const [selectedPoi, setSelectedPoi] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [showNazcaLines, setShowNazcaLines] = useState(false); // Toggle para capa de líneas
-  const [nazcaLinesLoaded, setNazcaLinesLoaded] = useState(false);
   
   // 360° Image Viewer State
   const [show360Viewer, setShow360Viewer] = useState(false);
