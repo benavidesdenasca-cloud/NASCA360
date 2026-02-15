@@ -219,6 +219,35 @@ class POIUpdate(BaseModel):
     video_id: Optional[str] = None
     is_active: Optional[bool] = None
 
+# ==================== KMZ LAYER MODELS ====================
+
+class KMZFeature(BaseModel):
+    """A single feature (line/polygon) from KMZ"""
+    type: str  # LineString, Polygon
+    coordinates: List  # List of coordinate arrays
+    name: Optional[str] = None
+    style_color: Optional[str] = "#FF6600"
+
+class KMZLayer(BaseModel):
+    """A KMZ layer with its features"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    features: List[Dict] = []  # GeoJSON-style features
+    feature_count: int = 0
+    bounds: Optional[Dict] = None  # {north, south, east, west}
+    color: str = "#FF6600"
+    is_active: bool = True
+    created_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class KMZLayerUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    color: Optional[str] = None
+    is_active: Optional[bool] = None
+
 # ==================== REQUEST/RESPONSE MODELS ====================
 
 class RegisterRequest(BaseModel):
