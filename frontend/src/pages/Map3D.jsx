@@ -577,6 +577,164 @@ const Map3D = () => {
     }
   };
 
+  // KMZ Layer Functions
+  const handleKmzUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.name.toLowerCase().endsWith('.kmz')) {
+      toast.error('Por favor seleccione un archivo .kmz');
+      return;
+    }
+    
+    setUploadingKmz(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const response = await axios.post(`${API}/api/kmz/upload`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      toast.success(response.data.message);
+      
+      // Refresh KMZ layers list
+      const kmzRes = await axios.get(`${API}/api/kmz/layers`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setKmzLayers(kmzRes.data || []);
+      
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Error al subir KMZ');
+    } finally {
+      setUploadingKmz(false);
+      event.target.value = ''; // Reset file input
+    }
+  };
+
+  const toggleKmzLayer = async (layerId) => {
+    const isCurrentlyActive = activeKmzLayers[layerId];
+    
+    if (isCurrentlyActive) {
+      // Hide layer
+      if (kmzLayerRefs.current[layerId] && mapRef.current) {
+        kmzLayerRefs.current[layerId].forEach(marker => {
+          if (mapRef.current.hasLayer(marker)) {
+            mapRef.current.removeLayer(marker);
+          }
+        });
+      }
+      setActiveKmzLayers(prev => ({ ...prev, [layerId]: false }));
+      toast.success('Capa ocultada');
+    } else {
+      // Show layer - need to load features
+      toast.info('Cargando capa...');
+      
+      try {
+        const response = await axios.get(`${API}/api/kmz/layers/${layerId}/geojson`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        const geojson = response.data;
+        const L = window.L;
+        const markers = [];
+        
+        // Process features as divIcon markers (workaround for Leaflet polyline bug)
+        for (const feature of geojson.features || []) {
+          try {
+            const coords = feature.geometry?.coordinates;
+            const geomType = feature.geometry?.type;
+            
+            if (geomType === 'LineString' && Array.isArray(coords)) {
+              for (const c of coords) {
+                if (Array.isArray(c) && c.length >= 2) {
+                  const lng = Number(c[0]);
+                  const lat = Number(c[1]);
+                  if (!isNaN(lat) && !isNaN(lng)) {
+                    const icon = L.divIcon({
+                      className: 'kmz-point',
+                      html: '<div style="width:4px;height:4px;background:#FF6600;border-radius:50%;"></div>',
+                      iconSize: [4, 4],
+                      iconAnchor: [2, 2]
+                    });
+                    const marker = L.marker([lat, lng], { icon });
+                    marker.addTo(mapRef.current);
+                    markers.push(marker);
+                  }
+                }
+              }
+            } else if (geomType === 'Polygon' && Array.isArray(coords)) {
+              for (const ring of coords) {
+                if (Array.isArray(ring)) {
+                  for (const c of ring) {
+                    if (Array.isArray(c) && c.length >= 2) {
+                      const lng = Number(c[0]);
+                      const lat = Number(c[1]);
+                      if (!isNaN(lat) && !isNaN(lng)) {
+                        const icon = L.divIcon({
+                          className: 'kmz-point',
+                          html: '<div style="width:4px;height:4px;background:#FF6600;border-radius:50%;"></div>',
+                          iconSize: [4, 4],
+                          iconAnchor: [2, 2]
+                        });
+                        const marker = L.marker([lat, lng], { icon });
+                        marker.addTo(mapRef.current);
+                        markers.push(marker);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // Skip problematic features
+          }
+        }
+        
+        kmzLayerRefs.current[layerId] = markers;
+        setActiveKmzLayers(prev => ({ ...prev, [layerId]: true }));
+        toast.success(`${markers.length} puntos cargados`);
+        
+      } catch (error) {
+        toast.error('Error al cargar la capa');
+      }
+    }
+  };
+
+  const deleteKmzLayer = async (layerId) => {
+    if (!window.confirm('¿Eliminar esta capa KMZ?')) return;
+    
+    try {
+      await axios.delete(`${API}/api/kmz/layers/${layerId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Remove from map if active
+      if (kmzLayerRefs.current[layerId] && mapRef.current) {
+        kmzLayerRefs.current[layerId].forEach(marker => {
+          if (mapRef.current.hasLayer(marker)) {
+            mapRef.current.removeLayer(marker);
+          }
+        });
+        delete kmzLayerRefs.current[layerId];
+      }
+      
+      setKmzLayers(kmzLayers.filter(l => l.id !== layerId));
+      setActiveKmzLayers(prev => {
+        const newState = { ...prev };
+        delete newState[layerId];
+        return newState;
+      });
+      
+      toast.success('Capa eliminada');
+    } catch (error) {
+      toast.error('Error al eliminar la capa');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col">
       <Navbar />
