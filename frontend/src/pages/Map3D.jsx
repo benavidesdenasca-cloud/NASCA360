@@ -60,6 +60,12 @@ const Map3D = () => {
     video_id: ''
   });
 
+  // KMZ Layer States
+  const [kmzLayers, setKmzLayers] = useState([]);
+  const [activeKmzLayers, setActiveKmzLayers] = useState({}); // {layerId: true/false}
+  const [uploadingKmz, setUploadingKmz] = useState(false);
+  const kmzLayerRefs = useRef({}); // Store refs to Leaflet layers for each KMZ
+
   // Refs to track current state for map click handler
   const adminPanelOpenRef = useRef(adminPanelOpen);
   const setPoiFormRef = useRef(setPoiForm);
