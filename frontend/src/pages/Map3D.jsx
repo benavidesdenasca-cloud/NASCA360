@@ -1095,8 +1095,8 @@ const Map3D = () => {
                   <div className="text-xs text-gray-500">Figuras</div>
                 </div>
                 <div className="bg-white rounded-lg p-2">
-                  <div className="text-xl font-bold text-amber-600">{videos.length}</div>
-                  <div className="text-xs text-gray-500">Videos 360°</div>
+                  <div className="text-xl font-bold text-amber-600">{pois.filter(p => p.image_url).length}</div>
+                  <div className="text-xs text-gray-500">Con Foto 360°</div>
                 </div>
               </div>
             </div>
