@@ -86,7 +86,7 @@ const Map3D = () => {
     console.log('Map3D - isAdmin:', isAdmin);
   }, [user, isAdmin]);
 
-  // Fetch POIs and KMZ layers
+  // Fetch POIs
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -95,10 +95,6 @@ const Map3D = () => {
         // Fetch POIs
         const poisRes = await axios.get(`${API}/api/pois`, { headers });
         setPois(poisRes.data || []);
-        
-        // Fetch KMZ layers
-        const kmzRes = await axios.get(`${API}/api/kmz/layers`, { headers });
-        setKmzLayers(kmzRes.data || []);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
