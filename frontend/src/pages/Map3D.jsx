@@ -105,6 +105,7 @@ const Map3D = () => {
         
         // Fetch KMZ layers
         const kmzRes = await axios.get(`${API}/api/kmz/layers`, { headers });
+        console.log('KMZ layers response:', kmzRes.data);
         setKmzLayers(kmzRes.data || []);
       } catch (error) {
         console.error('Error fetching data:', error);
