@@ -1172,7 +1172,7 @@ const Map3D = () => {
           {selectedPoi && !adminPanelOpen && (
             <div 
               data-testid="poi-detail-panel"
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 max-w-lg w-[90%] md:w-auto"
+              className="absolute top-20 right-4 z-[9998] bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 max-w-md"
             >
               <button
                 onClick={() => setSelectedPoi(null)}
