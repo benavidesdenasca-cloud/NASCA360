@@ -6,8 +6,7 @@ Plataforma de turismo virtual premium para administrar y mostrar contenido 360°
 ## Alcance Actual
 1. **VR Inmersivo:** Soporte para imágenes 360° con Pannellum.js
 2. **Mapa 3D Interactivo:** Sección con POIs y panel admin completo
-3. **Capa de trazos del Ministerio:** Trazos oficiales como puntos (GeoJSON local)
-4. **Visor de imágenes 360°:** Integrado con proxy backend para CORS
+3. **Visor de imágenes 360°:** Integrado con proxy backend para CORS
 
 ## Arquitectura
 ```
@@ -15,15 +14,12 @@ Plataforma de turismo virtual premium para administrar y mostrar contenido 360°
 ├── backend/
 │   └── server.py          # FastAPI + MongoDB + Image Proxy
 └── frontend/
-    ├── public/
-    │   └── nazca_lines_filtered.json # 150 trazos del Ministerio
     └── src/
         └── pages/
             └── Map3D.jsx   # Mapa interactivo con visor 360°
 ```
 
 ## Integraciones
-- Cloudflare Stream (video) - Deprecado, reemplazado por imágenes 360°
 - Stripe (pagos)
 - SendGrid (email)
 - Emergent Google Auth
@@ -37,25 +33,26 @@ Plataforma de turismo virtual premium para administrar y mostrar contenido 360°
 - Reproductor 360° con Pannellum.js
 - Página Mapa 3D con POIs
 - Panel admin para CRUD de POIs
-- Controles de mapa personalizados
+- Controles de mapa (zoom in/out, reset)
 - Sidebar con scroll independiente
-- Capa de trazos del Ministerio de Cultura
 - Backend proxy para imágenes 360° (soluciona CORS)
 - **Eliminación de funcionalidad KMZ** (15 Feb 2026)
+- **Eliminación de capa "Trazos del Ministerio"** (15 Feb 2026)
 
 ### 🔴 Eliminado (15 Feb 2026)
 - Gestión de capas KMZ - Removido por solicitud del usuario
-  - Endpoints: /api/kmz/upload, /api/kmz/layers/*
-  - Modelos: KMZFeature, KMZLayer, KMZLayerUpdate
-  - Frontend: Estados, funciones y UI de KMZ en Map3D.jsx
+- Capa de Trazos del Ministerio - Removido por solicitud del usuario
+  - Botón de capas en controles del mapa
+  - Toggle para mostrar/ocultar trazos
+  - Archivo nazca_lines_filtered.json (ya no se usa)
 
 ### 🟡 Pendiente (P1-P2)
-- Implementar apiErrorHandler.js globalmente
-- Eliminar código deprecated de AWS S3
-- Refactorizar Map3D.jsx (>1000 líneas)
+- Implementar `apiErrorHandler.js` globalmente
+- Eliminar código deprecated de AWS S3 en backend
 
 ### 🔵 Futuro (Backlog)
 - Modularizar server.py en routes/, models/, services/
+- Refactorizar Map3D.jsx en componentes más pequeños
 - Integración DRM para seguridad de medios
 
 ## Credenciales de Prueba
@@ -76,6 +73,5 @@ Plataforma de turismo virtual premium para administrar y mostrar contenido 360°
 - `GET /api/image-proxy?url={url}` - Proxy para imágenes 360° (soluciona CORS)
 
 ## Notas Técnicas
-- Bug de Leaflet 1.9.4: `L.polyline` y `L.circleMarker` fallan con error `reading 'x'`
-- **Workaround estable:** Usar `L.divIcon` markers en lugar de polilíneas
 - Las imágenes 360° deben pasar por el proxy backend para evitar CORS en Pannellum
+- Controles de mapa simplificados: solo zoom y reset
