@@ -527,7 +527,7 @@ const Map3D = () => {
         latitude: -14.7391,
         altitude: 2000,
         category: 'geoglifo',
-        video_id: ''
+        image_url: ''
       });
     } catch (error) {
       console.error('Error saving POI:', error);
@@ -548,7 +548,7 @@ const Map3D = () => {
       latitude: poi.latitude,
       altitude: poi.altitude || 2000,
       category: poi.category,
-      video_id: poi.video_id || ''
+      image_url: poi.image_url || ''
     });
     setAdminPanelOpen(true);
   };
