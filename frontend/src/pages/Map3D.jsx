@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/App';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { MapPin, Info, X, ChevronRight, Play, ZoomIn, ZoomOut, RotateCcw, Plus, Edit, Trash2, Save, Settings, Layers, Upload, Eye, EyeOff } from 'lucide-react';
+import { MapPin, Info, X, ChevronRight, ZoomIn, ZoomOut, RotateCcw, Plus, Edit, Trash2, Save, Settings, Layers, Upload, Eye, EyeOff, Image, Maximize2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -41,11 +41,14 @@ const Map3D = () => {
   const [pois, setPois] = useState([]);
   const [selectedPoi, setSelectedPoi] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [videos, setVideos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [showNazcaLines, setShowNazcaLines] = useState(false); // Toggle para capa de líneas
   const [nazcaLinesLoaded, setNazcaLinesLoaded] = useState(false);
+  
+  // 360° Image Viewer State
+  const [show360Viewer, setShow360Viewer] = useState(false);
+  const [current360Image, setCurrent360Image] = useState(null);
   
   // Admin Panel States
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
@@ -57,7 +60,7 @@ const Map3D = () => {
     latitude: -14.7391,
     altitude: 2000,
     category: 'geoglifo',
-    video_id: ''
+    image_url: ''
   });
 
   // KMZ Layer States
