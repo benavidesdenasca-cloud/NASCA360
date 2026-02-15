@@ -2889,8 +2889,12 @@ def parse_kml_to_geojson(kml_content: str) -> tuple:
     features = []
     bounds = {"north": -90, "south": 90, "east": -180, "west": 180}
     
-    # Remove namespaces for easier parsing
-    kml_content = re.sub(r'\sxmlns[^"]*"[^"]*"', '', kml_content)
+    # Remove ALL namespaces for easier parsing
+    # 1. Remove xmlns declarations
+    kml_content = re.sub(r'\sxmlns[^=]*="[^"]*"', '', kml_content)
+    # 2. Remove namespace prefixes from tags (e.g., <gx:coord> -> <coord>)
+    kml_content = re.sub(r'<(/?)(\w+):', r'<\1', kml_content)
+    # 3. Clean up the kml root tag
     kml_content = re.sub(r'<kml[^>]*>', '<kml>', kml_content)
     
     try:
