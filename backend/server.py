@@ -3126,6 +3126,46 @@ async def delete_kmz_layer(layer_id: str, current_user: User = Depends(get_curre
     
     return {"message": "Capa KMZ eliminada correctamente"}
 
+# ==================== IMAGE PROXY ENDPOINT ====================
+
+@api_router.get("/image-proxy")
+async def proxy_image(url: str):
+    """Proxy external images to avoid CORS issues with 360° viewers"""
+    import httpx
+    
+    if not url:
+        raise HTTPException(status_code=400, detail="URL requerida")
+    
+    # Validate URL
+    if not url.startswith(('http://', 'https://')):
+        raise HTTPException(status_code=400, detail="URL inválida")
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, follow_redirects=True)
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail="Error al obtener imagen")
+            
+            # Get content type
+            content_type = response.headers.get('content-type', 'image/jpeg')
+            
+            # Return the image with proper headers
+            from fastapi.responses import Response
+            return Response(
+                content=response.content,
+                media_type=content_type,
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Cache-Control": "public, max-age=86400"  # Cache for 1 day
+                }
+            )
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Timeout al obtener imagen")
+    except Exception as e:
+        logging.error(f"Image proxy error: {e}")
+        raise HTTPException(status_code=500, detail="Error al obtener imagen")
+
 # Add middlewares BEFORE including routers
 app.add_middleware(
     CORSMiddleware,
