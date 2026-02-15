@@ -816,24 +816,8 @@ const Map3D = () => {
               <Button onClick={resetView} className="bg-white hover:bg-gray-100 text-gray-800 border" size="icon" title="Restablecer">
                 <RotateCcw className="w-5 h-5" />
               </Button>
-              <div className="w-px h-8 bg-gray-300 mx-1 self-center"></div>
-              <Button 
-                onClick={() => setShowNazcaLines(!showNazcaLines)} 
-                className={`border ${showNazcaLines ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-600' : 'bg-white hover:bg-gray-100 text-gray-800'}`}
-                size="icon"
-                title="Capas - Ministerio de Cultura"
-              >
-                <Layers className="w-5 h-5" />
-              </Button>
             </div>
           </div>
-
-          {/* Nazca Lines Layer Info */}
-          {showNazcaLines && (
-            <div className="absolute left-4 top-20 z-[9999] bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg">
-              <span className="font-semibold">Capa activa:</span> Ministerio de Cultura
-            </div>
-          )}
 
           {/* Selected POI Info Panel */}
           {selectedPoi && !adminPanelOpen && (
