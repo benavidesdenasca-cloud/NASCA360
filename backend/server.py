@@ -153,6 +153,7 @@ class Video360(BaseModel):
     category: str  # nasca, palpa, museum
     cultural_tags: List[str] = []
     thumbnail_url: Optional[str] = None
+    stereo_format: str = "mono"  # mono, sbs (side-by-side), tb (top-bottom)
     is_premium: bool = True  # All content is premium by default
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
