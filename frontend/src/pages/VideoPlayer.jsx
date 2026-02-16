@@ -227,6 +227,7 @@ const VideoPlayer = () => {
                 videoUrl={streamUrl}
                 posterUrl={video.thumbnail_url?.startsWith('/api') ? `${BACKEND_URL}${video.thumbnail_url}` : (video.thumbnail_url?.startsWith('s3://') ? null : video.thumbnail_url)}
                 title={video.title}
+                stereoFormat={video.stereo_format || 'mono'}
                 onVideoEnd={() => navigate('/gallery')}
               />
             ) : (
