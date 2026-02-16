@@ -891,6 +891,22 @@ const VideoModal = ({ video, onClose, onSave }) => {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Formato de Video 360°</label>
+            <select
+              value={formData.stereo_format}
+              onChange={(e) => setFormData({...formData, stereo_format: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="mono">Monoscópico (Normal)</option>
+              <option value="sbs">Estereoscópico Side-by-Side (SBS)</option>
+              <option value="tb">Estereoscópico Top-Bottom (TB)</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Si el video se ve dividido en dos, selecciona el formato estereoscópico correspondiente.
+            </p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Duración (ej: 5:30)</label>
             <input
               type="text"
