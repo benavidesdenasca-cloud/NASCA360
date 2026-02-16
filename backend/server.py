@@ -255,6 +255,7 @@ class VideoCreate(BaseModel):
     category: str
     cultural_tags: List[str] = []
     thumbnail_url: Optional[str] = None
+    stereo_format: str = "mono"  # mono, sbs (side-by-side), tb (top-bottom)
     is_premium: bool = True
 
 # ==================== AUTHENTICATION ====================
