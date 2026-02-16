@@ -618,6 +618,7 @@ const VideoModal = ({ video, onClose, onSave }) => {
     category: video.category || 'nasca',
     duration: video.duration || '',
     cultural_tags: video.cultural_tags?.join(', ') || '',
+    stereo_format: video.stereo_format || 'mono',
     is_premium: video.is_premium ?? true
   });
   const [uploading, setUploading] = useState(false);
