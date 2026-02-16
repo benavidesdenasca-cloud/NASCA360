@@ -310,6 +310,30 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd, stereoFormat =
     const geometry = new THREE.SphereGeometry(500, 60, 40);
     geometry.scale(-1, 1, 1);
     
+    // Adjust UV mapping for stereo formats (use only left eye)
+    // This is determined by the stereoFormat prop or auto-detected
+    const effectiveStereoFormat = stereoFormat;
+    
+    if (effectiveStereoFormat === 'sbs') {
+      // Side-by-side stereo: use left half (0 to 0.5 on U axis)
+      const uvAttribute = geometry.attributes.uv;
+      for (let i = 0; i < uvAttribute.count; i++) {
+        const u = uvAttribute.getX(i);
+        uvAttribute.setX(i, u * 0.5); // Scale U to use only left half
+      }
+      uvAttribute.needsUpdate = true;
+      console.log('Applied SBS stereo UV mapping (using left eye)');
+    } else if (effectiveStereoFormat === 'tb') {
+      // Top-bottom stereo: use top half (0.5 to 1 on V axis)
+      const uvAttribute = geometry.attributes.uv;
+      for (let i = 0; i < uvAttribute.count; i++) {
+        const v = uvAttribute.getY(i);
+        uvAttribute.setY(i, v * 0.5 + 0.5); // Scale V to use only top half
+      }
+      uvAttribute.needsUpdate = true;
+      console.log('Applied TB stereo UV mapping (using top eye)');
+    }
+    
     const material = new THREE.MeshBasicMaterial({ 
       map: texture,
       side: THREE.FrontSide
