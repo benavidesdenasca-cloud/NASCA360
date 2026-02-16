@@ -11,7 +11,8 @@ const QUALITY_SETTINGS = {
   low: { label: 'Baja (720p)', pixelRatio: 1, segments: 32 },
 };
 
-const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd }) => {
+const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd, stereoFormat = 'mono' }) => {
+  // stereoFormat: 'mono' (normal 360), 'sbs' (side-by-side stereo), 'tb' (top-bottom stereo)
   const containerRef = useRef(null);
   const videoRef = useRef(null);
   const rendererRef = useRef(null);
@@ -43,6 +44,7 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd }) => {
   const [vrSupported, setVrSupported] = useState(false);
   const [isInVR, setIsInVR] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);
+  const [detectedStereo, setDetectedStereo] = useState(false);
   
   const lonRef = useRef(0);
   const latRef = useRef(0);
