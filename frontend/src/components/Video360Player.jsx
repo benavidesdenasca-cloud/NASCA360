@@ -511,9 +511,13 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd }) => {
     };
 
     video.onerror = (e) => {
-      console.error('Video error event:', e);
-      // Ignore errors that happen after successful metadata load
-      // The video is working even if some requests fail
+      // Only log errors if metadata hasn't loaded yet
+      // HLS.js can cause temporary errors during initialization that are not fatal
+      if (!hasMetadata) {
+        console.warn('Video error event (before metadata):', e);
+      }
+      // Don't set error state - let HLS.js handle recovery
+      // The video will work even if some initial requests fail
     };
 
     // Set source - check if HLS stream
@@ -524,10 +528,16 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd }) => {
     if (isHLS && Hls.isSupported()) {
       // Use HLS.js for adaptive streaming
       console.log('Using HLS.js for adaptive streaming');
+      
+      // Clear any existing src before HLS attaches
+      video.removeAttribute('src');
+      
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
-        backBufferLength: 90
+        backBufferLength: 90,
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120
       });
       
       hls.loadSource(videoUrl);
