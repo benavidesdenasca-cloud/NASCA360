@@ -568,8 +568,16 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd, stereoFormat =
         enableWorker: true,
         lowLatencyMode: false,
         backBufferLength: 90,
-        maxBufferLength: 60,
-        maxMaxBufferLength: 120
+        maxBufferLength: 120,        // Increased buffer for smoother 4K playback
+        maxMaxBufferLength: 240,     // Allow larger buffer for high quality
+        startLevel: -1,              // Auto-select best quality based on bandwidth
+        autoStartLoad: true,
+        capLevelToPlayerSize: false, // Don't limit quality based on player size (we're mapping to 360°)
+        maxLoadingDelay: 4,
+        minAutoBitrate: 0,           // Allow lowest quality as fallback
+        abrEwmaDefaultEstimate: 5000000, // Assume decent bandwidth initially (5 Mbps)
+        abrBandWidthFactor: 0.95,    // Use 95% of measured bandwidth
+        abrBandWidthUpFactor: 0.7,   // Aggressive quality upgrades
       });
       
       hls.loadSource(videoUrl);
