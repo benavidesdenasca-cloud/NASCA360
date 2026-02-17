@@ -232,6 +232,11 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd, stereoFormat =
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.xr.enabled = true; // Enable WebXR
+    
+    // Color management for accurate video colors
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NoToneMapping; // Preserve original video colors
+    
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
