@@ -303,16 +303,17 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd, stereoFormat =
       });
     }
 
-    // Video Texture
+    // Video Texture with proper color space
     const texture = new THREE.VideoTexture(video);
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
     texture.format = THREE.RGBAFormat;
     texture.generateMipmaps = false;
+    texture.colorSpace = THREE.SRGBColorSpace; // Correct color space for video
     textureRef.current = texture;
 
-    // Sphere geometry (inverted for 360 view)
-    const geometry = new THREE.SphereGeometry(500, 60, 40);
+    // Sphere geometry (inverted for 360 view) - higher resolution for better quality
+    const geometry = new THREE.SphereGeometry(500, 80, 60);
     geometry.scale(-1, 1, 1);
     
     // Adjust UV mapping for stereo formats (use only left eye)
