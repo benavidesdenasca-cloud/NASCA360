@@ -5,10 +5,10 @@ import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 
 const QUALITY_SETTINGS = {
-  auto: { label: 'Auto', pixelRatio: -1, segments: 60 },
-  high: { label: 'Alta (4K)', pixelRatio: 2, segments: 64 },
-  medium: { label: 'Media (1080p)', pixelRatio: 1.5, segments: 48 },
-  low: { label: 'Baja (720p)', pixelRatio: 1, segments: 32 },
+  auto: { label: 'Auto', pixelRatio: -1, segments: 80, height: null },
+  high: { label: 'Alta (4K)', pixelRatio: 2, segments: 100, height: 2160 },
+  medium: { label: 'Media (1080p)', pixelRatio: 1.5, segments: 64, height: 1080 },
+  low: { label: 'Baja (720p)', pixelRatio: 1, segments: 48, height: 720 },
 };
 
 const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd, stereoFormat = 'mono' }) => {
