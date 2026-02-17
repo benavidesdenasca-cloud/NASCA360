@@ -709,6 +709,32 @@ const Video360Player = ({ videoUrl, posterUrl, title, onVideoEnd, stereoFormat =
       rendererRef.current.setPixelRatio(pixelRatio);
     }
     
+    // Force HLS to use specific quality level
+    if (hlsRef.current && hlsLevels.length > 0) {
+      if (newQuality === 'auto') {
+        // Auto mode - let HLS.js decide
+        hlsRef.current.currentLevel = -1;
+        hlsRef.current.nextLevel = -1;
+        console.log('HLS: Auto quality mode enabled');
+      } else {
+        // Find the best matching level for the requested quality
+        const targetHeight = settings.height || 2160; // Default to 4K
+        let bestLevel = hlsLevels.length - 1; // Start with highest
+        
+        for (let i = hlsLevels.length - 1; i >= 0; i--) {
+          if (hlsLevels[i].height <= targetHeight) {
+            bestLevel = hlsLevels[i].index;
+            break;
+          }
+        }
+        
+        // Force this level
+        hlsRef.current.currentLevel = bestLevel;
+        hlsRef.current.nextLevel = bestLevel;
+        console.log(`HLS: Forced level ${bestLevel} (${hlsLevels[bestLevel]?.height}p)`);
+      }
+    }
+    
     // Update sphere geometry for quality
     if (sphereRef.current && sceneRef.current) {
       const oldSphere = sphereRef.current;
