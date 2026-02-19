@@ -1354,58 +1354,76 @@ async def create_reservation_checkout(
     else:
         logging.error(f"PayPal reservation payment creation failed: {payment.error}")
         raise HTTPException(status_code=500, detail=f"Error al crear pago: {payment.error}")
-        currency="usd",
-        metadata={
-            "type": "reservation",
-            "reservation_date": reservation.reservation_date,
-            "time_slot": reservation.time_slot,
-            "cabin_number": reservation.cabin_number
-        },
-        payment_status="initiated"
-    )
-    
-    transaction_dict = transaction.model_dump()
-    transaction_dict['created_at'] = transaction_dict['created_at'].isoformat()
-    await db.payment_transactions.insert_one(transaction_dict)
-    
-    return {"url": session.url, "session_id": session.session_id}
 
-@api_router.get("/reservations/status/{session_id}")
-async def get_reservation_status(
-    session_id: str,
-    current_user: User = Depends(get_current_user),
-    req: Request = None
+@api_router.get("/reservations/execute-payment")
+async def execute_reservation_payment(
+    paymentId: str,
+    PayerID: str,
+    current_user: User = Depends(get_current_user)
 ):
-    """Check reservation payment status"""
-    transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+    """Execute PayPal payment for reservation after user approval"""
+    # Find pending reservation
+    reservation = await db.reservations.find_one({
+        "paypal_payment_id": paymentId,
+        "user_id": current_user.user_id,
+        "status": "pending"
+    })
     
-    if not transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservación pendiente no encontrada")
     
-    if transaction['payment_status'] == "paid":
-        return {"status": "paid", "message": "Reserva confirmada"}
+    # Execute the payment
+    payment = Payment.find(paymentId)
     
-    webhook_url = f"{str(req.base_url).rstrip('/')}/api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-    
-    checkout_status = await stripe_checkout.get_checkout_status(session_id)
-    
-    if checkout_status.payment_status == "paid" and transaction['payment_status'] != "paid":
-        await db.payment_transactions.update_one(
-            {"session_id": session_id},
-            {"$set": {"payment_status": "paid"}}
-        )
+    if payment.execute({"payer_id": PayerID}):
+        # Payment successful - confirm reservation
+        now = datetime.now(timezone.utc)
         
         await db.reservations.update_one(
-            {"stripe_session_id": session_id},
-            {"$set": {"status": "confirmed"}}
+            {"paypal_payment_id": paymentId},
+            {"$set": {
+                "status": "confirmed",
+                "paypal_payer_id": PayerID,
+                "payment_date": now.isoformat()
+            }}
         )
         
-        return {"status": "paid", "message": "Reserva confirmada exitosamente"}
+        # Get updated reservation
+        updated_reservation = await db.reservations.find_one(
+            {"paypal_payment_id": paymentId},
+            {"_id": 0}
+        )
+        
+        return {
+            "success": True,
+            "message": "¡Reserva confirmada exitosamente!",
+            "reservation": updated_reservation
+        }
+    else:
+        logging.error(f"PayPal reservation execution failed: {payment.error}")
+        await db.reservations.update_one(
+            {"paypal_payment_id": paymentId},
+            {"$set": {"status": "payment_failed", "error": str(payment.error)}}
+        )
+        raise HTTPException(status_code=400, detail=f"Error al procesar pago: {payment.error}")
+
+@api_router.get("/reservations/status/{payment_id}")
+async def get_reservation_status(
+    payment_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Check reservation payment status"""
+    reservation = await db.reservations.find_one(
+        {"paypal_payment_id": payment_id, "user_id": current_user.user_id},
+        {"_id": 0}
+    )
+    
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservación no encontrada")
     
     return {
-        "status": checkout_status.payment_status,
-        "message": "Payment pending"
+        "status": reservation.get('status', 'pending'),
+        "reservation": reservation
     }
 
 @api_router.get("/reservations/me")
