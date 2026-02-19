@@ -640,7 +640,7 @@ const Map3D = () => {
             <div className="flex-shrink-0 p-4 bg-gradient-to-r from-amber-600 to-amber-700 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold">Nazca & Palpa</h2>
+                  <h2 className="text-xl font-bold">Líneas de Nazca</h2>
                   <p className="text-amber-100 text-sm">
                     {isAdmin ? '🔧 Modo Administrador' : 'Patrimonio de la Humanidad'}
                   </p>
