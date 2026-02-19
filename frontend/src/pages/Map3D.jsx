@@ -87,6 +87,38 @@ const Map3D = () => {
     console.log('Map3D - isAdmin:', isAdmin);
   }, [user, isAdmin]);
 
+  // Check subscription status
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!token) {
+        setCheckingSubscription(false);
+        setHasActiveSubscription(false);
+        return;
+      }
+      
+      // Admin always has access
+      if (isAdmin) {
+        setCheckingSubscription(false);
+        setHasActiveSubscription(true);
+        return;
+      }
+      
+      try {
+        const response = await axios.get(`${API}/api/subscription/status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setHasActiveSubscription(response.data.has_active_subscription);
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        setHasActiveSubscription(false);
+      } finally {
+        setCheckingSubscription(false);
+      }
+    };
+    
+    checkSubscription();
+  }, [token, isAdmin]);
+
   // Fetch POIs
   useEffect(() => {
     const fetchData = async () => {
