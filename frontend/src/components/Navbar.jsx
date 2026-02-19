@@ -185,6 +185,13 @@ const Navbar = () => {
             >
               Reservas
             </Link>
+            <Link
+              to="/contact"
+              className="block px-4 py-2 text-gray-700 hover:bg-amber-50 rounded"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Contacto
+            </Link>
             {user ? (
               <>
                 <Link
