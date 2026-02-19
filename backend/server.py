@@ -2987,7 +2987,7 @@ async def send_contact_message(form: ContactForm):
         
     except Exception as e:
         logging.error(f"Error sending contact email: {e}")
-        # Save failed message to database anyway
+        # Save message to database anyway - don't fail the user request
         try:
             contact_record = {
                 "name": form.name,
@@ -2995,13 +2995,16 @@ async def send_contact_message(form: ContactForm):
                 "phone": form.phone,
                 "message": form.message,
                 "created_at": datetime.now(timezone.utc).isoformat(),
-                "status": "failed",
+                "status": "pending_email",  # Will be sent manually or via retry
                 "error": str(e)
             }
             await db.contact_messages.insert_one(contact_record)
-        except:
-            pass
-        raise HTTPException(status_code=500, detail="Error al enviar el mensaje. Por favor intenta de nuevo.")
+            logging.info(f"Contact message saved to database for {form.email}")
+            # Return success to user - we have their message even if email failed
+            return {"success": True, "message": "Mensaje recibido correctamente. Te contactaremos pronto."}
+        except Exception as db_error:
+            logging.error(f"Failed to save contact to database: {db_error}")
+            raise HTTPException(status_code=500, detail="Error al enviar el mensaje. Por favor intenta de nuevo.")
 
 # ==================== IMAGE PROXY ENDPOINT ====================
 
