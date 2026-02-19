@@ -104,66 +104,6 @@ const Map3D = () => {
     }
   }, [token]);
 
-  // Load Palpa Lines GeoJSON
-  useEffect(() => {
-    const loadPalpaLines = async () => {
-      try {
-        const response = await fetch('/palpa_lines.json');
-        const data = await response.json();
-        setPalpaLinesData(data);
-      } catch (error) {
-        console.error('Error loading Palpa Lines:', error);
-      }
-    };
-    loadPalpaLines();
-  }, []);
-
-  // Render Palpa Lines layer when data is loaded and map is ready
-  useEffect(() => {
-    if (!mapRef.current || !mapLoaded || !palpaLinesData) return;
-    
-    const L = window.L;
-    if (!L) return;
-
-    // Remove existing layer if any
-    if (palpaLayerRef.current) {
-      mapRef.current.removeLayer(palpaLayerRef.current);
-      palpaLayerRef.current = null;
-    }
-
-    // Add new layer if enabled
-    if (showPalpaLines) {
-      const palpaStyle = (feature) => ({
-        color: '#FFD700',
-        weight: 2,
-        opacity: 0.8,
-        fillColor: '#FFD700',
-        fillOpacity: 0.3
-      });
-
-      palpaLayerRef.current = L.geoJSON(palpaLinesData, {
-        style: palpaStyle,
-        onEachFeature: (feature, layer) => {
-          if (feature.properties && feature.properties.name) {
-            layer.bindPopup(`
-              <div style="padding: 8px; min-width: 200px;">
-                <h3 style="margin: 0 0 8px 0; color: #FFD700; font-weight: bold;">
-                  ${feature.properties.name}
-                </h3>
-                <p style="margin: 0; font-size: 13px; color: #333;">
-                  ${feature.properties.description || ''}
-                </p>
-                <span style="display: inline-block; margin-top: 8px; padding: 2px 8px; background: #FFD700; color: #000; border-radius: 12px; font-size: 11px;">
-                  Palpa
-                </span>
-              </div>
-            `);
-          }
-        }
-      }).addTo(mapRef.current);
-    }
-  }, [palpaLinesData, showPalpaLines, mapLoaded]);
-
   // Initialize Leaflet map
   useEffect(() => {
     // Prevent re-initialization
