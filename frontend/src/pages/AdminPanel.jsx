@@ -109,12 +109,13 @@ const AdminPanel = () => {
       
       const headers = { 'Authorization': `Bearer ${token}` };
 
-      const [metricsRes, usersRes, videosRes, subsRes, resRes] = await Promise.all([
+      const [metricsRes, usersRes, videosRes, subsRes, resRes, subStatsRes] = await Promise.all([
         axios.get(`${API}/admin/metrics`, { headers }),
         axios.get(`${API}/admin/users`, { headers }),
         axios.get(`${API}/videos`, { headers }),
         axios.get(`${API}/admin/subscriptions`, { headers }),
-        axios.get(`${API}/admin/reservations`, { headers })
+        axios.get(`${API}/admin/reservations`, { headers }),
+        axios.get(`${API}/admin/subscriptions/stats`, { headers }).catch(() => ({ data: null }))
       ]);
 
       setMetrics(metricsRes.data || {
@@ -128,6 +129,9 @@ const AdminPanel = () => {
       setVideos(videosRes.data || []);
       setSubscriptions(subsRes.data || []);
       setReservations(resRes.data || []);
+      if (subStatsRes.data) {
+        setSubscriptionStats(subStatsRes.data);
+      }
       setLoading(false);
     } catch (error) {
       console.error('Error fetching admin data:', error);
@@ -138,6 +142,55 @@ const AdminPanel = () => {
       if (error.response?.status === 401 || error.response?.status === 403) {
         navigate('/auth/login');
       }
+    }
+  };
+
+  // Fetch subscriptions with filter
+  const fetchFilteredSubscriptions = async (filter) => {
+    try {
+      const headers = { 'Authorization': `Bearer ${token}` };
+      const response = await axios.get(`${API}/admin/subscriptions?status=${filter}`, { headers });
+      setSubscriptions(response.data || []);
+    } catch (error) {
+      toast.error('Error al filtrar suscripciones');
+    }
+  };
+
+  // Fetch payment history for a user
+  const fetchPaymentHistory = async (userId) => {
+    try {
+      const headers = { 'Authorization': `Bearer ${token}` };
+      const response = await axios.get(`${API}/admin/users/${userId}/payment-history`, { headers });
+      setPaymentHistory(response.data);
+      setPaymentHistoryModal(userId);
+    } catch (error) {
+      toast.error('Error al cargar historial de pagos');
+    }
+  };
+
+  // Cancel subscription
+  const handleCancelSubscription = async (subscriptionId) => {
+    if (!window.confirm('¿Estás seguro de cancelar esta suscripción?')) return;
+    
+    try {
+      const headers = { 'Authorization': `Bearer ${token}` };
+      await axios.put(`${API}/admin/subscriptions/${subscriptionId}/cancel`, {}, { headers });
+      toast.success('Suscripción cancelada');
+      fetchAdminData();
+    } catch (error) {
+      toast.error('Error al cancelar suscripción');
+    }
+  };
+
+  // Extend subscription
+  const handleExtendSubscription = async (subscriptionId, days = 30) => {
+    try {
+      const headers = { 'Authorization': `Bearer ${token}` };
+      const response = await axios.put(`${API}/admin/subscriptions/${subscriptionId}/extend?days=${days}`, {}, { headers });
+      toast.success(response.data.message);
+      fetchAdminData();
+    } catch (error) {
+      toast.error('Error al extender suscripción');
     }
   };
 
