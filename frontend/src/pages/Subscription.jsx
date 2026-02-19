@@ -157,7 +157,19 @@ const Subscription = () => {
       return response.data.payment_id;
     } catch (error) {
       console.error('Error creating order:', error);
-      toast.error(error.response?.data?.detail || 'Error al crear el pago');
+      // Handle Pydantic validation errors (array of objects) vs string errors
+      let errorMessage = 'Error al crear el pago';
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else if (Array.isArray(detail)) {
+          errorMessage = detail.map(e => e.msg || e.message || JSON.stringify(e)).join(', ');
+        } else if (typeof detail === 'object') {
+          errorMessage = detail.msg || detail.message || JSON.stringify(detail);
+        }
+      }
+      toast.error(errorMessage);
       setLoading(false);
       throw error;
     }
