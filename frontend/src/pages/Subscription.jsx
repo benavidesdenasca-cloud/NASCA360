@@ -68,6 +68,7 @@ const Subscription = () => {
   const [step, setStep] = useState(user ? 'plan' : 'register'); // 'register' or 'plan'
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [hasExistingSubscription, setHasExistingSubscription] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -82,6 +83,26 @@ const Subscription = () => {
       toast.error('Pago cancelado. Puedes intentar de nuevo cuando quieras.');
     }
   }, [searchParams]);
+
+  // Check if user has existing subscription (for renewal vs new subscription)
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (user && token) {
+        try {
+          const response = await axios.get(`${API}/subscription/status`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          // User has subscription if they had one before (even if expired)
+          // Check if subscription data exists
+          setHasExistingSubscription(response.data.subscription !== null);
+        } catch (error) {
+          console.error('Error checking subscription:', error);
+          setHasExistingSubscription(false);
+        }
+      }
+    };
+    checkSubscription();
+  }, [user, token]);
 
   // If user is logged in, show renewal options
   useEffect(() => {
