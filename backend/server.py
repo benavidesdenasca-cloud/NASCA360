@@ -783,31 +783,385 @@ async def get_video(video_id: str, current_user: User = Depends(get_current_user
 
 # Subscription packages - NO FREE PLAN
 SUBSCRIPTION_PACKAGES = {
-    "daily": {
+    "1_month": {
         "amount": 20.00,
-        "currency": "usd",
-        "name": "Plan Diario",
-        "duration_days": 1
+        "currency": "USD",
+        "name": "Plan 1 Mes",
+        "duration_days": 30,
+        "description": "Acceso completo por 1 mes"
     },
-    "weekly": {
+    "3_months": {
+        "amount": 55.00,
+        "currency": "USD",
+        "name": "Plan 3 Meses",
+        "duration_days": 90,
+        "description": "Acceso completo por 3 meses - Ahorra $5",
+        "original_price": 60.00
+    },
+    "6_months": {
         "amount": 100.00,
-        "currency": "usd",
-        "name": "Plan Semanal",
-        "duration_days": 7
+        "currency": "USD",
+        "name": "Plan 6 Meses",
+        "duration_days": 180,
+        "description": "Acceso completo por 6 meses - Ahorra $20",
+        "original_price": 120.00
     },
-    "monthly": {
+    "12_months": {
         "amount": 200.00,
-        "currency": "usd",
-        "name": "Plan Mensual",
-        "duration_days": 30
-    },
-    "annual": {
-        "amount": 500.00,
-        "currency": "usd",
-        "name": "Plan Anual",
-        "duration_days": 365
+        "currency": "USD",
+        "name": "Plan 12 Meses",
+        "duration_days": 365,
+        "description": "Acceso completo por 12 meses - Ahorra $40",
+        "original_price": 240.00
     }
 }
+
+# ==================== PAYPAL CONFIGURATION ====================
+import paypalrestsdk
+from paypalrestsdk import Payment, Sale
+
+PAYPAL_CLIENT_ID = os.environ.get('PAYPAL_CLIENT_ID')
+PAYPAL_CLIENT_SECRET = os.environ.get('PAYPAL_CLIENT_SECRET')
+PAYPAL_MODE = os.environ.get('PAYPAL_MODE', 'live')  # 'sandbox' or 'live'
+
+paypalrestsdk.configure({
+    "mode": PAYPAL_MODE,
+    "client_id": PAYPAL_CLIENT_ID,
+    "client_secret": PAYPAL_CLIENT_SECRET
+})
+
+# ==================== PAYPAL SUBSCRIPTION ENDPOINTS ====================
+
+class PayPalSubscriptionRequest(BaseModel):
+    plan_type: str  # 1_month, 3_months, 6_months, 12_months
+    email: str
+    name: str
+    password: str
+    origin_url: str
+
+@api_router.get("/subscription/packages")
+async def get_subscription_packages():
+    """Get available subscription packages"""
+    return SUBSCRIPTION_PACKAGES
+
+@api_router.post("/paypal/create-order")
+async def create_paypal_order(request: PayPalSubscriptionRequest):
+    """Create PayPal order for subscription with user registration data"""
+    if request.plan_type not in SUBSCRIPTION_PACKAGES:
+        raise HTTPException(status_code=400, detail="Tipo de plan inválido")
+    
+    package = SUBSCRIPTION_PACKAGES[request.plan_type]
+    
+    # Validate email is not already registered
+    existing_user = await db.users.find_one({"email": request.email.lower()})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Este email ya está registrado. Por favor inicia sesión.")
+    
+    # Create PayPal payment
+    payment = Payment({
+        "intent": "sale",
+        "payer": {
+            "payment_method": "paypal"
+        },
+        "redirect_urls": {
+            "return_url": f"{request.origin_url}/subscription/success?plan={request.plan_type}",
+            "cancel_url": f"{request.origin_url}/subscription?cancelled=true"
+        },
+        "transactions": [{
+            "item_list": {
+                "items": [{
+                    "name": package['name'],
+                    "description": package['description'],
+                    "quantity": "1",
+                    "price": str(package['amount']),
+                    "currency": package['currency']
+                }]
+            },
+            "amount": {
+                "total": str(package['amount']),
+                "currency": package['currency']
+            },
+            "description": f"Suscripción Nazca360 - {package['name']}"
+        }]
+    })
+    
+    if payment.create():
+        # Store pending registration data
+        pending_registration = {
+            "payment_id": payment.id,
+            "email": request.email.lower(),
+            "name": request.name,
+            "password_hash": hash_password(request.password),
+            "plan_type": request.plan_type,
+            "amount": package['amount'],
+            "duration_days": package['duration_days'],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "status": "pending"
+        }
+        await db.pending_registrations.insert_one(pending_registration)
+        
+        # Find approval URL
+        approval_url = None
+        for link in payment.links:
+            if link.rel == "approval_url":
+                approval_url = link.href
+                break
+        
+        return {
+            "payment_id": payment.id,
+            "approval_url": approval_url,
+            "status": "created"
+        }
+    else:
+        logging.error(f"PayPal payment creation failed: {payment.error}")
+        raise HTTPException(status_code=500, detail=f"Error al crear pago: {payment.error}")
+
+@api_router.get("/paypal/execute-payment")
+async def execute_paypal_payment(paymentId: str, PayerID: str, plan: str):
+    """Execute PayPal payment after user approval and create user account"""
+    # Find pending registration
+    pending = await db.pending_registrations.find_one({
+        "payment_id": paymentId,
+        "status": "pending"
+    })
+    
+    if not pending:
+        raise HTTPException(status_code=404, detail="Registro pendiente no encontrado")
+    
+    # Execute the payment
+    payment = Payment.find(paymentId)
+    
+    if payment.execute({"payer_id": PayerID}):
+        # Payment successful - create user account
+        now = datetime.now(timezone.utc)
+        user_id = str(uuid.uuid4())
+        duration_days = pending['duration_days']
+        end_date = now + timedelta(days=duration_days)
+        
+        # Create user
+        new_user = {
+            "user_id": user_id,
+            "name": pending['name'],
+            "email": pending['email'],
+            "password_hash": pending['password_hash'],
+            "role": "user",
+            "subscription_plan": pending['plan_type'],
+            "is_verified": True,  # Auto-verify since they paid
+            "is_blocked": False,
+            "created_at": now.isoformat()
+        }
+        await db.users.insert_one(new_user)
+        
+        # Create subscription record
+        subscription = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "user_email": pending['email'],
+            "user_name": pending['name'],
+            "plan_type": pending['plan_type'],
+            "paypal_payment_id": paymentId,
+            "paypal_payer_id": PayerID,
+            "payment_status": "paid",
+            "payment_method": "paypal",
+            "amount_paid": pending['amount'],
+            "currency": "USD",
+            "payment_date": now.isoformat(),
+            "start_date": now.isoformat(),
+            "end_date": end_date.isoformat(),
+            "status": "active",
+            "auto_renew": False,
+            "created_at": now.isoformat()
+        }
+        await db.subscriptions.insert_one(subscription)
+        
+        # Update pending registration status
+        await db.pending_registrations.update_one(
+            {"payment_id": paymentId},
+            {"$set": {"status": "completed", "user_id": user_id}}
+        )
+        
+        # Generate access token for auto-login
+        access_token = create_access_token(user_id)
+        
+        return {
+            "success": True,
+            "message": "¡Pago exitoso! Tu cuenta ha sido creada.",
+            "user": {
+                "user_id": user_id,
+                "name": pending['name'],
+                "email": pending['email'],
+                "subscription_plan": pending['plan_type'],
+                "subscription_end": end_date.isoformat()
+            },
+            "access_token": access_token,
+            "token_type": "bearer"
+        }
+    else:
+        logging.error(f"PayPal payment execution failed: {payment.error}")
+        await db.pending_registrations.update_one(
+            {"payment_id": paymentId},
+            {"$set": {"status": "failed", "error": str(payment.error)}}
+        )
+        raise HTTPException(status_code=400, detail=f"Error al procesar pago: {payment.error}")
+
+@api_router.post("/paypal/renew-subscription")
+async def renew_subscription_paypal(
+    plan_type: str,
+    origin_url: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Create PayPal order for subscription renewal (existing users)"""
+    if plan_type not in SUBSCRIPTION_PACKAGES:
+        raise HTTPException(status_code=400, detail="Tipo de plan inválido")
+    
+    package = SUBSCRIPTION_PACKAGES[plan_type]
+    
+    # Create PayPal payment
+    payment = Payment({
+        "intent": "sale",
+        "payer": {
+            "payment_method": "paypal"
+        },
+        "redirect_urls": {
+            "return_url": f"{origin_url}/subscription/success?plan={plan_type}&renew=true",
+            "cancel_url": f"{origin_url}/subscription?cancelled=true"
+        },
+        "transactions": [{
+            "item_list": {
+                "items": [{
+                    "name": package['name'],
+                    "description": f"Renovación - {package['description']}",
+                    "quantity": "1",
+                    "price": str(package['amount']),
+                    "currency": package['currency']
+                }]
+            },
+            "amount": {
+                "total": str(package['amount']),
+                "currency": package['currency']
+            },
+            "description": f"Renovación Nazca360 - {package['name']}"
+        }]
+    })
+    
+    if payment.create():
+        # Store pending renewal
+        pending_renewal = {
+            "payment_id": payment.id,
+            "user_id": current_user.user_id,
+            "email": current_user.email,
+            "plan_type": plan_type,
+            "amount": package['amount'],
+            "duration_days": package['duration_days'],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "status": "pending",
+            "type": "renewal"
+        }
+        await db.pending_renewals.insert_one(pending_renewal)
+        
+        approval_url = None
+        for link in payment.links:
+            if link.rel == "approval_url":
+                approval_url = link.href
+                break
+        
+        return {
+            "payment_id": payment.id,
+            "approval_url": approval_url,
+            "status": "created"
+        }
+    else:
+        raise HTTPException(status_code=500, detail=f"Error al crear pago: {payment.error}")
+
+@api_router.get("/paypal/execute-renewal")
+async def execute_renewal_payment(
+    paymentId: str, 
+    PayerID: str, 
+    plan: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Execute PayPal payment for subscription renewal"""
+    pending = await db.pending_renewals.find_one({
+        "payment_id": paymentId,
+        "user_id": current_user.user_id,
+        "status": "pending"
+    })
+    
+    if not pending:
+        raise HTTPException(status_code=404, detail="Renovación pendiente no encontrada")
+    
+    payment = Payment.find(paymentId)
+    
+    if payment.execute({"payer_id": PayerID}):
+        now = datetime.now(timezone.utc)
+        duration_days = pending['duration_days']
+        
+        # Get current subscription end date
+        current_sub = await db.subscriptions.find_one(
+            {"user_id": current_user.user_id, "status": "active"},
+            sort=[("end_date", -1)]
+        )
+        
+        # Calculate new end date (extend from current end or from now)
+        if current_sub and current_sub.get('end_date'):
+            current_end = datetime.fromisoformat(current_sub['end_date'].replace('Z', '+00:00'))
+            if current_end.tzinfo is None:
+                current_end = current_end.replace(tzinfo=timezone.utc)
+            
+            if current_end > now:
+                new_end = current_end + timedelta(days=duration_days)
+            else:
+                new_end = now + timedelta(days=duration_days)
+        else:
+            new_end = now + timedelta(days=duration_days)
+        
+        # Create new subscription record
+        subscription = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user.user_id,
+            "user_email": current_user.email,
+            "user_name": current_user.name,
+            "plan_type": pending['plan_type'],
+            "paypal_payment_id": paymentId,
+            "paypal_payer_id": PayerID,
+            "payment_status": "paid",
+            "payment_method": "paypal",
+            "amount_paid": pending['amount'],
+            "currency": "USD",
+            "payment_date": now.isoformat(),
+            "start_date": now.isoformat(),
+            "end_date": new_end.isoformat(),
+            "status": "active",
+            "auto_renew": False,
+            "created_at": now.isoformat()
+        }
+        await db.subscriptions.insert_one(subscription)
+        
+        # Update user subscription plan
+        await db.users.update_one(
+            {"user_id": current_user.user_id},
+            {"$set": {"subscription_plan": pending['plan_type']}}
+        )
+        
+        # Update pending renewal status
+        await db.pending_renewals.update_one(
+            {"payment_id": paymentId},
+            {"$set": {"status": "completed"}}
+        )
+        
+        return {
+            "success": True,
+            "message": "¡Renovación exitosa!",
+            "subscription_end": new_end.isoformat()
+        }
+    else:
+        await db.pending_renewals.update_one(
+            {"payment_id": paymentId},
+            {"$set": {"status": "failed", "error": str(payment.error)}}
+        )
+        raise HTTPException(status_code=400, detail=f"Error al procesar pago: {payment.error}")
+
+# Keep legacy endpoints for compatibility but mark as deprecated
 
 @api_router.post("/subscriptions/checkout")
 async def create_subscription_checkout(
