@@ -1160,124 +1160,24 @@ async def execute_renewal_payment(
 # Keep legacy endpoints for compatibility but mark as deprecated
 
 @api_router.post("/subscriptions/checkout")
-async def create_subscription_checkout(
+async def create_subscription_checkout_deprecated(
     request: SubscriptionCheckoutRequest,
     current_user: User = Depends(get_current_user),
     req: Request = None
 ):
-    """Create Stripe checkout session for subscription"""
-    if request.plan_type not in SUBSCRIPTION_PACKAGES:
-        raise HTTPException(status_code=400, detail="Invalid plan type")
-    
-    package = SUBSCRIPTION_PACKAGES[request.plan_type]
-    
-    host_url = request.origin_url
-    webhook_url = f"{str(req.base_url).rstrip('/')}/api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-    
-    success_url = f"{host_url}/subscription/success?session_id={{{{CHECKOUT_SESSION_ID}}}}"
-    cancel_url = f"{host_url}/subscription"
-    
-    checkout_request = CheckoutSessionRequest(
-        amount=package['amount'],
-        currency=package['currency'],
-        success_url=success_url,
-        cancel_url=cancel_url,
-        metadata={
-            "user_id": current_user.user_id,
-            "plan_type": request.plan_type,
-            "user_email": current_user.email
-        }
+    """DEPRECATED - Use PayPal endpoints instead"""
+    raise HTTPException(
+        status_code=410, 
+        detail="Este endpoint está deprecado. Por favor usa /api/paypal/renew-subscription para renovar tu suscripción."
     )
-    
-    session = await stripe_checkout.create_checkout_session(checkout_request)
-    
-    transaction = PaymentTransaction(
-        user_id=current_user.user_id,
-        session_id=session.session_id,
-        amount=package['amount'],
-        currency=package['currency'],
-        metadata={
-            "plan_type": request.plan_type,
-            "user_email": current_user.email
-        },
-        payment_status="initiated"
-    )
-    
-    transaction_dict = transaction.model_dump()
-    transaction_dict['created_at'] = transaction_dict['created_at'].isoformat()
-    await db.payment_transactions.insert_one(transaction_dict)
-    
-    subscription = Subscription(
-        user_id=current_user.user_id,
-        plan_type=request.plan_type,
-        stripe_session_id=session.session_id,
-        payment_status="initiated"
-    )
-    
-    subscription_dict = subscription.model_dump()
-    subscription_dict['created_at'] = subscription_dict['created_at'].isoformat()
-    if subscription_dict.get('start_date'):
-        subscription_dict['start_date'] = subscription_dict['start_date'].isoformat()
-    if subscription_dict.get('end_date'):
-        subscription_dict['end_date'] = subscription_dict['end_date'].isoformat()
-    
-    await db.subscriptions.insert_one(subscription_dict)
-    
-    return {"url": session.url, "session_id": session.session_id}
 
 @api_router.get("/subscriptions/status/{session_id}")
-async def get_subscription_status(
-    session_id: str,
-    current_user: User = Depends(get_current_user),
-    req: Request = None
-):
-    """Check subscription payment status"""
-    transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
-    
-    if not transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-    
-    if transaction['payment_status'] == "paid":
-        return {"status": "paid", "message": "Subscription activated"}
-    
-    webhook_url = f"{str(req.base_url).rstrip('/')}/api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-    
-    checkout_status = await stripe_checkout.get_checkout_status(session_id)
-    
-    if checkout_status.payment_status == "paid" and transaction['payment_status'] != "paid":
-        await db.payment_transactions.update_one(
-            {"session_id": session_id},
-            {"$set": {"payment_status": "paid"}}
-        )
-        
-        plan_type = transaction['metadata'].get('plan_type', 'monthly')
-        plan_config = SUBSCRIPTION_PACKAGES.get(plan_type, SUBSCRIPTION_PACKAGES['monthly'])
-        
-        start_date = datetime.now(timezone.utc)
-        end_date = start_date + timedelta(days=plan_config['duration_days'])
-        
-        await db.subscriptions.update_one(
-            {"stripe_session_id": session_id},
-            {"$set": {
-                "payment_status": "paid",
-                "start_date": start_date.isoformat(),
-                "end_date": end_date.isoformat()
-            }}
-        )
-        
-        await db.users.update_one(
-            {"user_id": current_user.user_id},
-            {"$set": {"subscription_plan": plan_type}}
-        )
-        
-        return {"status": "paid", "message": "Subscription activated successfully"}
-    
-    return {
-        "status": checkout_status.payment_status,
-        "message": "Payment pending"
-    }
+async def get_subscription_status_deprecated(session_id: str, current_user: User = Depends(get_current_user)):
+    """DEPRECATED - Use PayPal endpoints instead"""
+    raise HTTPException(
+        status_code=410,
+        detail="Este endpoint está deprecado. Las suscripciones ahora se procesan con PayPal."
+    )
 
 @api_router.get("/subscriptions/me")
 async def get_my_subscription(current_user: User = Depends(get_current_user)):
@@ -1294,80 +1194,9 @@ async def get_my_subscription(current_user: User = Depends(get_current_user)):
     return subscription
 
 @api_router.post("/webhook/stripe")
-async def stripe_webhook(request: Request):
-    """Handle Stripe webhooks"""
-    body = await request.body()
-    signature = request.headers.get("Stripe-Signature")
-    
-    webhook_url = f"{str(request.base_url).rstrip('/')}/api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-    
-    try:
-        webhook_response = await stripe_checkout.handle_webhook(body, signature)
-        
-        if webhook_response.event_type == "checkout.session.completed":
-            session_id = webhook_response.session_id
-            payment_date = datetime.now(timezone.utc)
-            
-            await db.payment_transactions.update_one(
-                {"session_id": session_id},
-                {"$set": {
-                    "payment_status": "paid",
-                    "payment_date": payment_date.isoformat()
-                }}
-            )
-            
-            transaction = await db.payment_transactions.find_one({"session_id": session_id})
-            if transaction:
-                transaction_type = transaction['metadata'].get('type', 'subscription')
-                
-                if transaction_type == 'reservation':
-                    # Handle reservation payment
-                    await db.reservations.update_one(
-                        {"stripe_session_id": session_id},
-                        {"$set": {"status": "confirmed"}}
-                    )
-                else:
-                    # Handle subscription payment
-                    plan_type = transaction['metadata'].get('plan_type', 'monthly')
-                    plan_config = SUBSCRIPTION_PACKAGES.get(plan_type, SUBSCRIPTION_PACKAGES['monthly'])
-                    
-                    start_date = datetime.now(timezone.utc)
-                    end_date = start_date + timedelta(days=plan_config['duration_days'])
-                    
-                    # Get user info for quick reference
-                    user = await db.users.find_one({"user_id": transaction['user_id']})
-                    user_email = user.get('email', '') if user else ''
-                    user_name = user.get('name', '') if user else ''
-                    
-                    # Update subscription with all payment details
-                    await db.subscriptions.update_one(
-                        {"stripe_session_id": session_id},
-                        {"$set": {
-                            "payment_status": "paid",
-                            "status": "active",
-                            "start_date": start_date.isoformat(),
-                            "end_date": end_date.isoformat(),
-                            "payment_date": payment_date.isoformat(),
-                            "amount_paid": transaction.get('amount', plan_config.get('price', 0)),
-                            "currency": "USD",
-                            "payment_method": "card",  # Default to card for Stripe
-                            "stripe_payment_intent_id": transaction.get('id', session_id),
-                            "user_email": user_email,
-                            "user_name": user_name
-                        }}
-                    )
-                    
-                    user_id = transaction['user_id']
-                    await db.users.update_one(
-                        {"user_id": user_id},
-                        {"$set": {"subscription_plan": plan_type}}
-                    )
-        
-        return {"status": "success"}
-    except Exception as e:
-        logger.error(f"Webhook error: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+async def stripe_webhook_deprecated(request: Request):
+    """DEPRECATED - Stripe webhooks no longer in use"""
+    return {"status": "deprecated", "message": "Stripe integration has been replaced with PayPal"}
 
 # ==================== RESERVATION ROUTES ====================
 
