@@ -342,19 +342,8 @@ const Map3D = () => {
 
   const resetView = () => {
     if (!mapRef.current) return;
-    mapRef.current.flyTo([NAZCA_CENTER.latitude, NAZCA_CENTER.longitude], 14, { duration: 1.5 });
+    mapRef.current.flyTo([NAZCA_CENTER.latitude, NAZCA_CENTER.longitude], 12, { duration: 1.5 });
     setSelectedPoi(null);
-  };
-
-  // Fly to Palpa Lines area
-  const flyToPalpa = () => {
-    if (!mapRef.current) return;
-    mapRef.current.flyTo([-14.52, -75.17], 14, { duration: 1.5 });
-    setSelectedPoi(null);
-    if (!showPalpaLines) {
-      setShowPalpaLines(true);
-    }
-    toast.success('Líneas de Palpa - Explora los geoglifos ancestrales');
   };
 
   const zoomIn = () => mapRef.current?.zoomIn();
