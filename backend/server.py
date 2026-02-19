@@ -1000,17 +1000,20 @@ async def execute_paypal_payment(paymentId: str, PayerID: str, plan: str):
         )
         raise HTTPException(status_code=400, detail=f"Error al procesar pago: {payment.error}")
 
+class RenewalRequest(BaseModel):
+    plan_type: str
+    origin_url: str
+
 @api_router.post("/paypal/renew-subscription")
 async def renew_subscription_paypal(
-    plan_type: str,
-    origin_url: str,
+    request: RenewalRequest,
     current_user: User = Depends(get_current_user)
 ):
     """Create PayPal order for subscription renewal (existing users)"""
-    if plan_type not in SUBSCRIPTION_PACKAGES:
+    if request.plan_type not in SUBSCRIPTION_PACKAGES:
         raise HTTPException(status_code=400, detail="Tipo de plan inválido")
     
-    package = SUBSCRIPTION_PACKAGES[plan_type]
+    package = SUBSCRIPTION_PACKAGES[request.plan_type]
     
     # Create PayPal payment
     payment = Payment({
@@ -1019,8 +1022,8 @@ async def renew_subscription_paypal(
             "payment_method": "paypal"
         },
         "redirect_urls": {
-            "return_url": f"{origin_url}/subscription/success?plan={plan_type}&renew=true",
-            "cancel_url": f"{origin_url}/subscription?cancelled=true"
+            "return_url": f"{request.origin_url}/subscription/success?plan={request.plan_type}&renew=true",
+            "cancel_url": f"{request.origin_url}/subscription?cancelled=true"
         },
         "transactions": [{
             "item_list": {
@@ -1046,7 +1049,7 @@ async def renew_subscription_paypal(
             "payment_id": payment.id,
             "user_id": current_user.user_id,
             "email": current_user.email,
-            "plan_type": plan_type,
+            "plan_type": request.plan_type,
             "amount": package['amount'],
             "duration_days": package['duration_days'],
             "created_at": datetime.now(timezone.utc).isoformat(),
