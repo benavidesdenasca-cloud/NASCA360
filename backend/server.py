@@ -1274,7 +1274,7 @@ async def create_reservation_checkout(
     current_user: User = Depends(get_current_user),
     req: Request = None
 ):
-    """Create Stripe checkout session for cabin reservation - PRICE: $10 USD"""
+    """Create PayPal checkout session for cabin reservation - PRICE: $10 USD"""
     # Validate cabin number
     if reservation.cabin_number not in [1, 2, 3]:
         raise HTTPException(status_code=400, detail="Invalid cabin number. Must be 1, 2, or 3")
@@ -1290,54 +1290,70 @@ async def create_reservation_checkout(
     if existing:
         raise HTTPException(status_code=400, detail=f"Cabina {reservation.cabin_number} ya está reservada para este horario")
     
-    # Create Stripe checkout session
-    host_url = str(req.base_url).rstrip('/')
-    webhook_url = f"{host_url}/api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    # Get origin URL from request headers
+    origin_url = req.headers.get('origin', str(req.base_url).rstrip('/'))
     
-    success_url = f"{host_url}/reservations/success?session_id={{{{CHECKOUT_SESSION_ID}}}}"
-    cancel_url = f"{host_url}/reservations"
+    # Create PayPal payment for reservation
+    payment = Payment({
+        "intent": "sale",
+        "payer": {
+            "payment_method": "paypal"
+        },
+        "redirect_urls": {
+            "return_url": f"{origin_url}/reservations/success",
+            "cancel_url": f"{origin_url}/reservations?cancelled=true"
+        },
+        "transactions": [{
+            "item_list": {
+                "items": [{
+                    "name": f"Reserva Cabina VR #{reservation.cabin_number}",
+                    "description": f"Fecha: {reservation.reservation_date} - Horario: {reservation.time_slot}",
+                    "quantity": "1",
+                    "price": "10.00",
+                    "currency": "USD"
+                }]
+            },
+            "amount": {
+                "total": "10.00",
+                "currency": "USD"
+            },
+            "description": f"Reserva Cabina VR Nazca360 - {reservation.reservation_date} {reservation.time_slot}"
+        }]
+    })
     
-    checkout_request = CheckoutSessionRequest(
-        amount=10.00,  # $10 USD for all users
-        currency="usd",
-        success_url=success_url,
-        cancel_url=cancel_url,
-        metadata={
-            "user_id": current_user.user_id,
-            "reservation_date": reservation.reservation_date,
-            "time_slot": reservation.time_slot,
-            "cabin_number": str(reservation.cabin_number),
-            "user_name": current_user.name,
-            "user_email": current_user.email,
-            "type": "reservation"
+    if payment.create():
+        # Create pending reservation
+        new_reservation = CabinReservation(
+            user_id=current_user.user_id,
+            user_name=current_user.name,
+            user_email=current_user.email,
+            reservation_date=reservation.reservation_date,
+            time_slot=reservation.time_slot,
+            cabin_number=reservation.cabin_number,
+            status="pending",
+            qr_code=f"QR-{str(uuid.uuid4())[:8].upper()}"
+        )
+        
+        reservation_dict = new_reservation.model_dump()
+        reservation_dict['created_at'] = reservation_dict['created_at'].isoformat()
+        reservation_dict['paypal_payment_id'] = payment.id
+        await db.reservations.insert_one(reservation_dict)
+        
+        # Find approval URL
+        approval_url = None
+        for link in payment.links:
+            if link.rel == "approval_url":
+                approval_url = link.href
+                break
+        
+        return {
+            "payment_id": payment.id,
+            "approval_url": approval_url,
+            "reservation_id": reservation_dict['id']
         }
-    )
-    
-    session = await stripe_checkout.create_checkout_session(checkout_request)
-    
-    # Create pending reservation
-    new_reservation = CabinReservation(
-        user_id=current_user.user_id,
-        user_name=current_user.name,
-        user_email=current_user.email,
-        reservation_date=reservation.reservation_date,
-        time_slot=reservation.time_slot,
-        cabin_number=reservation.cabin_number,
-        status="pending",
-        qr_code=f"QR-{str(uuid.uuid4())[:8].upper()}"
-    )
-    
-    reservation_dict = new_reservation.model_dump()
-    reservation_dict['created_at'] = reservation_dict['created_at'].isoformat()
-    reservation_dict['stripe_session_id'] = session.session_id
-    await db.reservations.insert_one(reservation_dict)
-    
-    # Create payment transaction
-    transaction = PaymentTransaction(
-        user_id=current_user.user_id,
-        session_id=session.session_id,
-        amount=10.00,
+    else:
+        logging.error(f"PayPal reservation payment creation failed: {payment.error}")
+        raise HTTPException(status_code=500, detail=f"Error al crear pago: {payment.error}")
         currency="usd",
         metadata={
             "type": "reservation",
