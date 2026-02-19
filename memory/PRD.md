@@ -60,6 +60,10 @@ Plataforma de turismo virtual premium para administrar y mostrar contenido 360°
   - Límites: Norte -14.48 (antes -14.62), Sur -14.82
   - Centro ajustado para cubrir Nazca y Palpa
   - Bounds: West -75.25, East -74.90
+- **Mapa 3D restringido a suscriptores** (19 Feb 2026)
+  - Nuevo endpoint: GET /api/subscription/status
+  - Usuarios sin suscripción ven pantalla de bloqueo
+  - Admin siempre tiene acceso
 
 ### 🔴 Eliminado
 - Integración Stripe (reemplazada por PayPal)
