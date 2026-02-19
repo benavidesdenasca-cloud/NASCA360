@@ -43,11 +43,6 @@ const Map3D = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
   
-  // Palpa Lines Layer State
-  const [showPalpaLines, setShowPalpaLines] = useState(true);
-  const [palpaLinesData, setPalpaLinesData] = useState(null);
-  const palpaLayerRef = useRef(null);
-  
   // 360° Image Viewer State
   const [show360Viewer, setShow360Viewer] = useState(false);
   const [current360Image, setCurrent360Image] = useState(null);
