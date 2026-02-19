@@ -40,20 +40,29 @@ const SubscriptionSuccess = () => {
       setStatus('processing');
       
       // Determine the correct endpoint
-      // - Renewal: execute-renewal
-      // - New subscription for existing user: execute-renewal (same flow)
-      // - New user registration: execute-payment
-      const endpoint = (isRenewal || isNewSubForExistingUser) && token
-        ? `${API}/paypal/execute-renewal`
-        : `${API}/paypal/execute-payment`;
+      // Priority: 
+      // 1. If user has token and it's a renewal/new_sub -> use authenticated endpoint
+      // 2. Otherwise, use the no-auth endpoint that validates via pending record
+      let endpoint;
+      let headers = {};
+      
+      if ((isRenewal || isNewSubForExistingUser) && token) {
+        // Authenticated renewal/subscription
+        endpoint = `${API}/paypal/execute-renewal`;
+        headers = { Authorization: `Bearer ${token}` };
+      } else if (isRenewal || isNewSubForExistingUser) {
+        // No token but was a renewal/new subscription - use no-auth endpoint
+        endpoint = `${API}/paypal/execute-subscription`;
+      } else {
+        // New user registration
+        endpoint = `${API}/paypal/execute-payment`;
+      }
       
       const params = new URLSearchParams({
         paymentId,
         PayerID: payerId,
         plan
       });
-      
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       
       const response = await axios.get(`${endpoint}?${params}`, { headers });
       
