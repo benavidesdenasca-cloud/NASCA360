@@ -1,170 +1,174 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to build Nazca360, a premium virtual tourism platform, with a focus on allowing an admin to upload and manage large (5-12GB) 360° videos. The platform required a paywall and secure video streaming.
+The user's initial goal was to build Nazca360, a premium virtual tourism platform. The scope has evolved significantly.
 
-During this session, the user expanded the scope with several major feature requests:
-1.  **Immersive VR:** Add support for watching 360° videos in an immersive VR mode using Meta Quest headsets.
-2.  **VR Usability:** Ensure users can exit VR mode easily (via the controller's menu button) and are not left in an empty scene when a video finishes.
-3.  **3D Map:** Create a new Mapa 3D section to display the Nazca Lines on an interactive map.
-4.  **Map Admin Panel:** The administrator () must have a panel within the map page to create, edit, and delete Points of Interest (POIs), including their coordinates and viewing altitude.
-5.  **Map Imagery:** Use high-resolution satellite imagery (e.g., Google) and remove default provider labels.
+**Latest User Requests:**
+1.  **PayPal Integration:** Replace the existing Stripe payment gateway with PayPal for all subscriptions (0/month) and VR cabin reservations. This includes handling different subscription durations (1, 3, 6, 12 months) with discounts.
+2.  **Admin Panel Enhancements:** Add a detailed financial dashboard to the admin panel for tracking subscriptions, including payment dates, amounts, methods, validity, transaction IDs, and status.
+3.  **Contact Page:** Create a new Contacto page with business information, an embedded Google Map, and a functional contact form that sends an email to .
+4.  **Video Player Fixes:**
+    *   Fix a rendering issue where stereoscopic (side-by-side) 3D videos appeared distorted.
+    *   Improve the video quality in the 360° player, which appeared pale and washed out compared to the source.
+5.  **Map Layer Additions:** Add the Líneas de Palpa (Palpa Lines), including the Pelícano de Palpa, to the 3D map.
+
+**PRODUCT REQUIREMENTS:**
+- All payments (new user subscriptions, renewals, VR cabin reservations) must be processed through PayPal.
+- The system must support multi-month subscription purchases with automated start/end date calculation and discounts.
+- The admin panel must provide a comprehensive financial overview of all subscriptions.
+- The contact form must save submissions to the database as a fallback and attempt to send an email via SendGrid.
+- The 360° video player must correctly render both monoscopic and stereoscopic videos with accurate color and quality.
+- The 3D map must display the Palpa Lines.
 
 **User's preferred language**:
 The user communicates in **Spanish**. The next agent MUST respond in Spanish only.
 
 **what currently exists?**
-The application is a full-stack platform (React, FastAPI, MongoDB) using Cloudflare Stream for video hosting.
-
-Major components are:
-*   **Authentication:** JWT-based login, including a superuser role.
-*   **Video Pipeline:** The previous blocker with large file uploads crashing the server has been resolved. The system now supports a simplified workflow where the admin can either upload a file directly through the app (which now uses  on the backend to correct 360° video metadata) or, more efficiently, upload to the Cloudflare dashboard and link the video in the app using its ID.
-*   **Video Player:** A custom  component using Three.js and HLS.js handles playback of Cloudflare videos. It now includes full WebXR support for an immersive VR experience on Meta Quest devices. It also features a floating UI panel in VR that appears when a video ends, allowing the user to replay or exit.
-*   **3D Map Page:** A new  route has been created using **Leaflet** (pivoted from CesiumJS due to complexity). It displays Nazca Lines POIs on a high-resolution Google Maps satellite layer.
-*   **Map Admin Panel:** The map page includes a complete, admin-only interface for CRUD operations on POIs. Admins can add, edit, and delete map markers directly from the frontend. The backend has corresponding protected API endpoints to manage POIs in the MongoDB database.
+The application is a full-stack platform (React, FastAPI, MongoDB) with JWT authentication.
+- **Payment Gateway:** PayPal is now fully integrated for both subscriptions and VR cabin reservations, replacing Stripe. The integration is configured to use **LIVE** credentials.
+- **Admin Panel:** The subscriptions tab has been significantly enhanced with a detailed financial table, filters (active, expired), and a modal to view a user's payment history.
+- **Contact Page:** A new  page exists with the required information, a Google Maps embed, and a contact form. The backend saves submissions to a  collection and attempts to send an email.
+- **360° Video Player ():**
+    - Now supports both monoscopic and stereoscopic (side-by-side) video formats via a  prop.
+    - Features improved rendering quality with correct color space and gamma settings () in Three.js.
+    - Includes enhanced HLS.js configuration for better quality streaming.
+- **Map Page ():** The KMZ and Trazos del Ministerio layer functionalities have been completely removed, simplifying the interface. The map currently only displays POIs.
 
 **Last working item**:
-*   **Last item agent was working:** Debugging the new Mapa 3D page. After the user reported a blank page, the agent diagnosed and fixed two critical bugs revealed by the user's console logs:
-    1.  : The Leaflet map was being initialized multiple times.
-    2.  : API calls to the new POI endpoints were missing the  prefix.
-    After fixing these, the user provided a screenshot of a new ESLint warning in the browser console (). The agent was about to fix this linting warning.
+*   **Last item agent was working:** The agent was starting to implement the user's request to add the Palpa Lines to the 3D map. It had determined that no existing GeoJSON file for this data was present and was using the web search tool to gather geographic coordinates and information about the Palpa geoglyphs to create a new data file.
 *   **Status:** IN PROGRESS
-*   **Agent Testing Done:** N
-*   **Which testing method agent to use?** Frontend testing agent. After fixing the ESLint warning, the agent should use the testing agent to perform a full E2E test of the Map Admin Panel functionality: log in as admin, create a new POI, edit it, and delete it, verifying that the map updates correctly at each step.
+*   **Agent Testing Done:** N/A
+*   **Which testing method agent to use?** Frontend testing agent. After creating the GeoJSON and implementing the layer, the testing agent should be used to verify that the new layer renders correctly on the map without affecting the existing POI functionality.
 *   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1 (P0):** ESLint warning in .
-*   **Issue 2 (P1):** Systemic frontend API error handling is incomplete.
-
-**Issues Detail:**
-*   **Issue 1: ESLint Warning  in **
-    *   **Attempted fixes:** None yet. The agent acknowledged the issue right before the session ended. This was likely introduced when fixing the double-initialization bug.
-    *   **Next debug checklist:**
-        1.  View .
-        2.  Identify the  hook that is missing a dependency (likely  or another function).
-        3.  Add the missing dependency to the dependency array. If this causes an infinite loop, wrap the function in a  hook.
-        4.  Verify that the frontend compiles without warnings and that the map page functions as expected.
-    *   **Why fix this issue and what will be achieved with the fix?** Resolves a code quality issue that could lead to stale data or unexpected re-renders on the map page.
-    *   **Status:** NOT STARTED
-    *   **Is recurring issue?** N
-    *   **Should Test frontend/backend/both after fix?** Frontend.
-    *   **Blocked on other issue:** None. This is the highest priority.
-
-*   **Issue 2: Recurring React Object Render Error**
-    *   **Attempted fixes:** (From previous fork) A utility file () was created but not integrated globally.
-    *   **Next debug checklist:**
-        1.  Use  in  to identify all components with API error handling.
-        2.  In each identified file, import the error handling utility and refactor the  blocks to use it.
-    *   **Why fix this issue and what will be achieved with the fix?** This will improve application stability and prevent UI crashes from unhandled API error formats.
-    *   **Status:** NOT STARTED
-    *   **Is recurring issue?** Y
-    *   **Should Test frontend/backend/both after fix?** Frontend.
-    *   **Blocked on other issue:** Issue 1 has higher priority.
+*   **Issue 1: Invalid SendGrid API Key (P1)**
+    *   **Description:** The contact form successfully saves messages to the database but fails to send emails due to a  error from SendGrid. The  in  is invalid or expired.
+    *   **Status:** BLOCKED (Requires valid key from user).
+*   **Issue 2: Invalid PayPal Credentials (P0 - Recurring)**
+    *   **Description:** During the PayPal integration, the agent encountered repeated  errors. This was due to the user providing invalid sandbox credentials, then sandbox credentials that were actually live, and a general confusion between sandbox/live modes. The issue is resolved for now by setting , but it's a high-risk area.
+    *   **Status:** RESOLVED (but high risk of recurrence if credentials change).
 
 **In progress Task List**:
-None.
+*   **Task 1: Add Palpa Lines to 3D Map (P0)**
+    *   **Where to resume:** The agent has completed the web search phase. The next step is to synthesize the gathered information into a  (GeoJSON) file, place it in , and then modify  to load and display this new layer, similar to how the old Trazos del Ministerio layer was handled.
+    *   **What will be achieved with this?** Fulfills the user's request to add more geoglyph data to the map.
+    *   **Status:** IN PROGRESS
+    *   **Should Test frontend/backend/both after fix?** Frontend.
 
 **Upcoming and Future Tasks**
-*   **(P2) Deprecate and Remove AWS S3 Code:** The backend still contains code and credentials for AWS S3. This should be removed to simplify the codebase.
-*   **(Future) DRM Integration:** The user has expressed interest in Digital Rights Management (e.g., Widevine) for maximum security. This is a complex, long-term feature.
+*   **Upcoming Tasks:**
+    *   **(P1) Refactor :** The component is still very large despite recent removals. It should be broken down into smaller components (e.g., , , , , ).
+    *   **(P1) Refactor :** The main backend file is a monolith. It should be modularized into , , and  directories.
+    *   **(P2) Systemic Frontend API Error Handling:** Implement the unused  utility across the application to standardize error handling and fix the recurring Objects are not valid as a React child bug when displaying API error messages.
+    *   **(P2) Deprecate and Remove AWS S3 Code:** Unused code for AWS S3 uploads still exists in  and should be removed.
+*   **Future Tasks:**
+    *   **(Future) DRM Integration:** The user has long-term interest in Digital Rights Management for media security.
+    *   **(Future) User Migration:** The user agreed to migrate to paypal, but no work has been done to handle existing users who had Stripe subscriptions. A migration path needs to be defined.
 
 **Completed work in this session**
-- **Fixed Large File Uploads:** Resolved the server memory crash by rewriting the backend proxy to stream files to Cloudflare instead of reading them into memory.
-- **Diagnosed Cloudflare Quota Issue:** Identified that the user's Cloudflare account had exceeded its storage limit and that 360° video metadata was causing incorrect duration calculations.
-- **Implemented FFmpeg Metadata Correction:** Added a backend process to automatically fix video metadata with  during upload, ensuring correct quota usage.
-- **Simplified Video Workflow:** Added an admin feature to link videos directly by pasting a Cloudflare Video ID, as requested by the user.
-- **Enabled 360° Playback for Cloudflare Videos:** Modified the  to prioritize the custom  component, enabling 360° playback.
-- **Implemented Full VR Support (WebXR):**
-  - Integrated Three.js with WebXR to allow immersive viewing on Meta Quest devices.
-  - Added a UI button to enter/exit VR mode.
-  - Fixed VR session handling to allow exiting via the controller's menu button.
-  - Created a floating UI panel in VR (using ) that appears when a video ends, offering Replay and Exit options, operable with a single controller.
-- **Built Mapa 3D Page:**
-  - Created a new page using Leaflet with high-resolution Google satellite tiles.
-  - Implemented a full admin panel for CRUD operations on map POIs.
-  - Built corresponding protected backend endpoints for managing POIs.
-- **Fixed Multiple Map Page Bugs:** Resolved critical errors related to double map initialization and missing API prefixes that were preventing the map page from rendering.
+- **PayPal Migration (DONE):** Fully replaced Stripe with PayPal for all subscription and reservation payments. The integration is configured for **LIVE** transactions.
+- **Admin Financial Dashboard (DONE):** Implemented a detailed financial view in the Admin Panel for subscriptions.
+- **Contact Page (DONE):** Created a new  page with a functional form (with a database fallback).
+- **360° Video Player Enhancements (DONE):**
+    - Added support for stereoscopic (side-by-side) 3D videos.
+    - Fixed washed-out video quality by correcting color space settings in Three.js.
+- **Code Cleanup (DONE):**
+    - Completely removed all KMZ layer functionality from the frontend and backend.
+    - Completely removed the Trazos del Ministerio layer functionality from the frontend.
 
 **Earlier issues found/mentioned but not fixed**
-*   The systemic frontend error handling () was identified in a previous session and remains unresolved.
+*   **Issue 1: Invalid SendGrid API Key**
+    *   **Debug checklist:** The error is  from SendGrid. The key in  is incorrect. The agent implemented a fallback to save messages to the database, but email sending is broken.
+    *   **Why to solve this issue and what will be achieved with this?** To make the contact form fully functional as per the user's request.
+    *   **Should Test frontend/backend/both after fix:** Backend (by testing the  endpoint).
+    *   **Is recurring issue?** N
 
 **Known issue recurrence from previous fork**
-*   **Issue:** .
-*   **Recurrence count:** High.
-*   **Status:** NOT STARTED.
+- **Issue:** .
+- **Recurrence count:** High. This issue appeared again during PayPal implementation when displaying an Axios error object in a toast notification.
+- **Status:** PARTIALLY RESOLVED. A local fix was applied in , but a global solution using  is still needed to prevent it from happening elsewhere.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Cloudflare Stream:** Video-on-demand platform for storage and HLS delivery.
-*   **Backend Streaming Proxy:** The implemented solution to upload large files without memory overload, using .
-*   **FFmpeg:** Command-line tool used on the backend to correct video metadata before upload.
-*   **WebXR:** Standard for accessing virtual and augmented reality devices, used for the Meta Quest integration.
-*   **Three.js:** 3D graphics library used for the .
-*   **three-mesh-ui:** A library for creating user interfaces within a Three.js scene, used for the VR panel.
-*   **Leaflet:** A lightweight, open-source JavaScript library for interactive maps. Used instead of CesiumJS.
+*   **PayPal REST SDK:** Used for creating and capturing payments on the backend.
+*   **@paypal/react-paypal-js:** Used for rendering PayPal buttons on the frontend.
+*   **Three.js Color Management:** Correcting visual appearance by setting  and  to .
+*   **Stereoscopic Video Rendering:** Adjusting texture UV coordinates () in a Three.js material to correctly display side-by-side 3D video.
+*   **Database Fallback:** Handling external service failures (like SendGrid) gracefully by saving user data to a database and returning a success response.
 
 **key DB schema**
-*   **videos:** 
-*   **pois:**  (NEW)
+- **subscriptions:**  (new fields added).
+- **payment_transactions:**  (schema updated to be more generic).
+- **contact_messages:**  (**NEW** collection).
+- **pois:** Unchanged.
+- **kmz_layers:** This collection is now obsolete and can be dropped from the database.
 
 **All files of reference**
-*   : **This is the critical file.** It has the pending ESLint issue and contains all logic for the map and admin panel.
-*   : Contains the new CRUD API endpoints for POIs ().
-*   : Contains the complex WebXR and VR UI implementation.
-*   : Defines the routing, including the new  route.
-*   : Contains the UI links to the new map page.
+- : Major changes for PayPal integration, Stripe code removal, new Contact endpoint, and updated Subscription models.
+- : Major overhaul of the Subscriptions tab.
+- : Major changes for stereoscopic rendering and color correction.
+- : New page for PayPal subscriptions.
+- : New contact page.
+- : Updated to use PayPal instead of Stripe.
+- : Updated with PayPal keys.  is set to .
+- : Updated with PayPal Client ID.
 
 **Areas that need refactoring**:
-*    is now over 2600 lines and should be broken down into smaller modules (e.g., , , ).
-*   All deprecated AWS S3 code should be removed from  and the frontend.
+-  remains oversized.
+-  is over 3000 lines and urgently needs to be modularized.
+- The recurring Objects are not valid as a React child error highlights the need for a global error handling strategy.
 
 **key api endpoints**
-*   : Uploads a file, corrects metadata with ffmpeg, and sends to Cloudflare.
-*   : Links a video that was already uploaded to Cloudflare.
-*   , : Fetch map points of interest.
-*   : Create a new map POI (admin only).
-*   : Update a map POI (admin only).
-*   : Delete a map POI (admin only).
+- : **NEW** endpoint for the contact form.
+- : **NEW**
+- : **NEW**
+- : **NEW**
+- : **NEW**
+- : **NEW**
+- : **NEW**
+- : **NEW**
+- : Still exists but logic has been updated to save richer data. Should be renamed or revisited.
 
 **Critical Info for New Agent**
-*   The immediate priority is to fix the ESLint warning in . This is a small fix that will stabilize the new map page.
-*   After the fix, the entire Map Admin Panel workflow needs to be tested E2E to ensure the user's latest feature request is fully functional.
-*   The pivot from CesiumJS to Leaflet was a key decision to simplify development. Do not re-introduce CesiumJS.
-*   The VR functionality in  is complex. Be cautious if making changes there.
+- **PAYPAL IS LIVE:** The PayPal integration is using **production (LIVE)** keys. All transactions will be for real money. Be extremely careful when testing payment flows. To use the sandbox, you must change  to  in  and get valid sandbox keys from the user.
+- **SENDGRID IS BROKEN:** The SendGrid API key is invalid (). The contact form currently saves messages to the DB as a fallback. Do not attempt to fix it without a new, valid key from the user.
+- **NEXT TASK:** Your immediate task is to create a GeoJSON file for the Palpa Lines and integrate it into .
 
 **documents and test reports created in this job**
-*   None new. Previous reports are outdated by the significant feature additions.
+- : Heavily updated to reflect the removal of features and the addition of the contact page, admin dashboard, and PayPal migration.
+- : Confirmed successful regression testing after KMZ functionality was removed. No newer reports were generated for subsequent features.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to add a full-featured Mapa 3D page with admin controls. **Status: IN PROGRESS**.
-2.  **User:** Requests sharper satellite imagery for the map. **Status: COMPLETED**, switched to Google Maps tiles.
-3.  **User:** Requests an admin panel on the map to manage POIs and asks to remove Google's labels. **Status: IN PROGRESS**.
-4.  **User:** Reports not seeing the admin figures on the map. **Status: ADDRESSED**, led to debugging the map page.
-5.  **User:** Reports that the sidebar and menu are completely missing on the map page. **Status: ADDRESSED**, led to further debugging.
-6.  **User:** Provides critical console logs showing Map container already initialized and 404 on /pois. **Status: ADDRESSED**, agent used this to find and fix the root causes.
-7.  **User:** Provides a screenshot of a new ESLint warning ( missing dependency) after the latest fix. **Status: PENDING**, this is the current active issue.
+10. **User:** Requests to add the Palpa Lines to the 3D map. **Status: IN PROGRESS.**
+9.  **User:** Provides the (same) LIVE PayPal keys again. **Status: RESOLVED.**
+8.  **User:** Provides what turned out to be LIVE PayPal keys. **Status: ADDRESSED.**
+7.  **User:** Provides initial set of invalid PayPal keys. **Status: ADDRESSED.**
+6.  **User:** Provides console logs showing a  error and a React crash on the subscription page. **Status: COMPLETED.**
+5.  **User:** Confirms requirements for PayPal migration (replace Stripe, new user flow, discounts). **Status: COMPLETED.**
+4.  **User:** Asks for payment gateway options in Peru, then requests to replace Stripe with PayPal. **Status: COMPLETED.**
+3.  **User:** Requests major financial enhancements to the Admin Panel. **Status: COMPLETED.**
+2.  **User:** Requests a new Contacto page with specific requirements. **Status: COMPLETED.**
+1.  **User:** Reports that videos look pale/washed out in the app. **Status: COMPLETED.**
 
 **Project Health Check:**
 *   **Broken:**
-    *    has a code quality issue (ESLint warning) that may cause incorrect behavior and needs to be fixed. The full functionality has not been verified by the user yet.
-
+    *   **Email Sending:** The SendGrid integration is non-functional due to an invalid API key.
 *   **Mocked:**
     *   None.
 
 **3rd Party Integrations**
-*   **Cloudflare Stream (Video)** — requires User API Key.
-*   **Stripe (Payments)** — requires User API Key.
-*   **SendGrid (Email)** — requires User API Key.
-*   **Emergent Google Auth (Authentication)** — uses Emergent LLM Key.
-*   **Leaflet (Maps)** — integrated via CDN/npm.
-*   **FFmpeg (Backend Tool)** — installed on the container.
+*   **PayPal:** Fully integrated for payments (Subscriptions & Reservations). **Uses LIVE credentials.**
+*   **SendGrid (Email):** Integrated but **BROKEN** (invalid API key).
+*   **Cloudflare Stream (Video):** In use for hosting 360° videos.
+*   **Leaflet (Maps):** Integrated.
+*   **Pannellum.js (360° Images):** Integrated.
+*   **Stripe (Payments):** **REMOVED**. All logic has been replaced by PayPal.
 
 **Testing status**
-*   **Testing agent used after significant changes:** NO, not since the major VR and Map features were added.
-*   **Troubleshoot agent used after agent stuck in loop:** NO.
-*   **Test files created:** None.
-*   **Known regressions:** None currently, but the map page has been unstable during development.
+- **Testing agent used after significant changes:** NO. The testing agent was last used after the KMZ removal. The major PayPal migration and other subsequent features were only tested manually by the agent with  and by checking for compilation. A full regression test is recommended.
+- **Test files created:** None.
+- **Known regressions:** None, but many untested changes have been made.
 
 **Credentials to test flow:**
 *   **Superuser:**
@@ -172,5 +176,7 @@ None.
     *   **Password:** 
 
 **What agent forgot to execute**
-*   The agent did not address the long-standing technical debt of refactoring frontend error handling with .
-*   The agent did not remove the deprecated AWS S3 code from the backend.</analysis>
+- The agent did not run the testing agent after the massive Stripe-to-PayPal migration, which touched subscriptions, reservations, and multiple frontend pages.
+- The agent has not addressed the pending refactoring tasks for  and .
+- The agent has not implemented the global .
+- The agent has not removed the deprecated AWS S3 code from .</analysis>
