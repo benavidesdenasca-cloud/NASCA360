@@ -152,21 +152,36 @@ const Subscription = () => {
     try {
       setLoading(true);
       
-      const endpoint = user 
-        ? `${API}/paypal/renew-subscription`
-        : `${API}/paypal/create-order`;
+      // Determine which endpoint to use:
+      // - User logged in WITH existing subscription -> renew
+      // - User logged in WITHOUT subscription (e.g., Google Auth new user) -> create new subscription for existing user
+      // - No user -> create order with registration
+      let endpoint;
+      let payload;
+      let headers = {};
       
-      const payload = user 
-        ? { plan_type: selectedPlan, origin_url: window.location.origin }
-        : {
-            plan_type: selectedPlan,
-            email: formData.email,
-            name: formData.name,
-            password: formData.password,
-            origin_url: window.location.origin
-          };
-      
-      const headers = user ? { Authorization: `Bearer ${token}` } : {};
+      if (user && hasExistingSubscription) {
+        // Renew existing subscription
+        endpoint = `${API}/paypal/renew-subscription`;
+        payload = { plan_type: selectedPlan, origin_url: window.location.origin };
+        headers = { Authorization: `Bearer ${token}` };
+      } else if (user && !hasExistingSubscription) {
+        // User logged in (e.g., via Google) but no subscription yet
+        // Use a new endpoint for existing users to create their first subscription
+        endpoint = `${API}/paypal/create-subscription-for-user`;
+        payload = { plan_type: selectedPlan, origin_url: window.location.origin };
+        headers = { Authorization: `Bearer ${token}` };
+      } else {
+        // New user registration + subscription
+        endpoint = `${API}/paypal/create-order`;
+        payload = {
+          plan_type: selectedPlan,
+          email: formData.email,
+          name: formData.name,
+          password: formData.password,
+          origin_url: window.location.origin
+        };
+      }
       
       const response = await axios.post(endpoint, payload, { headers });
       
