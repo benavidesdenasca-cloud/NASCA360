@@ -81,6 +81,13 @@ const Navbar = () => {
             >
               Reservas
             </Link>
+            <Link 
+              to="/contact" 
+              data-testid="nav-contact"
+              className="text-gray-700 hover:text-amber-900 font-medium"
+            >
+              Contacto
+            </Link>
 
             {user ? (
               <DropdownMenu>
