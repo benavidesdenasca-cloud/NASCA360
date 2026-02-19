@@ -1018,6 +1018,9 @@ async def renew_subscription_paypal(
     current_user: User = Depends(get_current_user)
 ):
     """Create PayPal order for subscription renewal (existing users)"""
+    # Reconfigure PayPal
+    configure_paypal()
+    
     if request.plan_type not in SUBSCRIPTION_PACKAGES:
         raise HTTPException(status_code=400, detail="Tipo de plan inválido")
     
