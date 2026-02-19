@@ -1232,10 +1232,182 @@ async def get_all_users(admin: User = Depends(require_admin)):
     return users
 
 @api_router.get("/admin/subscriptions")
-async def get_all_subscriptions(admin: User = Depends(require_admin)):
-    """Get all subscriptions (admin only)"""
-    subscriptions = await db.subscriptions.find({}, {"_id": 0}).to_list(1000)
+async def get_all_subscriptions(
+    admin: User = Depends(require_admin),
+    status: Optional[str] = None,  # active, expired, cancelled, all
+    user_id: Optional[str] = None
+):
+    """Get all subscriptions with filters (admin only)"""
+    query = {}
+    
+    # Apply status filter
+    if status and status != "all":
+        if status == "active":
+            query["status"] = "active"
+            query["end_date"] = {"$gt": datetime.now(timezone.utc).isoformat()}
+        elif status == "expired":
+            query["$or"] = [
+                {"status": "expired"},
+                {"end_date": {"$lt": datetime.now(timezone.utc).isoformat()}}
+            ]
+        elif status == "cancelled":
+            query["status"] = "cancelled"
+    
+    # Filter by user
+    if user_id:
+        query["user_id"] = user_id
+    
+    subscriptions = await db.subscriptions.find(query, {"_id": 0}).to_list(1000)
+    
+    # Enrich with user data and update status if needed
+    for sub in subscriptions:
+        # Get user info if not cached
+        if not sub.get('user_email') or not sub.get('user_name'):
+            user = await db.users.find_one({"user_id": sub['user_id']}, {"_id": 0, "name": 1, "email": 1})
+            if user:
+                sub['user_email'] = user.get('email', 'N/A')
+                sub['user_name'] = user.get('name', 'N/A')
+        
+        # Calculate current status based on dates
+        if sub.get('end_date'):
+            end_date = sub['end_date']
+            if isinstance(end_date, str):
+                end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
+            
+            if sub.get('status') != 'cancelled':
+                if end_date < datetime.now(timezone.utc):
+                    sub['calculated_status'] = 'expired'
+                else:
+                    sub['calculated_status'] = 'active'
+            else:
+                sub['calculated_status'] = 'cancelled'
+        else:
+            sub['calculated_status'] = sub.get('status', 'pending')
+    
     return subscriptions
+
+@api_router.get("/admin/subscriptions/stats")
+async def get_subscription_stats(admin: User = Depends(require_admin)):
+    """Get subscription statistics (admin only)"""
+    now = datetime.now(timezone.utc)
+    
+    all_subs = await db.subscriptions.find({}, {"_id": 0}).to_list(1000)
+    
+    total = len(all_subs)
+    active = 0
+    expired = 0
+    cancelled = 0
+    total_revenue = 0
+    
+    for sub in all_subs:
+        if sub.get('status') == 'cancelled':
+            cancelled += 1
+        elif sub.get('end_date'):
+            end_date = sub['end_date']
+            if isinstance(end_date, str):
+                end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
+            
+            if end_date < now:
+                expired += 1
+            else:
+                active += 1
+        
+        if sub.get('amount_paid'):
+            total_revenue += sub['amount_paid']
+    
+    return {
+        "total": total,
+        "active": active,
+        "expired": expired,
+        "cancelled": cancelled,
+        "total_revenue": total_revenue,
+        "currency": "USD"
+    }
+
+@api_router.get("/admin/users/{user_id}/payment-history")
+async def get_user_payment_history(user_id: str, admin: User = Depends(require_admin)):
+    """Get payment history for a specific user (admin only)"""
+    # Get all subscriptions for this user
+    subscriptions = await db.subscriptions.find(
+        {"user_id": user_id}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Get all payment transactions for this user
+    transactions = await db.payment_transactions.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Get user info
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    
+    return {
+        "user": user,
+        "subscriptions": subscriptions,
+        "transactions": transactions
+    }
+
+@api_router.put("/admin/subscriptions/{subscription_id}/cancel")
+async def cancel_subscription(
+    subscription_id: str, 
+    reason: Optional[str] = None,
+    admin: User = Depends(require_admin)
+):
+    """Cancel a subscription (admin only)"""
+    result = await db.subscriptions.update_one(
+        {"id": subscription_id},
+        {"$set": {
+            "status": "cancelled",
+            "cancelled_at": datetime.now(timezone.utc).isoformat(),
+            "cancellation_reason": reason or "Cancelled by admin"
+        }}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    return {"message": "Subscription cancelled"}
+
+@api_router.put("/admin/subscriptions/{subscription_id}/extend")
+async def extend_subscription(
+    subscription_id: str, 
+    days: int = 30,
+    admin: User = Depends(require_admin)
+):
+    """Extend a subscription by X days (admin only)"""
+    sub = await db.subscriptions.find_one({"id": subscription_id})
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    current_end = sub.get('end_date')
+    if current_end:
+        if isinstance(current_end, str):
+            current_end = datetime.fromisoformat(current_end.replace('Z', '+00:00'))
+        if current_end.tzinfo is None:
+            current_end = current_end.replace(tzinfo=timezone.utc)
+        
+        # If expired, extend from now; if active, extend from current end
+        if current_end < datetime.now(timezone.utc):
+            new_end = datetime.now(timezone.utc) + timedelta(days=days)
+        else:
+            new_end = current_end + timedelta(days=days)
+    else:
+        new_end = datetime.now(timezone.utc) + timedelta(days=days)
+    
+    await db.subscriptions.update_one(
+        {"id": subscription_id},
+        {"$set": {
+            "end_date": new_end.isoformat(),
+            "status": "active"
+        }}
+    )
+    
+    return {"message": f"Subscription extended to {new_end.isoformat()}", "new_end_date": new_end.isoformat()}
 
 @api_router.get("/admin/reservations")
 async def get_all_reservations(admin: User = Depends(require_admin)):
