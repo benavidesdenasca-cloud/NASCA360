@@ -72,6 +72,16 @@ const AdminPanel = () => {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Subscription filters
+  const [subscriptionFilter, setSubscriptionFilter] = useState('all');
+  const [subscriptionStats, setSubscriptionStats] = useState({
+    total: 0, active: 0, expired: 0, cancelled: 0, total_revenue: 0
+  });
+  
+  // Payment history modal
+  const [paymentHistoryModal, setPaymentHistoryModal] = useState(null);
+  const [paymentHistory, setPaymentHistory] = useState(null);
+  
   // Modal states
   const [editUserModal, setEditUserModal] = useState(null);
   const [videoModal, setVideoModal] = useState(null);
