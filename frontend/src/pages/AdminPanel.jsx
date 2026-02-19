@@ -715,6 +715,126 @@ const AdminPanel = () => {
           onSave={handleSaveVideo}
         />
       )}
+
+      {/* Payment History Modal */}
+      {paymentHistoryModal && paymentHistory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-4 border-b">
+              <div>
+                <h3 className="text-2xl font-bold text-amber-900">Historial de Pagos</h3>
+                {paymentHistory.user && (
+                  <p className="text-gray-600">{paymentHistory.user.name} - {paymentHistory.user.email}</p>
+                )}
+              </div>
+              <button onClick={() => setPaymentHistoryModal(null)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {/* Subscriptions History */}
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold text-amber-800 mb-4">Suscripciones ({paymentHistory.subscriptions?.length || 0})</h4>
+              {paymentHistory.subscriptions?.length > 0 ? (
+                <div className="space-y-3">
+                  {paymentHistory.subscriptions.map((sub, idx) => (
+                    <div key={idx} className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-500">Plan</p>
+                          <p className="font-semibold capitalize">{sub.plan_type}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Estado</p>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            sub.status === 'active' ? 'bg-green-100 text-green-800' :
+                            sub.status === 'expired' ? 'bg-red-100 text-red-800' :
+                            sub.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {sub.status || sub.payment_status}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Monto</p>
+                          <p className="font-semibold text-green-700">{sub.amount_paid ? `$${sub.amount_paid.toFixed(2)}` : 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Fecha de Pago</p>
+                          <p>{sub.payment_date ? new Date(sub.payment_date).toLocaleDateString('es-PE') : 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Inicio</p>
+                          <p>{sub.start_date ? new Date(sub.start_date).toLocaleDateString('es-PE') : 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Vencimiento</p>
+                          <p>{sub.end_date ? new Date(sub.end_date).toLocaleDateString('es-PE') : 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">ID Transacción</p>
+                          <p className="font-mono text-xs">{(sub.stripe_payment_intent_id || sub.stripe_session_id)?.slice(0, 20) || 'N/A'}...</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Auto-Renovación</p>
+                          <p>{sub.auto_renew ? '✓ Sí' : '✗ No'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">No hay suscripciones registradas</p>
+              )}
+            </div>
+
+            {/* Transactions History */}
+            <div>
+              <h4 className="text-lg font-semibold text-amber-800 mb-4">Transacciones ({paymentHistory.transactions?.length || 0})</h4>
+              {paymentHistory.transactions?.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="text-left py-2 px-3">Fecha</th>
+                        <th className="text-left py-2 px-3">Tipo</th>
+                        <th className="text-left py-2 px-3">Monto</th>
+                        <th className="text-left py-2 px-3">Estado</th>
+                        <th className="text-left py-2 px-3">ID Sesión</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paymentHistory.transactions.map((tx, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-3">{tx.created_at ? new Date(tx.created_at).toLocaleDateString('es-PE') : 'N/A'}</td>
+                          <td className="py-2 px-3 capitalize">{tx.metadata?.type || 'N/A'}</td>
+                          <td className="py-2 px-3 font-semibold text-green-700">${tx.amount?.toFixed(2) || '0.00'}</td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              tx.payment_status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {tx.payment_status}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 font-mono text-xs">{tx.session_id?.slice(0, 15) || 'N/A'}...</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">No hay transacciones registradas</p>
+              )}
+            </div>
+
+            <div className="mt-6 pt-4 border-t flex justify-end">
+              <Button onClick={() => setPaymentHistoryModal(null)} variant="outline">
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
