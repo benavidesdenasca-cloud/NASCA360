@@ -43,6 +43,10 @@ const Map3D = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
   
+  // Subscription verification state
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(null);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
+  
   // 360° Image Viewer State
   const [show360Viewer, setShow360Viewer] = useState(false);
   const [current360Image, setCurrent360Image] = useState(null);
