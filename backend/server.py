@@ -135,12 +135,22 @@ class Subscription(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
+    user_email: Optional[str] = None  # For quick reference
+    user_name: Optional[str] = None   # For quick reference
     plan_type: str  # basic or premium
     stripe_session_id: Optional[str] = None
-    payment_status: str  # initiated, paid, failed, cancelled
+    stripe_payment_intent_id: Optional[str] = None  # Transaction ID
+    payment_status: str  # initiated, paid, failed, cancelled, expired
+    payment_method: Optional[str] = None  # card, paypal, etc.
+    amount_paid: Optional[float] = None  # Amount in USD or local currency
+    currency: str = "USD"
+    payment_date: Optional[datetime] = None  # When payment was received
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    status: str = "pending"  # pending, active, expired, cancelled
     auto_renew: bool = True
+    cancelled_at: Optional[datetime] = None
+    cancellation_reason: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Video360(BaseModel):
