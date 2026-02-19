@@ -1317,6 +1317,96 @@ async def execute_renewal_payment(
 
 # Keep legacy endpoints for compatibility but mark as deprecated
 
+@api_router.get("/paypal/execute-subscription")
+async def execute_subscription_payment_no_auth(
+    paymentId: str, 
+    PayerID: str, 
+    plan: str
+):
+    """Execute PayPal payment for subscription without requiring auth (uses pending record)"""
+    # Reconfigure PayPal
+    configure_paypal()
+    
+    # Find pending payment by payment_id
+    pending = await db.pending_renewals.find_one({
+        "payment_id": paymentId,
+        "status": "pending"
+    })
+    
+    if not pending:
+        raise HTTPException(status_code=404, detail="Pago pendiente no encontrado o ya procesado")
+    
+    payment = Payment.find(paymentId)
+    
+    if payment.execute({"payer_id": PayerID}):
+        now = datetime.now(timezone.utc)
+        duration_days = pending['duration_days']
+        
+        # Get current subscription if any
+        current_sub = await db.subscriptions.find_one(
+            {"user_id": pending['user_id'], "status": "active"},
+            sort=[("end_date", -1)]
+        )
+        
+        # Calculate new end date
+        if current_sub and current_sub.get('end_date'):
+            current_end = datetime.fromisoformat(current_sub['end_date'].replace('Z', '+00:00'))
+            if current_end.tzinfo is None:
+                current_end = current_end.replace(tzinfo=timezone.utc)
+            
+            if current_end > now:
+                new_end = current_end + timedelta(days=duration_days)
+            else:
+                new_end = now + timedelta(days=duration_days)
+        else:
+            new_end = now + timedelta(days=duration_days)
+        
+        # Create new subscription record
+        subscription = {
+            "id": str(uuid.uuid4()),
+            "user_id": pending['user_id'],
+            "user_email": pending['email'],
+            "plan_type": pending['plan_type'],
+            "paypal_payment_id": paymentId,
+            "paypal_payer_id": PayerID,
+            "payment_status": "paid",
+            "payment_method": "paypal",
+            "amount_paid": pending['amount'],
+            "currency": "USD",
+            "payment_date": now.isoformat(),
+            "start_date": now.isoformat(),
+            "end_date": new_end.isoformat(),
+            "status": "active",
+            "auto_renew": False,
+            "created_at": now.isoformat()
+        }
+        await db.subscriptions.insert_one(subscription)
+        
+        # Update user subscription plan
+        await db.users.update_one(
+            {"user_id": pending['user_id']},
+            {"$set": {"subscription_plan": pending['plan_type']}}
+        )
+        
+        # Update pending status
+        await db.pending_renewals.update_one(
+            {"payment_id": paymentId},
+            {"$set": {"status": "completed"}}
+        )
+        
+        return {
+            "success": True,
+            "message": "¡Suscripción activada exitosamente!",
+            "subscription_end": new_end.isoformat(),
+            "user_id": pending['user_id']
+        }
+    else:
+        await db.pending_renewals.update_one(
+            {"payment_id": paymentId},
+            {"$set": {"status": "failed", "error": str(payment.error)}}
+        )
+        raise HTTPException(status_code=400, detail=f"Error al procesar pago: {payment.error}")
+
 @api_router.post("/subscriptions/checkout")
 async def create_subscription_checkout_deprecated(
     request: SubscriptionCheckoutRequest,
