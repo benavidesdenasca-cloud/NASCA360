@@ -817,32 +817,6 @@ const Map3D = () => {
                 <RotateCcw className="w-5 h-5" />
               </Button>
             </div>
-            
-            {/* Palpa Lines Layer Toggle */}
-            <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-lg flex flex-col gap-2">
-              <button
-                onClick={() => setShowPalpaLines(!showPalpaLines)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
-                  showPalpaLines 
-                    ? 'bg-amber-500 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-                data-testid="toggle-palpa-lines"
-                title="Mostrar/Ocultar Líneas de Palpa"
-              >
-                <Layers className="w-4 h-4" />
-                <span className="text-sm font-medium">Líneas de Palpa</span>
-              </button>
-              <button
-                onClick={flyToPalpa}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all"
-                data-testid="fly-to-palpa"
-                title="Ir a Líneas de Palpa"
-              >
-                <MapPin className="w-4 h-4" />
-                <span className="text-sm font-medium">Ir a Palpa</span>
-              </button>
-            </div>
           </div>
 
           {/* Selected POI Info Panel */}
