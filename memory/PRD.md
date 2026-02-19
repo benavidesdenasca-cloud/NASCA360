@@ -56,6 +56,10 @@ Plataforma de turismo virtual premium para administrar y mostrar contenido 360°
   - Descuentos por pago adelantado
   - Renovación manual
 - **Integración PayPal para reservaciones VR** (19 Feb 2026)
+- **Mapa 3D expandido 15km al norte** (19 Feb 2026)
+  - Límites: Norte -14.48 (antes -14.62), Sur -14.82
+  - Centro ajustado para cubrir Nazca y Palpa
+  - Bounds: West -75.25, East -74.90
 
 ### 🔴 Eliminado
 - Integración Stripe (reemplazada por PayPal)
