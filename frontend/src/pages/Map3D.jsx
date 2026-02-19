@@ -510,6 +510,44 @@ const Map3D = () => {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col">
       <Navbar />
       
+      {/* Subscription Check - Loading */}
+      {checkingSubscription && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Verificando acceso...</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Subscription Required - No Access */}
+      {!checkingSubscription && !hasActiveSubscription && (
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
+            <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Lock className="w-10 h-10 text-amber-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Acceso Restringido</h2>
+            <p className="text-gray-600 mb-6">
+              Necesitas una suscripción activa para explorar el Mapa 3D de las Líneas de Nazca y Palpa.
+            </p>
+            <Button 
+              onClick={() => navigate('/suscripciones')}
+              className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 rounded-full"
+              data-testid="subscribe-btn"
+            >
+              Ver Planes de Suscripción
+            </Button>
+            <p className="text-sm text-gray-500 mt-4">
+              Desde $20 USD/mes
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {/* Map Content - Only show if subscription is active */}
+      {!checkingSubscription && hasActiveSubscription && (
+        <>
       {/* Admin Panel - Fixed position for overlay */}
       {isAdmin && adminPanelOpen && (
         <div 
