@@ -411,6 +411,17 @@ const Map3D = () => {
     setSelectedPoi(null);
   };
 
+  // Fly to Palpa Lines area
+  const flyToPalpa = () => {
+    if (!mapRef.current) return;
+    mapRef.current.flyTo([-14.52, -75.17], 14, { duration: 1.5 });
+    setSelectedPoi(null);
+    if (!showPalpaLines) {
+      setShowPalpaLines(true);
+    }
+    toast.success('Líneas de Palpa - Explora los geoglifos ancestrales');
+  };
+
   const zoomIn = () => mapRef.current?.zoomIn();
   const zoomOut = () => mapRef.current?.zoomOut();
 
