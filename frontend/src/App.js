@@ -27,6 +27,7 @@ import Reservations from '@/pages/Reservations';
 import ReservationSuccess from '@/pages/ReservationSuccess';
 import Dashboard from '@/pages/Dashboard';
 import AdminPanel from '@/pages/AdminPanel';
+import Contact from '@/pages/Contact';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
