@@ -9,18 +9,18 @@ import axios from 'axios';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-// Nazca Lines area boundaries
+// Nazca & Palpa Lines area boundaries - Extended 15km north to include Palpa
 const NAZCA_CENTER = {
-  longitude: -75.08,  // Centrado más hacia el área con mejor cobertura
-  latitude: -14.72,
-  height: 15000
+  longitude: -75.10,  // Centrado entre Nazca y Palpa
+  latitude: -14.62,   // Ajustado para incluir ambas áreas
+  height: 25000       // Mayor altura para ver ambas regiones
 };
 
 const NAZCA_BOUNDS = {
-  west: -75.20,   
+  west: -75.25,   
   south: -14.82,  
-  east: -74.95,   
-  north: -14.62   
+  east: -74.90,   
+  north: -14.48   // Expandido 15km al norte (~0.135 grados) para incluir Palpa
 };
 
 const CATEGORIES = [
