@@ -122,8 +122,13 @@ const Reservations = () => {
         }
       );
 
-      // Redirect to Stripe checkout
-      window.location.href = response.data.url;
+      // Redirect to PayPal checkout
+      if (response.data.approval_url) {
+        window.location.href = response.data.approval_url;
+      } else {
+        toast.error('Error al obtener URL de pago');
+        setLoading(false);
+      }
     } catch (error) {
       console.error('Reservation error:', error);
       toast.error(error.response?.data?.detail || 'Error al procesar la reserva');
