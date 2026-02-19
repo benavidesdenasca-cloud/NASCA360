@@ -267,17 +267,55 @@ class VideoCreate(BaseModel):
 # ==================== AUTHENTICATION ====================
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
-    """Get current authenticated user from JWT token"""
+    """Get current authenticated user from JWT token or Emergent session token"""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     token = authorization.replace("Bearer ", "")
+    
+    # First, try to find the session directly (for Emergent Auth tokens)
+    session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+    
+    if session:
+        # Session found - validate it
+        expires_at = session['expires_at']
+        if isinstance(expires_at, str):
+            expires_at = datetime.fromisoformat(expires_at)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        
+        if expires_at < datetime.now(timezone.utc):
+            await db.user_sessions.delete_one({"session_token": token})
+            raise HTTPException(status_code=401, detail="Session expired")
+        
+        # Update last activity
+        await db.user_sessions.update_one(
+            {"session_token": token},
+            {"$set": {"last_activity": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        # Get user by user_id from session
+        user_id = session['user_id']
+        user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+        if not user_doc:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        user = User(**user_doc)
+        
+        # Check if account is blocked
+        if user.is_blocked:
+            await db.user_sessions.delete_many({"user_id": user_id})
+            raise HTTPException(status_code=403, detail="Tu cuenta ha sido bloqueada")
+        
+        return user
+    
+    # If no session found, try to decode as JWT (for regular login tokens)
     user_id = decode_access_token(token)
     
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     
-    # Find session
+    # Find session by JWT token
     session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=401, detail="Session not found")
