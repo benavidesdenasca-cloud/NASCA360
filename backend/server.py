@@ -1047,6 +1047,77 @@ class RenewalRequest(BaseModel):
     plan_type: str
     origin_url: str
 
+@api_router.post("/paypal/create-subscription-for-user")
+async def create_subscription_for_existing_user(
+    request: RenewalRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Create PayPal order for existing user's first subscription (e.g., Google Auth users)"""
+    # Reconfigure PayPal
+    configure_paypal()
+    
+    if request.plan_type not in SUBSCRIPTION_PACKAGES:
+        raise HTTPException(status_code=400, detail="Tipo de plan inválido")
+    
+    package = SUBSCRIPTION_PACKAGES[request.plan_type]
+    
+    # Create PayPal payment
+    payment = Payment({
+        "intent": "sale",
+        "payer": {
+            "payment_method": "paypal"
+        },
+        "redirect_urls": {
+            "return_url": f"{request.origin_url}/subscription/success?plan={request.plan_type}&new_sub=true",
+            "cancel_url": f"{request.origin_url}/subscription?cancelled=true"
+        },
+        "transactions": [{
+            "item_list": {
+                "items": [{
+                    "name": package['name'],
+                    "description": package['description'],
+                    "quantity": "1",
+                    "price": str(package['amount']),
+                    "currency": package['currency']
+                }]
+            },
+            "amount": {
+                "total": str(package['amount']),
+                "currency": package['currency']
+            },
+            "description": f"Suscripción Nazca360 - {package['name']}"
+        }]
+    })
+    
+    if payment.create():
+        # Store pending subscription for existing user
+        pending_sub = {
+            "payment_id": payment.id,
+            "user_id": current_user.user_id,
+            "email": current_user.email,
+            "plan_type": request.plan_type,
+            "amount": package['amount'],
+            "duration_days": package['duration_days'],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "status": "pending",
+            "type": "new_subscription_existing_user"
+        }
+        await db.pending_renewals.insert_one(pending_sub)
+        
+        approval_url = None
+        for link in payment.links:
+            if link.rel == "approval_url":
+                approval_url = link.href
+                break
+        
+        return {
+            "payment_id": payment.id,
+            "approval_url": approval_url,
+            "status": "created"
+        }
+    else:
+        raise HTTPException(status_code=500, detail=f"Error al crear pago: {payment.error}")
+
 @api_router.post("/paypal/renew-subscription")
 async def renew_subscription_paypal(
     request: RenewalRequest,
