@@ -44,7 +44,7 @@ const Map3D = () => {
   const [mapLoaded, setMapLoaded] = useState(false);
   
   // Palpa Lines Layer State
-  const [showPalpaLines, setShowPalpaLines] = useState(false); // Start disabled to debug
+  const [showPalpaLines, setShowPalpaLines] = useState(true);
   const [palpaLinesData, setPalpaLinesData] = useState(null);
   const palpaLayerRef = useRef(null);
   
