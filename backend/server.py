@@ -818,13 +818,18 @@ from paypalrestsdk import Payment, Sale
 
 PAYPAL_CLIENT_ID = os.environ.get('PAYPAL_CLIENT_ID')
 PAYPAL_CLIENT_SECRET = os.environ.get('PAYPAL_CLIENT_SECRET')
-PAYPAL_MODE = os.environ.get('PAYPAL_MODE', 'live')  # 'sandbox' or 'live'
+PAYPAL_MODE = os.environ.get('PAYPAL_MODE', 'sandbox')  # 'sandbox' or 'live'
 
-paypalrestsdk.configure({
-    "mode": PAYPAL_MODE,
-    "client_id": PAYPAL_CLIENT_ID,
-    "client_secret": PAYPAL_CLIENT_SECRET
-})
+def configure_paypal():
+    """Configure PayPal SDK with current environment variables"""
+    paypalrestsdk.configure({
+        "mode": os.environ.get('PAYPAL_MODE', 'sandbox'),
+        "client_id": os.environ.get('PAYPAL_CLIENT_ID'),
+        "client_secret": os.environ.get('PAYPAL_CLIENT_SECRET')
+    })
+
+# Initial configuration
+configure_paypal()
 
 # ==================== PAYPAL SUBSCRIPTION ENDPOINTS ====================
 
@@ -843,6 +848,9 @@ async def get_subscription_packages():
 @api_router.post("/paypal/create-order")
 async def create_paypal_order(request: PayPalSubscriptionRequest):
     """Create PayPal order for subscription with user registration data"""
+    # Reconfigure PayPal to ensure fresh credentials
+    configure_paypal()
+    
     if request.plan_type not in SUBSCRIPTION_PACKAGES:
         raise HTTPException(status_code=400, detail="Tipo de plan inválido")
     
