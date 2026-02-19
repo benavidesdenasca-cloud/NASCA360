@@ -845,6 +845,41 @@ async def get_subscription_packages():
     """Get available subscription packages"""
     return SUBSCRIPTION_PACKAGES
 
+@api_router.get("/subscription/status")
+async def get_subscription_status(current_user: User = Depends(get_current_user)):
+    """Check if current user has an active subscription"""
+    # Admin always has access
+    if current_user.role == 'admin':
+        return {"has_active_subscription": True, "is_admin": True}
+    
+    # Check subscription status
+    has_subscription = False
+    subscription_data = None
+    
+    if current_user.subscription_plan and current_user.subscription_plan != "basic":
+        subscription = await db.subscriptions.find_one(
+            {"user_id": current_user.user_id, "status": "active"},
+            {"_id": 0}
+        )
+        if subscription and subscription.get('end_date'):
+            end_date = datetime.fromisoformat(subscription['end_date']) if isinstance(subscription['end_date'], str) else subscription['end_date']
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > end_date:
+                has_subscription = False
+            else:
+                has_subscription = True
+                subscription_data = {
+                    "end_date": end_date.isoformat(),
+                    "plan": subscription.get('plan_type', 'premium')
+                }
+    
+    return {
+        "has_active_subscription": has_subscription,
+        "is_admin": False,
+        "subscription": subscription_data
+    }
+
 @api_router.post("/paypal/create-order")
 async def create_paypal_order(request: PayPalSubscriptionRequest):
     """Create PayPal order for subscription with user registration data"""
