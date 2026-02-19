@@ -478,38 +478,169 @@ const AdminPanel = () => {
             {/* Subscriptions Tab */}
             <TabsContent value="subscriptions">
               <div className="glass rounded-2xl p-8">
-                <h2 className="text-2xl font-bold text-amber-900 mb-6">Suscripciones Activas</h2>
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                  <div className="bg-blue-50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-blue-700">{subscriptionStats.total}</p>
+                    <p className="text-xs text-blue-600">Total</p>
+                  </div>
+                  <div className="bg-green-50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-green-700">{subscriptionStats.active}</p>
+                    <p className="text-xs text-green-600">Activas</p>
+                  </div>
+                  <div className="bg-red-50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-red-700">{subscriptionStats.expired}</p>
+                    <p className="text-xs text-red-600">Vencidas</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-gray-700">{subscriptionStats.cancelled}</p>
+                    <p className="text-xs text-gray-600">Canceladas</p>
+                  </div>
+                  <div className="bg-amber-50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-amber-700">${subscriptionStats.total_revenue?.toFixed(2) || '0.00'}</p>
+                    <p className="text-xs text-amber-600">Ingresos</p>
+                  </div>
+                </div>
+
+                {/* Filters */}
+                <div className="flex flex-wrap gap-2 mb-6">
+                  <h2 className="text-2xl font-bold text-amber-900 mr-4">Suscripciones</h2>
+                  {['all', 'active', 'expired', 'cancelled'].map((filter) => (
+                    <Button
+                      key={filter}
+                      variant={subscriptionFilter === filter ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setSubscriptionFilter(filter);
+                        fetchFilteredSubscriptions(filter);
+                      }}
+                      className={subscriptionFilter === filter ? 'bg-amber-600' : ''}
+                    >
+                      {filter === 'all' ? 'Todas' : filter === 'active' ? 'Activas' : filter === 'expired' ? 'Vencidas' : 'Canceladas'}
+                    </Button>
+                  ))}
+                </div>
+
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b-2 border-amber-200">
-                        <th className="text-left py-3 px-4 text-amber-900">Plan</th>
-                        <th className="text-left py-3 px-4 text-amber-900">Estado</th>
-                        <th className="text-left py-3 px-4 text-amber-900">Inicio</th>
-                        <th className="text-left py-3 px-4 text-amber-900">Fin</th>
+                      <tr className="border-b-2 border-amber-200 bg-amber-50">
+                        <th className="text-left py-3 px-3 text-amber-900">Usuario</th>
+                        <th className="text-left py-3 px-3 text-amber-900">Plan</th>
+                        <th className="text-left py-3 px-3 text-amber-900">Estado</th>
+                        <th className="text-left py-3 px-3 text-amber-900">Fecha Pago</th>
+                        <th className="text-left py-3 px-3 text-amber-900">Monto</th>
+                        <th className="text-left py-3 px-3 text-amber-900">Método</th>
+                        <th className="text-left py-3 px-3 text-amber-900">Inicio</th>
+                        <th className="text-left py-3 px-3 text-amber-900">Vencimiento</th>
+                        <th className="text-left py-3 px-3 text-amber-900">ID Trans.</th>
+                        <th className="text-left py-3 px-3 text-amber-900">Auto-Renov.</th>
+                        <th className="text-left py-3 px-3 text-amber-900">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {subscriptions.filter(s => s.payment_status === 'paid').map((sub) => (
-                        <tr key={sub.id} className="border-b border-amber-100 hover:bg-amber-50">
-                          <td className="py-3 px-4 capitalize font-semibold text-amber-900">
-                            {sub.plan_type}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                              {sub.payment_status}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            {sub.start_date ? new Date(sub.start_date).toLocaleDateString() : 'N/A'}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            {sub.end_date ? new Date(sub.end_date).toLocaleDateString() : 'N/A'}
-                          </td>
-                        </tr>
-                      ))}
+                      {subscriptions.map((sub) => {
+                        const status = sub.calculated_status || sub.status || 'pending';
+                        const statusColors = {
+                          active: 'bg-green-100 text-green-800',
+                          expired: 'bg-red-100 text-red-800',
+                          cancelled: 'bg-gray-100 text-gray-800',
+                          pending: 'bg-yellow-100 text-yellow-800'
+                        };
+                        
+                        return (
+                          <tr key={sub.id} className="border-b border-amber-100 hover:bg-amber-50">
+                            <td className="py-3 px-3">
+                              <div>
+                                <p className="font-semibold text-amber-900">{sub.user_name || 'N/A'}</p>
+                                <p className="text-xs text-gray-500">{sub.user_email || sub.user_id?.slice(0, 8)}</p>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 capitalize">
+                                {sub.plan_type}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColors[status]}`}>
+                                {status === 'active' ? 'Activa' : status === 'expired' ? 'Vencida' : status === 'cancelled' ? 'Cancelada' : 'Pendiente'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-gray-600">
+                              {sub.payment_date ? new Date(sub.payment_date).toLocaleDateString('es-PE') : 'N/A'}
+                            </td>
+                            <td className="py-3 px-3 font-semibold text-green-700">
+                              {sub.amount_paid ? `$${sub.amount_paid.toFixed(2)}` : 'N/A'}
+                            </td>
+                            <td className="py-3 px-3 text-gray-600 capitalize">
+                              {sub.payment_method || 'N/A'}
+                            </td>
+                            <td className="py-3 px-3 text-gray-600">
+                              {sub.start_date ? new Date(sub.start_date).toLocaleDateString('es-PE') : 'N/A'}
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className={status === 'expired' ? 'text-red-600 font-semibold' : 'text-gray-600'}>
+                                {sub.end_date ? new Date(sub.end_date).toLocaleDateString('es-PE') : 'N/A'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="font-mono text-xs text-gray-500" title={sub.stripe_payment_intent_id || sub.stripe_session_id}>
+                                {(sub.stripe_payment_intent_id || sub.stripe_session_id)?.slice(0, 12) || 'N/A'}...
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              {sub.auto_renew ? (
+                                <span className="text-green-600">✓ Sí</span>
+                              ) : (
+                                <span className="text-gray-400">✗ No</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => fetchPaymentHistory(sub.user_id)}
+                                  className="text-xs px-2"
+                                  title="Ver historial"
+                                >
+                                  📋
+                                </Button>
+                                {status === 'active' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleCancelSubscription(sub.id)}
+                                    className="text-xs px-2 text-red-600"
+                                    title="Cancelar"
+                                  >
+                                    ✗
+                                  </Button>
+                                )}
+                                {(status === 'expired' || status === 'active') && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleExtendSubscription(sub.id, 30)}
+                                    className="text-xs px-2 text-green-600"
+                                    title="Extender 30 días"
+                                  >
+                                    +30d
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
+                  
+                  {subscriptions.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      No hay suscripciones con este filtro
+                    </div>
+                  )}
                 </div>
               </div>
             </TabsContent>
