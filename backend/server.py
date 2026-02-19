@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
-from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 import httpx
 from authlib.integrations.starlette_client import OAuth
 import aiofiles
@@ -37,9 +36,6 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
-
-# Stripe setup
-STRIPE_API_KEY = os.environ['STRIPE_API_KEY']
 
 # Google OAuth setup
 GOOGLE_CLIENT_ID = os.environ['GOOGLE_CLIENT_ID']
