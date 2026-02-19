@@ -2851,6 +2851,158 @@ async def seed_default_pois(current_user: User = Depends(get_current_user)):
     await db.pois.insert_many(default_pois)
     return {"message": f"Se crearon {len(default_pois)} POIs por defecto"}
 
+# ==================== CONTACT FORM ENDPOINT ====================
+
+class ContactForm(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = None
+    message: str
+
+@api_router.post("/contact")
+async def send_contact_message(form: ContactForm):
+    """Send contact form message via email"""
+    from sendgrid import SendGridAPIClient
+    from sendgrid.helpers.mail import Mail, Email, To, Content
+    
+    try:
+        # Validate email format
+        import re
+        email_pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+        if not re.match(email_pattern, form.email):
+            raise HTTPException(status_code=400, detail="Email inválido")
+        
+        # Get SendGrid config
+        sendgrid_key = os.environ.get('SENDGRID_API_KEY')
+        from_email = os.environ.get('FROM_EMAIL', 'noreply@nazca360.com')
+        
+        if not sendgrid_key:
+            logging.error("SENDGRID_API_KEY not configured")
+            raise HTTPException(status_code=500, detail="Error de configuración de email")
+        
+        # Build email content
+        subject = f"Nuevo mensaje de contacto - {form.name}"
+        
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #D97706, #EA580C); padding: 20px; border-radius: 10px 10px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">📬 Nuevo Mensaje de Contacto</h1>
+            </div>
+            <div style="background: #FFFBEB; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #FDE68A;">
+                <h2 style="color: #92400E; margin-top: 0;">Información del Contacto</h2>
+                
+                <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="margin: 5px 0;"><strong style="color: #B45309;">Nombre:</strong> {form.name}</p>
+                    <p style="margin: 5px 0;"><strong style="color: #B45309;">Email:</strong> <a href="mailto:{form.email}" style="color: #D97706;">{form.email}</a></p>
+                    <p style="margin: 5px 0;"><strong style="color: #B45309;">Teléfono:</strong> {form.phone or 'No proporcionado'}</p>
+                </div>
+                
+                <h3 style="color: #92400E;">Mensaje:</h3>
+                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #D97706;">
+                    <p style="margin: 0; line-height: 1.6; white-space: pre-wrap;">{form.message}</p>
+                </div>
+                
+                <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #FDE68A;">
+                    <p style="color: #92400E; margin: 0; font-size: 12px;">
+                        Este mensaje fue enviado desde el formulario de contacto de Nazca360.
+                    </p>
+                </div>
+            </div>
+        </div>
+        """
+        
+        # Send email to max@nazca360.com
+        message = Mail(
+            from_email=Email(from_email, "Nazca360 - Contacto"),
+            to_emails=To("max@nazca360.com"),
+            subject=subject,
+            html_content=Content("text/html", html_content)
+        )
+        
+        # Also send a copy reply to the sender
+        auto_reply_subject = "Hemos recibido tu mensaje - Nazca360"
+        auto_reply_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #D97706, #EA580C); padding: 20px; border-radius: 10px 10px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">¡Gracias por contactarnos!</h1>
+            </div>
+            <div style="background: #FFFBEB; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #FDE68A;">
+                <p style="color: #78350F; font-size: 16px;">Hola <strong>{form.name}</strong>,</p>
+                
+                <p style="color: #78350F; line-height: 1.6;">
+                    Hemos recibido tu mensaje y te responderemos lo antes posible. 
+                    Nuestro equipo está disponible de Lunes a Domingo de 8:00 AM a 10:00 PM.
+                </p>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="color: #92400E; margin-top: 0;">Tu mensaje:</h3>
+                    <p style="color: #57534E; line-height: 1.6; white-space: pre-wrap;">{form.message}</p>
+                </div>
+                
+                <p style="color: #78350F; line-height: 1.6;">
+                    Si necesitas atención inmediata, puedes contactarnos directamente:
+                </p>
+                
+                <div style="background: white; padding: 15px; border-radius: 8px;">
+                    <p style="margin: 5px 0;"><strong>📞 WhatsApp:</strong> <a href="https://wa.me/51956567391" style="color: #D97706;">+51 956 567 391</a></p>
+                    <p style="margin: 5px 0;"><strong>📍 Dirección:</strong> Calle Lima 160 (Restobar Nazka), Nasca, Ica, Perú</p>
+                </div>
+                
+                <p style="color: #78350F; margin-top: 20px;">
+                    ¡Gracias por tu interés en Nazca360!<br>
+                    <em style="color: #92400E;">El equipo de Nazca360</em>
+                </p>
+            </div>
+        </div>
+        """
+        
+        sg = SendGridAPIClient(sendgrid_key)
+        
+        # Send main notification to admin
+        response = sg.send(message)
+        logging.info(f"Contact email sent to admin, status: {response.status_code}")
+        
+        # Send auto-reply to user
+        auto_reply = Mail(
+            from_email=Email(from_email, "Nazca360"),
+            to_emails=To(form.email),
+            subject=auto_reply_subject,
+            html_content=Content("text/html", auto_reply_content)
+        )
+        sg.send(auto_reply)
+        logging.info(f"Auto-reply sent to {form.email}")
+        
+        # Save contact message to database for records
+        contact_record = {
+            "name": form.name,
+            "email": form.email,
+            "phone": form.phone,
+            "message": form.message,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "status": "sent"
+        }
+        await db.contact_messages.insert_one(contact_record)
+        
+        return {"success": True, "message": "Mensaje enviado correctamente"}
+        
+    except Exception as e:
+        logging.error(f"Error sending contact email: {e}")
+        # Save failed message to database anyway
+        try:
+            contact_record = {
+                "name": form.name,
+                "email": form.email,
+                "phone": form.phone,
+                "message": form.message,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "status": "failed",
+                "error": str(e)
+            }
+            await db.contact_messages.insert_one(contact_record)
+        except:
+            pass
+        raise HTTPException(status_code=500, detail="Error al enviar el mensaje. Por favor intenta de nuevo.")
+
 # ==================== IMAGE PROXY ENDPOINT ====================
 
 @api_router.get("/image-proxy")
