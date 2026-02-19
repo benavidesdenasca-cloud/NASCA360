@@ -957,10 +957,14 @@ async def stripe_webhook(request: Request):
         
         if webhook_response.event_type == "checkout.session.completed":
             session_id = webhook_response.session_id
+            payment_date = datetime.now(timezone.utc)
             
             await db.payment_transactions.update_one(
                 {"session_id": session_id},
-                {"$set": {"payment_status": "paid"}}
+                {"$set": {
+                    "payment_status": "paid",
+                    "payment_date": payment_date.isoformat()
+                }}
             )
             
             transaction = await db.payment_transactions.find_one({"session_id": session_id})
@@ -981,12 +985,26 @@ async def stripe_webhook(request: Request):
                     start_date = datetime.now(timezone.utc)
                     end_date = start_date + timedelta(days=plan_config['duration_days'])
                     
+                    # Get user info for quick reference
+                    user = await db.users.find_one({"user_id": transaction['user_id']})
+                    user_email = user.get('email', '') if user else ''
+                    user_name = user.get('name', '') if user else ''
+                    
+                    # Update subscription with all payment details
                     await db.subscriptions.update_one(
                         {"stripe_session_id": session_id},
                         {"$set": {
                             "payment_status": "paid",
+                            "status": "active",
                             "start_date": start_date.isoformat(),
-                            "end_date": end_date.isoformat()
+                            "end_date": end_date.isoformat(),
+                            "payment_date": payment_date.isoformat(),
+                            "amount_paid": transaction.get('amount', plan_config.get('price', 0)),
+                            "currency": "USD",
+                            "payment_method": "card",  # Default to card for Stripe
+                            "stripe_payment_intent_id": transaction.get('id', session_id),
+                            "user_email": user_email,
+                            "user_name": user_name
                         }}
                     )
                     
