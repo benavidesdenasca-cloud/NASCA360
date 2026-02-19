@@ -16,10 +16,46 @@ const Gallery = () => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  // Subscription verification state
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(null);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
+
+  // Check subscription status
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!token) {
+        setCheckingSubscription(false);
+        setHasActiveSubscription(false);
+        return;
+      }
+      
+      try {
+        const response = await axios.get(`${API}/subscription/status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        // Admin always has access
+        if (response.data.is_admin) {
+          setHasActiveSubscription(true);
+        } else {
+          setHasActiveSubscription(response.data.has_active_subscription);
+        }
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        setHasActiveSubscription(false);
+      } finally {
+        setCheckingSubscription(false);
+      }
+    };
+    
+    checkSubscription();
+  }, [token]);
 
   useEffect(() => {
-    fetchVideos();
-  }, [selectedCategory, user]);
+    if (hasActiveSubscription) {
+      fetchVideos();
+    }
+  }, [selectedCategory, hasActiveSubscription]);
 
   const fetchVideos = async () => {
     try {
