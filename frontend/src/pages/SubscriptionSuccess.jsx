@@ -23,6 +23,7 @@ const SubscriptionSuccess = () => {
   const payerId = searchParams.get('PayerID');
   const plan = searchParams.get('plan');
   const isRenewal = searchParams.get('renew') === 'true';
+  const isNewSubForExistingUser = searchParams.get('new_sub') === 'true';
 
   useEffect(() => {
     if (!paymentId || !payerId) {
@@ -38,7 +39,11 @@ const SubscriptionSuccess = () => {
     try {
       setStatus('processing');
       
-      const endpoint = isRenewal && token
+      // Determine the correct endpoint
+      // - Renewal: execute-renewal
+      // - New subscription for existing user: execute-renewal (same flow)
+      // - New user registration: execute-payment
+      const endpoint = (isRenewal || isNewSubForExistingUser) && token
         ? `${API}/paypal/execute-renewal`
         : `${API}/paypal/execute-payment`;
       
