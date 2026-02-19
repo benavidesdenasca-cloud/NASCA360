@@ -176,6 +176,10 @@ function App() {
           } 
         />
         <Route 
+          path="/contact" 
+          element={<Contact />} 
+        />
+        <Route 
           path="/reservations/success" 
           element={
             <ProtectedRoute>
