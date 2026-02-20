@@ -2283,25 +2283,80 @@ async def update_user(
     update_data: dict,
     admin: User = Depends(require_admin)
 ):
-    """Update user details (admin only)"""
+    """Update user details and subscription (admin only)"""
     # Don't allow changing your own role
     if user_id == admin.user_id and "role" in update_data:
         raise HTTPException(status_code=400, detail="Cannot change your own role")
     
-    # Allowed fields to update
-    allowed_fields = ["name", "email", "role", "subscription_plan", "is_verified"]
+    # Handle subscription update separately
+    subscription_data = update_data.pop('subscription', None)
+    
+    # Allowed fields to update for user
+    allowed_fields = ["name", "email", "role", "subscription_plan", "is_verified", "is_blocked"]
     update_dict = {k: v for k, v in update_data.items() if k in allowed_fields}
     
-    if not update_dict:
-        raise HTTPException(status_code=400, detail="No valid fields to update")
+    # Update user fields
+    if update_dict:
+        result = await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": update_dict}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
     
-    result = await db.users.update_one(
-        {"user_id": user_id},
-        {"$set": update_dict}
-    )
-    
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="User not found")
+    # Handle subscription update
+    if subscription_data:
+        if subscription_data.get('status') == 'none' or subscription_data.get('plan_type') == 'none':
+            # Remove/cancel subscription
+            await db.subscriptions.update_many(
+                {"user_id": user_id, "status": "active"},
+                {"$set": {"status": "cancelled"}}
+            )
+            # Update user subscription_plan
+            await db.users.update_one(
+                {"user_id": user_id},
+                {"$set": {"subscription_plan": "basic"}}
+            )
+        else:
+            # Get user info
+            user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            now = datetime.now(timezone.utc)
+            
+            # Cancel any existing active subscriptions
+            await db.subscriptions.update_many(
+                {"user_id": user_id, "status": "active"},
+                {"$set": {"status": "replaced"}}
+            )
+            
+            # Create new subscription
+            new_subscription = {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "user_email": user.get('email'),
+                "plan_type": subscription_data.get('plan_type'),
+                "payment_status": "paid",
+                "payment_method": "admin_manual",
+                "amount_paid": subscription_data.get('amount_paid', 0),
+                "currency": "USD",
+                "payment_date": now.isoformat(),
+                "start_date": f"{subscription_data.get('start_date')}T00:00:00+00:00" if subscription_data.get('start_date') else now.isoformat(),
+                "end_date": f"{subscription_data.get('end_date')}T23:59:59+00:00" if subscription_data.get('end_date') else now.isoformat(),
+                "status": subscription_data.get('status', 'active'),
+                "auto_renew": False,
+                "created_at": now.isoformat(),
+                "notes": "Creado/modificado manualmente por administrador"
+            }
+            await db.subscriptions.insert_one(new_subscription)
+            
+            # Update user subscription_plan
+            await db.users.update_one(
+                {"user_id": user_id},
+                {"$set": {"subscription_plan": subscription_data.get('plan_type')}}
+            )
     
     return {"message": "User updated successfully"}
 
