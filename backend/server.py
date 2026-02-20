@@ -1152,27 +1152,37 @@ async def get_subscription_status(current_user: User = Depends(get_current_user)
     if current_user.role == 'admin':
         return {"has_active_subscription": True, "is_admin": True}
     
-    # Check subscription status
+    # Check subscription status - look for active subscription in database
     has_subscription = False
     subscription_data = None
     
-    if current_user.subscription_plan and current_user.subscription_plan != "basic":
-        subscription = await db.subscriptions.find_one(
-            {"user_id": current_user.user_id, "status": "active"},
-            {"_id": 0}
-        )
-        if subscription and subscription.get('end_date'):
-            end_date = datetime.fromisoformat(subscription['end_date']) if isinstance(subscription['end_date'], str) else subscription['end_date']
-            if end_date.tzinfo is None:
-                end_date = end_date.replace(tzinfo=timezone.utc)
-            if datetime.now(timezone.utc) > end_date:
-                has_subscription = False
-            else:
-                has_subscription = True
-                subscription_data = {
-                    "end_date": end_date.isoformat(),
-                    "plan": subscription.get('plan_type', 'premium')
-                }
+    # Find active subscription for this user
+    subscription = await db.subscriptions.find_one(
+        {"user_id": current_user.user_id, "status": "active"},
+        {"_id": 0},
+        sort=[("created_at", -1)]  # Get the most recent one
+    )
+    
+    if subscription and subscription.get('end_date'):
+        end_date = datetime.fromisoformat(subscription['end_date']) if isinstance(subscription['end_date'], str) else subscription['end_date']
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+        
+        if datetime.now(timezone.utc) <= end_date:
+            # Subscription is still valid
+            has_subscription = True
+            subscription_data = {
+                "end_date": end_date.isoformat(),
+                "plan": subscription.get('plan_type', 'premium'),
+                "start_date": subscription.get('start_date'),
+                "amount_paid": subscription.get('amount_paid')
+            }
+        else:
+            # Subscription expired - update status
+            await db.subscriptions.update_one(
+                {"id": subscription.get('id')},
+                {"$set": {"status": "expired"}}
+            )
     
     return {
         "has_active_subscription": has_subscription,
