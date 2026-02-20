@@ -868,15 +868,32 @@ const AdminPanel = () => {
 // Edit User Modal Component
 const EditUserModal = ({ user, onClose, onSave }) => {
   const [formData, setFormData] = useState({
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    subscription_plan: user.subscription_plan
+    name: user.name || '',
+    email: user.email || '',
+    role: user.role || 'user',
+    is_blocked: user.is_blocked || false
   });
+  
+  const [subscriptionData, setSubscriptionData] = useState({
+    plan_type: user.subscription_info?.plan_type || 'none',
+    amount_paid: user.subscription_info?.amount_paid || 0,
+    start_date: user.subscription_info?.start_date ? user.subscription_info.start_date.split('T')[0] : '',
+    end_date: user.subscription_info?.end_date ? user.subscription_info.end_date.split('T')[0] : '',
+    status: user.subscription_info?.status || 'none'
+  });
+  
+  const [activeTab, setActiveTab] = useState('user');
+
+  const handleSave = () => {
+    onSave(user.user_id, {
+      ...formData,
+      subscription: subscriptionData
+    });
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-2xl font-bold text-amber-900">Editar Usuario</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -884,62 +901,275 @@ const EditUserModal = ({ user, onClose, onSave }) => {
           </button>
         </div>
         
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-            />
-          </div>
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('user')}
+            className={`px-4 py-2 font-medium ${activeTab === 'user' 
+              ? 'text-amber-600 border-b-2 border-amber-600' 
+              : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Datos de Usuario
+          </button>
+          <button
+            onClick={() => setActiveTab('subscription')}
+            className={`px-4 py-2 font-medium ${activeTab === 'subscription' 
+              ? 'text-amber-600 border-b-2 border-amber-600' 
+              : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Suscripción
+          </button>
+        </div>
+        
+        {/* User Data Tab */}
+        {activeTab === 'user' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rol</label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="user">Usuario</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                <select
+                  value={formData.is_blocked ? 'blocked' : 'active'}
+                  onChange={(e) => setFormData({...formData, is_blocked: e.target.value === 'blocked'})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="active">Activo</option>
+                  <option value="blocked">Bloqueado</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 rounded-lg p-4 mt-4">
+              <p className="text-sm text-gray-600">
+                <strong>user_id:</strong> {user.user_id}
+              </p>
+              <p className="text-sm text-gray-600">
+                <strong>Creado:</strong> {user.created_at ? new Date(user.created_at).toLocaleDateString('es-PE') : 'N/A'}
+              </p>
+              <p className="text-sm text-gray-600">
+                <strong>Proveedor Auth:</strong> {user.oauth_provider || 'Email/Password'}
+              </p>
+            </div>
           </div>
+        )}
+        
+        {/* Subscription Tab */}
+        {activeTab === 'subscription' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Plan de Suscripción</label>
+                <select
+                  value={subscriptionData.plan_type}
+                  onChange={(e) => setSubscriptionData({...subscriptionData, plan_type: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="none">Sin Plan</option>
+                  <option value="1_month">1 Mes ($20)</option>
+                  <option value="3_months">3 Meses ($55)</option>
+                  <option value="6_months">6 Meses ($100)</option>
+                  <option value="12_months">12 Meses ($180)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Estado Suscripción</label>
+                <select
+                  value={subscriptionData.status}
+                  onChange={(e) => setSubscriptionData({...subscriptionData, status: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="none">Sin Suscripción</option>
+                  <option value="active">Activa</option>
+                  <option value="expired">Expirada</option>
+                  <option value="cancelled">Cancelada</option>
+                </select>
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Rol</label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({...formData, role: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-            >
-              <option value="user">Usuario</option>
-              <option value="admin">Administrador</option>
-            </select>
-          </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Monto Pagado ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={subscriptionData.amount_paid}
+                  onChange={(e) => setSubscriptionData({...subscriptionData, amount_paid: parseFloat(e.target.value) || 0})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Método de Pago</label>
+                <input
+                  type="text"
+                  value={user.subscription_info?.payment_method || 'paypal'}
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600"
+                />
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Plan</label>
-            <select
-              value={formData.subscription_plan}
-              onChange={(e) => setFormData({...formData, subscription_plan: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-            >
-              <option value="basic">Básico</option>
-              <option value="premium">Premium</option>
-            </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Inicio</label>
+                <input
+                  type="date"
+                  value={subscriptionData.start_date}
+                  onChange={(e) => setSubscriptionData({...subscriptionData, start_date: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Fin (Acceso hasta)</label>
+                <input
+                  type="date"
+                  value={subscriptionData.end_date}
+                  onChange={(e) => setSubscriptionData({...subscriptionData, end_date: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            </div>
+            
+            {/* Quick Actions */}
+            <div className="bg-amber-50 rounded-lg p-4 mt-4">
+              <p className="text-sm font-medium text-amber-800 mb-3">Acciones Rápidas:</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const today = new Date();
+                    const endDate = new Date(today);
+                    endDate.setDate(endDate.getDate() + 30);
+                    setSubscriptionData({
+                      ...subscriptionData,
+                      plan_type: '1_month',
+                      status: 'active',
+                      amount_paid: 20,
+                      start_date: today.toISOString().split('T')[0],
+                      end_date: endDate.toISOString().split('T')[0]
+                    });
+                  }}
+                  className="px-3 py-1 bg-amber-200 text-amber-800 rounded-full text-xs hover:bg-amber-300"
+                >
+                  + 1 Mes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const today = new Date();
+                    const endDate = new Date(today);
+                    endDate.setDate(endDate.getDate() + 90);
+                    setSubscriptionData({
+                      ...subscriptionData,
+                      plan_type: '3_months',
+                      status: 'active',
+                      amount_paid: 55,
+                      start_date: today.toISOString().split('T')[0],
+                      end_date: endDate.toISOString().split('T')[0]
+                    });
+                  }}
+                  className="px-3 py-1 bg-amber-200 text-amber-800 rounded-full text-xs hover:bg-amber-300"
+                >
+                  + 3 Meses
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const today = new Date();
+                    const endDate = new Date(today);
+                    endDate.setDate(endDate.getDate() + 180);
+                    setSubscriptionData({
+                      ...subscriptionData,
+                      plan_type: '6_months',
+                      status: 'active',
+                      amount_paid: 100,
+                      start_date: today.toISOString().split('T')[0],
+                      end_date: endDate.toISOString().split('T')[0]
+                    });
+                  }}
+                  className="px-3 py-1 bg-amber-200 text-amber-800 rounded-full text-xs hover:bg-amber-300"
+                >
+                  + 6 Meses
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const today = new Date();
+                    const endDate = new Date(today);
+                    endDate.setDate(endDate.getDate() + 365);
+                    setSubscriptionData({
+                      ...subscriptionData,
+                      plan_type: '12_months',
+                      status: 'active',
+                      amount_paid: 180,
+                      start_date: today.toISOString().split('T')[0],
+                      end_date: endDate.toISOString().split('T')[0]
+                    });
+                  }}
+                  className="px-3 py-1 bg-amber-200 text-amber-800 rounded-full text-xs hover:bg-amber-300"
+                >
+                  + 12 Meses
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubscriptionData({
+                      plan_type: 'none',
+                      status: 'none',
+                      amount_paid: 0,
+                      start_date: '',
+                      end_date: ''
+                    });
+                  }}
+                  className="px-3 py-1 bg-red-200 text-red-800 rounded-full text-xs hover:bg-red-300"
+                >
+                  Quitar Acceso
+                </button>
+              </div>
+            </div>
           </div>
+        )}
 
-          <div className="flex gap-3 mt-6">
-            <Button onClick={onClose} variant="outline" className="flex-1">
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => onSave(user.user_id, formData)}
-              className="flex-1 btn-peru"
-            >
-              Guardar
-            </Button>
-          </div>
+        <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+          <Button onClick={onClose} variant="outline" className="flex-1">
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSave}
+            className="flex-1 btn-peru"
+          >
+            Guardar Cambios
+          </Button>
         </div>
       </div>
     </div>
