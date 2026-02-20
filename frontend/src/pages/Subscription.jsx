@@ -464,11 +464,12 @@ const Subscription = () => {
                     <PayPalButtons
                       style={{ 
                         layout: "vertical",
-                        color: "blue",
+                        color: "gold",
                         shape: "rect",
                         label: "paypal",
                         height: 50
                       }}
+                      fundingSource="paypal"
                       disabled={loading || (!user && !validateForm())}
                       createOrder={async () => {
                         try {
