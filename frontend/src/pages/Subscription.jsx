@@ -554,7 +554,7 @@ const Subscription = () => {
                   </PayPalScriptProvider>
                   
                   <p className="text-center text-xs text-gray-500 mt-4">
-                    El pago se procesa en una ventana segura de PayPal sin salir de esta página.
+                    Haz clic en PayPal para abrir una ventana segura. Podrás pagar con tu cuenta PayPal o con tarjeta de crédito/débito.
                   </p>
                 </div>
               </div>
