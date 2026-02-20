@@ -453,27 +453,107 @@ const Subscription = () => {
                     <span className="text-amber-600">${selectedPlanData?.price} USD</span>
                   </div>
                   
-                  {/* PayPal Button */}
-                  <Button
-                    onClick={createPayPalOrder}
-                    disabled={loading}
-                    className="w-full bg-[#0070BA] hover:bg-[#005C99] text-white py-6 text-lg font-semibold rounded-xl flex items-center justify-center gap-3"
-                    data-testid="paypal-checkout"
+                  {/* PayPal Button - Popup Flow */}
+                  <PayPalScriptProvider 
+                    options={{ 
+                      "client-id": PAYPAL_CLIENT_ID,
+                      currency: "USD",
+                      intent: "capture"
+                    }}
                   >
-                    {loading ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    ) : (
-                      <>
-                        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.641.641 0 0 1 .633-.544h6.127c2.09 0 3.733.627 4.884 1.862.577.619.98 1.35 1.198 2.174.228.862.265 1.862.108 2.971-.185 1.308-.565 2.442-1.13 3.373-.522.861-1.214 1.58-2.057 2.134-.8.528-1.72.92-2.733 1.163-.97.233-2.042.35-3.187.35h-.41a1.919 1.919 0 0 0-1.898 1.628l-.056.348-.948 6.012-.038.248z"/>
-                        </svg>
-                        Pagar con PayPal
-                      </>
-                    )}
-                  </Button>
+                    <PayPalButtons
+                      style={{ 
+                        layout: "vertical",
+                        color: "blue",
+                        shape: "rect",
+                        label: "paypal",
+                        height: 50
+                      }}
+                      disabled={loading || (!user && !validateForm())}
+                      createOrder={async () => {
+                        try {
+                          setLoading(true);
+                          
+                          const payload = {
+                            plan_type: selectedPlan
+                          };
+                          
+                          // Add user data if not logged in
+                          if (!user) {
+                            payload.email = formData.email;
+                            payload.name = formData.name;
+                            payload.password = formData.password;
+                          }
+                          
+                          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                          
+                          const response = await axios.post(
+                            `${API}/paypal/popup/create-order`,
+                            payload,
+                            { headers }
+                          );
+                          
+                          return response.data.orderID;
+                        } catch (error) {
+                          console.error('Error creating order:', error);
+                          let errorMessage = 'Error al crear el pago';
+                          if (error.response?.data?.detail) {
+                            const detail = error.response.data.detail;
+                            errorMessage = typeof detail === 'string' ? detail : JSON.stringify(detail);
+                          }
+                          toast.error(errorMessage);
+                          setLoading(false);
+                          throw error;
+                        }
+                      }}
+                      onApprove={async (data) => {
+                        try {
+                          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                          
+                          const response = await axios.post(
+                            `${API}/paypal/popup/capture-order?orderID=${data.orderID}`,
+                            {},
+                            { headers }
+                          );
+                          
+                          if (response.data.success) {
+                            toast.success(response.data.message);
+                            
+                            // If new user, save credentials
+                            if (response.data.access_token) {
+                              localStorage.setItem('access_token', response.data.access_token);
+                              setToken(response.data.access_token);
+                              if (response.data.user) {
+                                setUser(response.data.user);
+                              }
+                            }
+                            
+                            // Navigate to success or map
+                            setTimeout(() => {
+                              navigate('/mapa');
+                            }, 1500);
+                          }
+                        } catch (error) {
+                          console.error('Error capturing order:', error);
+                          toast.error(error.response?.data?.detail || 'Error al procesar el pago');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      onCancel={() => {
+                        toast.info('Pago cancelado');
+                        setLoading(false);
+                      }}
+                      onError={(err) => {
+                        console.error('PayPal error:', err);
+                        toast.error('Error en PayPal. Por favor intenta de nuevo.');
+                        setLoading(false);
+                      }}
+                    />
+                  </PayPalScriptProvider>
                   
                   <p className="text-center text-xs text-gray-500 mt-4">
-                    Al hacer clic serás redirigido a PayPal para completar tu pago de forma segura.
+                    El pago se procesa en una ventana segura de PayPal sin salir de esta página.
                   </p>
                 </div>
               </div>
