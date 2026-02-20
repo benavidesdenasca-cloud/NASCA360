@@ -1968,8 +1968,31 @@ async def update_reservation(
 
 @api_router.get("/admin/users")
 async def get_all_users(admin: User = Depends(require_admin)):
-    """Get all users (admin only)"""
+    """Get all users with subscription info (admin only)"""
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
+    
+    # Enrich each user with their subscription info
+    for user in users:
+        # Find active subscription for this user
+        subscription = await db.subscriptions.find_one(
+            {"user_id": user['user_id'], "status": "active"},
+            {"_id": 0},
+            sort=[("created_at", -1)]
+        )
+        
+        if subscription:
+            user['subscription_info'] = {
+                "payment_date": subscription.get('payment_date'),
+                "amount_paid": subscription.get('amount_paid'),
+                "start_date": subscription.get('start_date'),
+                "end_date": subscription.get('end_date'),
+                "plan_type": subscription.get('plan_type'),
+                "payment_method": subscription.get('payment_method', 'paypal'),
+                "status": subscription.get('status')
+            }
+        else:
+            user['subscription_info'] = None
+    
     return users
 
 @api_router.get("/admin/subscriptions")
