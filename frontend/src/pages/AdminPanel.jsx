@@ -361,25 +361,49 @@ const AdminPanel = () => {
                     <tbody>
                       {users.map((u) => (
                         <tr key={u.user_id} className="border-b border-amber-100 hover:bg-amber-50">
-                          <td className="py-3 px-4">{u.name}</td>
-                          <td className="py-3 px-4">{u.email}</td>
+                          <td className="py-3 px-4">
+                            <div>
+                              <p className="font-medium">{u.name}</p>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                u.role === 'admin'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {u.role}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-sm">{u.email}</td>
                           <td className="py-3 px-4">
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              u.subscription_plan === 'premium'
+                              u.subscription_info
                                 ? 'bg-gradient-to-r from-amber-200 to-yellow-200 text-amber-900'
                                 : 'bg-gray-200 text-gray-700'
                             }`}>
-                              {u.subscription_plan || 'basic'}
+                              {u.subscription_info?.plan_type || 'Sin Plan'}
                             </span>
                           </td>
-                          <td className="py-3 px-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              u.role === 'admin'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {u.role}
-                            </span>
+                          <td className="py-3 px-4 text-sm">
+                            {u.subscription_info?.payment_date 
+                              ? new Date(u.subscription_info.payment_date).toLocaleDateString('es-PE')
+                              : '-'}
+                          </td>
+                          <td className="py-3 px-4 text-sm font-medium">
+                            {u.subscription_info?.amount_paid 
+                              ? `$${u.subscription_info.amount_paid}`
+                              : '-'}
+                          </td>
+                          <td className="py-3 px-4 text-xs">
+                            {u.subscription_info?.start_date && u.subscription_info?.end_date ? (
+                              <div>
+                                <p className="text-green-600">
+                                  Desde: {new Date(u.subscription_info.start_date).toLocaleDateString('es-PE')}
+                                </p>
+                                <p className="text-red-600">
+                                  Hasta: {new Date(u.subscription_info.end_date).toLocaleDateString('es-PE')}
+                                </p>
+                              </div>
+                            ) : '-'}
                           </td>
                           <td className="py-3 px-4">
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
