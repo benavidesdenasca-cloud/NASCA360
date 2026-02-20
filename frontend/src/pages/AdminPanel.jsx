@@ -351,7 +351,9 @@ const AdminPanel = () => {
                         <th className="text-left py-3 px-4 text-amber-900">Nombre</th>
                         <th className="text-left py-3 px-4 text-amber-900">Email</th>
                         <th className="text-left py-3 px-4 text-amber-900">Plan</th>
-                        <th className="text-left py-3 px-4 text-amber-900">Rol</th>
+                        <th className="text-left py-3 px-4 text-amber-900">Fecha Pago</th>
+                        <th className="text-left py-3 px-4 text-amber-900">Monto</th>
+                        <th className="text-left py-3 px-4 text-amber-900">Acceso</th>
                         <th className="text-left py-3 px-4 text-amber-900">Estado</th>
                         <th className="text-left py-3 px-4 text-amber-900">Acciones</th>
                       </tr>
