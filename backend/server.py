@@ -885,6 +885,7 @@ async def get_subscription_packages():
 
 # ==================== PAYPAL POPUP FLOW ENDPOINTS ====================
 # These endpoints work with PayPal JavaScript SDK for popup experience
+# Using Orders API v2 instead of Payments API v1
 
 class PopupOrderRequest(BaseModel):
     plan_type: str
@@ -893,13 +894,33 @@ class PopupOrderRequest(BaseModel):
     name: Optional[str] = None
     password: Optional[str] = None
 
+async def get_paypal_access_token():
+    """Get PayPal OAuth access token for API calls"""
+    client_id = os.environ.get('PAYPAL_CLIENT_ID')
+    client_secret = os.environ.get('PAYPAL_CLIENT_SECRET')
+    mode = os.environ.get('PAYPAL_MODE', 'sandbox')
+    
+    base_url = "https://api-m.paypal.com" if mode == "live" else "https://api-m.sandbox.paypal.com"
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{base_url}/v1/oauth2/token",
+            data={"grant_type": "client_credentials"},
+            auth=(client_id, client_secret),
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=500, detail="Error al autenticar con PayPal")
+        
+        return response.json()["access_token"]
+
 @api_router.post("/paypal/popup/create-order")
 async def create_popup_order(
     request: PopupOrderRequest,
     authorization: Optional[str] = Header(None)
 ):
-    """Create PayPal order for popup flow - works for both new and existing users"""
-    configure_paypal()
+    """Create PayPal order for popup flow using Orders API v2"""
     
     if request.plan_type not in SUBSCRIPTION_PACKAGES:
         raise HTTPException(status_code=400, detail="Tipo de plan inválido")
@@ -919,83 +940,85 @@ async def create_popup_order(
         except:
             pass
     
-    # Create PayPal payment (using REST API which returns payment ID for SDK)
-    payment = Payment({
-        "intent": "sale",
-        "payer": {
-            "payment_method": "paypal"
-        },
-        "redirect_urls": {
-            "return_url": "https://example.com/success",  # Not used in popup flow
-            "cancel_url": "https://example.com/cancel"   # Not used in popup flow
-        },
-        "transactions": [{
-            "item_list": {
-                "items": [{
-                    "name": package['name'],
-                    "description": package['description'],
-                    "quantity": "1",
-                    "price": str(package['amount']),
-                    "currency": package['currency']
-                }]
-            },
+    # Get PayPal access token
+    access_token = await get_paypal_access_token()
+    mode = os.environ.get('PAYPAL_MODE', 'sandbox')
+    base_url = "https://api-m.paypal.com" if mode == "live" else "https://api-m.sandbox.paypal.com"
+    
+    # Create order using Orders API v2
+    order_data = {
+        "intent": "CAPTURE",
+        "purchase_units": [{
             "amount": {
-                "total": str(package['amount']),
-                "currency": package['currency']
+                "currency_code": "USD",
+                "value": str(package['amount'])
             },
             "description": f"Suscripción Nazca360 - {package['name']}"
         }]
-    })
+    }
     
-    if payment.create():
-        # Store pending data
-        pending_data = {
-            "payment_id": payment.id,
-            "plan_type": request.plan_type,
-            "amount": package['amount'],
-            "duration_days": package['duration_days'],
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "status": "pending",
-            "type": "popup_flow"
-        }
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{base_url}/v2/checkout/orders",
+            json=order_data,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}"
+            }
+        )
         
-        if current_user:
-            # Existing user
-            pending_data["user_id"] = current_user.user_id
-            pending_data["email"] = current_user.email
-            pending_data["is_new_user"] = False
-        else:
-            # New user registration
-            if not request.email or not request.name or not request.password:
-                raise HTTPException(status_code=400, detail="Se requiere email, nombre y contraseña para nuevos usuarios")
-            
-            # Check email not registered
-            existing = await db.users.find_one({"email": request.email.lower()})
-            if existing:
-                raise HTTPException(status_code=400, detail="Este email ya está registrado")
-            
-            pending_data["email"] = request.email.lower()
-            pending_data["name"] = request.name
-            pending_data["password_hash"] = hash_password(request.password)
-            pending_data["is_new_user"] = True
+        if response.status_code not in [200, 201]:
+            logging.error(f"PayPal order creation failed: {response.text}")
+            raise HTTPException(status_code=500, detail="Error al crear orden de PayPal")
         
-        await db.pending_popup_payments.insert_one(pending_data)
-        
-        # Return the payment ID for the SDK
-        return {
-            "orderID": payment.id,
-            "status": "created"
-        }
+        order = response.json()
+        order_id = order["id"]
+    
+    # Store pending data
+    pending_data = {
+        "payment_id": order_id,
+        "plan_type": request.plan_type,
+        "amount": package['amount'],
+        "duration_days": package['duration_days'],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "status": "pending",
+        "type": "popup_flow"
+    }
+    
+    if current_user:
+        # Existing user
+        pending_data["user_id"] = current_user.user_id
+        pending_data["email"] = current_user.email
+        pending_data["is_new_user"] = False
     else:
-        raise HTTPException(status_code=500, detail=f"Error al crear pago: {payment.error}")
+        # New user registration
+        if not request.email or not request.name or not request.password:
+            raise HTTPException(status_code=400, detail="Se requiere email, nombre y contraseña para nuevos usuarios")
+        
+        # Check email not registered
+        existing = await db.users.find_one({"email": request.email.lower()})
+        if existing:
+            raise HTTPException(status_code=400, detail="Este email ya está registrado")
+        
+        pending_data["email"] = request.email.lower()
+        pending_data["name"] = request.name
+        pending_data["password_hash"] = hash_password(request.password)
+        pending_data["is_new_user"] = True
+    
+    await db.pending_popup_payments.insert_one(pending_data)
+    
+    # Return the order ID for the SDK
+    return {
+        "orderID": order_id,
+        "status": "created"
+    }
 
 @api_router.post("/paypal/popup/capture-order")
 async def capture_popup_order(
     orderID: str,
     authorization: Optional[str] = Header(None)
 ):
-    """Capture PayPal payment after user approves in popup"""
-    configure_paypal()
+    """Capture PayPal payment after user approves in popup using Orders API v2"""
     
     # Find pending payment
     pending = await db.pending_popup_payments.find_one({
@@ -1006,109 +1029,119 @@ async def capture_popup_order(
     if not pending:
         raise HTTPException(status_code=404, detail="Pago pendiente no encontrado")
     
-    # Execute the payment
-    payment = Payment.find(orderID)
+    # Get PayPal access token
+    access_token = await get_paypal_access_token()
+    mode = os.environ.get('PAYPAL_MODE', 'sandbox')
+    base_url = "https://api-m.paypal.com" if mode == "live" else "https://api-m.sandbox.paypal.com"
     
-    # Get payer ID from payment
-    if not payment or not payment.payer:
-        raise HTTPException(status_code=400, detail="No se pudo obtener información del pago")
-    
-    payer_id = payment.payer.payer_info.payer_id if payment.payer.payer_info else None
-    
-    if not payer_id:
-        raise HTTPException(status_code=400, detail="No se pudo obtener el ID del pagador")
-    
-    if payment.execute({"payer_id": payer_id}):
-        now = datetime.now(timezone.utc)
-        duration_days = pending['duration_days']
-        end_date = now + timedelta(days=duration_days)
+    # Capture the order
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{base_url}/v2/checkout/orders/{orderID}/capture",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}"
+            }
+        )
         
-        if pending.get('is_new_user', False):
-            # Create new user
-            user_id = str(uuid.uuid4())
-            new_user = {
-                "user_id": user_id,
-                "email": pending['email'],
-                "name": pending['name'],
-                "password_hash": pending['password_hash'],
-                "role": "user",
-                "subscription_plan": pending['plan_type'],
-                "is_verified": True,
-                "is_blocked": False,
-                "created_at": now.isoformat(),
-                "oauth_provider": None
-            }
-            await db.users.insert_one(new_user)
-            
-            # Create session
-            access_token = create_access_token(user_id)
-            session = {
-                "user_id": user_id,
-                "session_token": access_token,
-                "expires_at": (now + timedelta(days=7)).isoformat(),
-                "last_activity": now.isoformat(),
-                "created_at": now.isoformat()
-            }
-            await db.user_sessions.insert_one(session)
-        else:
-            # Existing user
-            user_id = pending['user_id']
-            access_token = None
-            
-            # Update user subscription
-            await db.users.update_one(
-                {"user_id": user_id},
-                {"$set": {"subscription_plan": pending['plan_type']}}
+        if response.status_code not in [200, 201]:
+            logging.error(f"PayPal capture failed: {response.text}")
+            await db.pending_popup_payments.update_one(
+                {"payment_id": orderID},
+                {"$set": {"status": "failed", "error": response.text}}
             )
+            raise HTTPException(status_code=400, detail="Error al procesar el pago")
         
-        # Create subscription record
-        subscription = {
-            "id": str(uuid.uuid4()),
+        capture_data = response.json()
+    
+    # Verify payment was completed
+    if capture_data.get("status") != "COMPLETED":
+        raise HTTPException(status_code=400, detail="El pago no fue completado")
+    
+    now = datetime.now(timezone.utc)
+    duration_days = pending['duration_days']
+    end_date = now + timedelta(days=duration_days)
+    
+    if pending.get('is_new_user', False):
+        # Create new user
+        user_id = str(uuid.uuid4())
+        new_user = {
             "user_id": user_id,
-            "user_email": pending['email'],
-            "plan_type": pending['plan_type'],
-            "paypal_payment_id": orderID,
-            "payment_status": "paid",
-            "payment_method": "paypal",
-            "amount_paid": pending['amount'],
-            "currency": "USD",
-            "payment_date": now.isoformat(),
-            "start_date": now.isoformat(),
-            "end_date": end_date.isoformat(),
-            "status": "active",
-            "auto_renew": False,
+            "email": pending['email'],
+            "name": pending['name'],
+            "password_hash": pending['password_hash'],
+            "role": "user",
+            "subscription_plan": pending['plan_type'],
+            "is_verified": True,
+            "is_blocked": False,
+            "created_at": now.isoformat(),
+            "oauth_provider": None
+        }
+        await db.users.insert_one(new_user)
+        
+        # Create session
+        access_token_jwt = create_access_token(user_id)
+        session = {
+            "user_id": user_id,
+            "session_token": access_token_jwt,
+            "expires_at": (now + timedelta(days=7)).isoformat(),
+            "last_activity": now.isoformat(),
             "created_at": now.isoformat()
         }
-        await db.subscriptions.insert_one(subscription)
-        
-        # Update pending status
-        await db.pending_popup_payments.update_one(
-            {"payment_id": orderID},
-            {"$set": {"status": "completed"}}
-        )
-        
-        result = {
-            "success": True,
-            "message": "¡Pago exitoso! Tu suscripción está activa.",
-            "subscription_end": end_date.isoformat()
-        }
-        
-        if pending.get('is_new_user', False):
-            result["access_token"] = access_token
-            result["user"] = {
-                "user_id": user_id,
-                "name": pending['name'],
-                "email": pending['email'],
-                "subscription_plan": pending['plan_type']
-            }
-        
-        return result
+        await db.user_sessions.insert_one(session)
     else:
-        await db.pending_popup_payments.update_one(
-            {"payment_id": orderID},
-            {"$set": {"status": "failed", "error": str(payment.error)}}
+        # Existing user
+        user_id = pending['user_id']
+        access_token_jwt = None
+        
+        # Update user subscription
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"subscription_plan": pending['plan_type']}}
         )
-        raise HTTPException(status_code=400, detail=f"Error al procesar pago: {payment.error}")
+    
+    # Create subscription record
+    subscription = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "user_email": pending['email'],
+        "plan_type": pending['plan_type'],
+        "paypal_order_id": orderID,
+        "payment_status": "paid",
+        "payment_method": "paypal",
+        "amount_paid": pending['amount'],
+        "currency": "USD",
+        "payment_date": now.isoformat(),
+        "start_date": now.isoformat(),
+        "end_date": end_date.isoformat(),
+        "status": "active",
+        "auto_renew": False,
+        "created_at": now.isoformat()
+    }
+    await db.subscriptions.insert_one(subscription)
+    
+    # Update pending status
+    await db.pending_popup_payments.update_one(
+        {"payment_id": orderID},
+        {"$set": {"status": "completed"}}
+    )
+    
+    result = {
+        "success": True,
+        "message": "¡Pago exitoso! Tu suscripción está activa.",
+        "subscription_end": end_date.isoformat()
+    }
+    
+    if pending.get('is_new_user', False):
+        result["access_token"] = access_token_jwt
+        result["user"] = {
+            "user_id": user_id,
+            "name": pending['name'],
+            "email": pending['email'],
+            "subscription_plan": pending['plan_type']
+        }
+    
+    return result
 
 # ==================== END POPUP FLOW ====================
 
