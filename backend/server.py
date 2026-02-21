@@ -2193,16 +2193,26 @@ async def get_all_reservations(admin: User = Depends(require_admin)):
 async def get_admin_metrics(admin: User = Depends(require_admin)):
     """Get dashboard metrics (admin only)"""
     total_users = await db.users.count_documents({})
-    premium_users = await db.users.count_documents({"subscription_plan": "premium"})
+    premium_users = await db.users.count_documents({"subscription_plan": {"$ne": "basic", "$exists": True}})
     total_reservations = await db.reservations.count_documents({})
     total_videos = await db.videos.count_documents({})
     
+    # Calculate revenue from payment_transactions
     paid_transactions = await db.payment_transactions.find(
         {"payment_status": "paid"},
         {"_id": 0}
     ).to_list(1000)
+    revenue_from_transactions = sum(t.get('amount', 0) for t in paid_transactions)
     
-    total_revenue = sum(t['amount'] for t in paid_transactions)
+    # Also calculate revenue from subscriptions (PayPal payments)
+    subscriptions = await db.subscriptions.find(
+        {"amount_paid": {"$exists": True, "$gt": 0}},
+        {"_id": 0, "amount_paid": 1}
+    ).to_list(1000)
+    revenue_from_subscriptions = sum(s.get('amount_paid', 0) for s in subscriptions)
+    
+    # Total revenue is the sum of both sources
+    total_revenue = revenue_from_transactions + revenue_from_subscriptions
     
     return {
         "total_users": total_users,
