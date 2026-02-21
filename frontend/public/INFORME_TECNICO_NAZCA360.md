@@ -7,7 +7,7 @@
 **Versión:** 1.0  
 **Fecha:** Febrero 2026  
 **Autor:** Max Leonard Benavides Carpio  
-**Plataforma:** Nazca360 - https://ancient-lines-vr.preview.emergentagent.com
+**Plataforma:** Nazca360 - https://nazca-virtual-tour.preview.emergentagent.com
 
 ---
 
@@ -776,9 +776,9 @@ El sistema está preparado para escalar horizontalmente:
 
 | Entorno | URL |
 |---------|-----|
-| Preview | https://ancient-lines-vr.preview.emergentagent.com |
-| Admin Panel | https://ancient-lines-vr.preview.emergentagent.com/admin |
-| API Base | https://ancient-lines-vr.preview.emergentagent.com/api |
+| Preview | https://nazca-virtual-tour.preview.emergentagent.com |
+| Admin Panel | https://nazca-virtual-tour.preview.emergentagent.com/admin |
+| API Base | https://nazca-virtual-tour.preview.emergentagent.com/api |
 
 ### Anexo C: Contacto del Proyecto
 
