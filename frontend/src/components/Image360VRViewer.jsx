@@ -328,34 +328,19 @@ const Image360VRViewer = ({
   // Toggle auto-rotate
   const toggleAutoRotate = () => {
     setAutoRotate(!autoRotate);
-    
-    if (aframeSceneRef.current) {
-      const sky = aframeSceneRef.current.querySelector('a-sky');
-      if (sky) {
-        if (!autoRotate) {
-          sky.setAttribute('animation', 'property: rotation; from: 0 0 0; to: 0 360 0; loop: true; dur: 200000; easing: linear');
-        } else {
-          sky.removeAttribute('animation');
-        }
-      }
-    }
   };
 
   // Enter VR mode
   const enterVR = () => {
-    if (aframeSceneRef.current && aframeSceneRef.current.enterVR) {
-      aframeSceneRef.current.enterVR();
+    if (vrButtonRef.current) {
+      vrButtonRef.current.click();
     }
   };
 
   // Reset camera view
   const resetView = () => {
-    if (aframeSceneRef.current) {
-      const camera = aframeSceneRef.current.querySelector('a-camera');
-      if (camera) {
-        camera.setAttribute('rotation', '0 0 0');
-      }
-    }
+    lonRef.current = 0;
+    latRef.current = 0;
   };
 
   return (
