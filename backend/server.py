@@ -4152,7 +4152,7 @@ async def startup_db():
 
 # ==================== DOCUMENTATION ENDPOINTS ====================
 
-@api_router.get("/docs/list")
+@api_router.get("/documentos/list")
 async def list_documents():
     """List all available documentation files"""
     docs_dir = Path("/app/docs")
@@ -4166,12 +4166,12 @@ async def list_documents():
                 "filename": file.name,
                 "type": file.suffix[1:],
                 "size_bytes": file.stat().st_size,
-                "download_url": f"/api/docs/download/{file.name}"
+                "download_url": f"/api/documentos/download/{file.name}"
             })
     
     return {"documents": sorted(documents, key=lambda x: x['filename'])}
 
-@api_router.get("/docs/download/{filename}")
+@api_router.get("/documentos/download/{filename}")
 async def download_document(filename: str):
     """Download a documentation file"""
     docs_dir = Path("/app/docs")
