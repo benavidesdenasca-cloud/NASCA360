@@ -24,11 +24,13 @@ Plataforma de turismo virtual premium para administrar y mostrar contenido 360°
 │   └── server.py          # FastAPI + MongoDB + PayPal
 └── frontend/
     └── src/
+        ├── components/
+        │   └── Image360VRViewer.jsx  # NEW: Visor 360° con WebXR/VR
         └── pages/
             ├── AdminPanel.jsx   # Panel financiero
             ├── Contact.jsx
             ├── Gallery.jsx
-            ├── Map3D.jsx
+            ├── Map3D.jsx        # Usa Image360VRViewer
             ├── Reservations.jsx # PayPal integrado
             ├── Subscription.jsx # PayPal + nuevo flujo
             └── SubscriptionSuccess.jsx
