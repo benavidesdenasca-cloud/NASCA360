@@ -1,0 +1,1904 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe Técnico - Nazca360</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono&display=swap');
+        
+        :root {
+            --primary: #1a365d;
+            --secondary: #2b6cb0;
+            --accent: #ed8936;
+            --text: #2d3748;
+            --light-bg: #f7fafc;
+            --border: #e2e8f0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: var(--text);
+            background: white;
+        }
+        
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 0 auto;
+            background: white;
+        }
+        
+        @media print {
+            .page {
+                page-break-after: always;
+            }
+            .no-break {
+                page-break-inside: avoid;
+            }
+        }
+        
+        /* Cover Page */
+        .cover {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            min-height: 257mm;
+        }
+        
+        .cover-logo {
+            font-size: 72pt;
+            margin-bottom: 20px;
+        }
+        
+        .cover h1 {
+            font-size: 28pt;
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .cover h2 {
+            font-size: 16pt;
+            color: var(--secondary);
+            font-weight: 400;
+            margin-bottom: 30px;
+        }
+        
+        .cover h3 {
+            font-size: 14pt;
+            color: var(--accent);
+            font-weight: 500;
+            margin-bottom: 60px;
+        }
+        
+        .cover-info {
+            margin-top: 40px;
+            font-size: 11pt;
+            color: #666;
+        }
+        
+        .cover-info p {
+            margin: 5px 0;
+        }
+        
+        /* Headers */
+        h1 {
+            font-size: 20pt;
+            color: var(--primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 10px;
+            margin: 30px 0 20px 0;
+        }
+        
+        h2 {
+            font-size: 14pt;
+            color: var(--secondary);
+            margin: 25px 0 15px 0;
+            border-left: 4px solid var(--accent);
+            padding-left: 10px;
+        }
+        
+        h3 {
+            font-size: 12pt;
+            color: var(--primary);
+            margin: 20px 0 10px 0;
+        }
+        
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 10pt;
+        }
+        
+        th {
+            background: var(--primary);
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 500;
+        }
+        
+        td {
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        tr:nth-child(even) {
+            background: var(--light-bg);
+        }
+        
+        /* Code blocks */
+        pre {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 9pt;
+            overflow-x: auto;
+            margin: 15px 0;
+            line-height: 1.4;
+        }
+        
+        code {
+            font-family: 'Roboto Mono', monospace;
+            background: var(--light-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9pt;
+        }
+        
+        /* Diagrams */
+        .diagram {
+            background: var(--light-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .diagram-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 11pt;
+        }
+        
+        .diagram pre {
+            background: white;
+            color: var(--text);
+            text-align: left;
+            font-size: 8pt;
+            line-height: 1.3;
+        }
+        
+        /* Info boxes */
+        .info-box {
+            background: #ebf8ff;
+            border-left: 4px solid var(--secondary);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .warning-box {
+            background: #fffaf0;
+            border-left: 4px solid var(--accent);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .success-box {
+            background: #f0fff4;
+            border-left: 4px solid #38a169;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        /* Lists */
+        ul, ol {
+            margin: 10px 0 10px 25px;
+        }
+        
+        li {
+            margin: 5px 0;
+        }
+        
+        /* TOC */
+        .toc {
+            background: var(--light-bg);
+            padding: 20px 30px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .toc h2 {
+            border: none;
+            padding: 0;
+            margin-bottom: 15px;
+        }
+        
+        .toc ul {
+            list-style: none;
+            margin: 0;
+        }
+        
+        .toc li {
+            padding: 5px 0;
+            border-bottom: 1px dotted var(--border);
+        }
+        
+        .toc a {
+            color: var(--text);
+            text-decoration: none;
+        }
+        
+        /* Footer */
+        .page-footer {
+            position: fixed;
+            bottom: 10mm;
+            left: 20mm;
+            right: 20mm;
+            text-align: center;
+            font-size: 9pt;
+            color: #999;
+            border-top: 1px solid var(--border);
+            padding-top: 5px;
+        }
+        
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .metric-card {
+            background: var(--light-bg);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .metric-value {
+            font-size: 24pt;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .metric-label {
+            font-size: 9pt;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        /* Flow diagram */
+        .flow-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .flow-box {
+            background: var(--secondary);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 10pt;
+            text-align: center;
+        }
+        
+        .flow-arrow {
+            font-size: 20pt;
+            color: var(--accent);
+        }
+        
+        p {
+            margin: 10px 0;
+            text-align: justify;
+        }
+    </style>
+</head>
+<body>
+
+<!-- PORTADA -->
+<div class="page cover">
+    <div class="cover-logo">🏛️</div>
+    <h1>INFORME TÉCNICO DE IMPLEMENTACIÓN</h1>
+    <h2>Base de Datos y Arquitectura de Plataforma Web</h2>
+    <h3>Sistema: Nazca360 - Plataforma de Turismo Virtual Inmersivo</h3>
+    
+    <div style="margin: 40px 0; padding: 20px; background: var(--light-bg); border-radius: 10px;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Nazca_Lines_-_Colibr%C3%AD.jpg/800px-Nazca_Lines_-_Colibr%C3%AD.jpg" alt="Líneas de Nazca" style="max-width: 300px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    </div>
+    
+    <div class="cover-info">
+        <p><strong>Versión:</strong> 1.0</p>
+        <p><strong>Fecha:</strong> Febrero 2026</p>
+        <p><strong>Autor:</strong> Max Leonard Benavides Carpio</p>
+        <p><strong>Plataforma:</strong> https://ancient-lines-vr.preview.emergentagent.com</p>
+    </div>
+</div>
+
+<!-- ÍNDICE -->
+<div class="page">
+    <h1>ÍNDICE DE CONTENIDOS</h1>
+    
+    <div class="toc">
+        <ul>
+            <li><strong>1.</strong> Introducción</li>
+            <li><strong>2.</strong> Objetivos del Sistema</li>
+            <li><strong>3.</strong> Arquitectura del Sistema</li>
+            <li><strong>4.</strong> Tecnologías Utilizadas</li>
+            <li><strong>5.</strong> Diseño de Base de Datos</li>
+            <li><strong>6.</strong> Modelos de Datos (Esquemas)</li>
+            <li><strong>7.</strong> API REST - Endpoints</li>
+            <li><strong>8.</strong> Diagramas del Sistema</li>
+            <li><strong>9.</strong> Seguridad e Integraciones</li>
+            <li><strong>10.</strong> Infraestructura de Despliegue</li>
+            <li><strong>11.</strong> Métricas y Estadísticas</li>
+            <li><strong>12.</strong> Conclusiones</li>
+            <li><strong>Anexos</strong></li>
+        </ul>
+    </div>
+    
+    <h1>1. INTRODUCCIÓN</h1>
+    
+    <h2>1.1 Descripción General</h2>
+    <p>
+        <strong>Nazca360</strong> es una plataforma web de turismo virtual que permite a los usuarios explorar las 
+        Líneas de Nazca y Palpa a través de experiencias inmersivas en 360°. El sistema ofrece contenido multimedia 
+        de alta calidad, incluyendo videos 360°, fotografías panorámicas y un mapa interactivo con puntos de interés 
+        georreferenciados.
+    </p>
+    
+    <h2>1.2 Alcance del Proyecto</h2>
+    <ul>
+        <li>Plataforma web responsive con soporte para dispositivos VR (Meta Quest 3)</li>
+        <li>Sistema de suscripciones con pasarela de pagos PayPal</li>
+        <li>Panel de administración para gestión de contenido y usuarios</li>
+        <li>Mapa 3D interactivo con 59 puntos de interés (POIs)</li>
+        <li>Galería de videos 360° con streaming adaptativo (HLS)</li>
+        <li>Sistema de reservaciones para experiencias VR presenciales</li>
+        <li>Visor 360° con soporte WebXR para realidad virtual</li>
+    </ul>
+    
+    <h2>1.3 Problema que Resuelve</h2>
+    <div class="info-box">
+        <p>
+            La plataforma democratiza el acceso al patrimonio cultural de las Líneas de Nazca, permitiendo a personas 
+            de todo el mundo experimentar estos geoglifos milenarios de manera virtual e inmersiva, superando las 
+            barreras geográficas y económicas del turismo tradicional.
+        </p>
+    </div>
+</div>
+
+<!-- OBJETIVOS -->
+<div class="page">
+    <h1>2. OBJETIVOS DEL SISTEMA</h1>
+    
+    <h2>2.1 Objetivo General</h2>
+    <p>
+        Desarrollar una plataforma web de turismo virtual que permita la visualización inmersiva de las Líneas 
+        de Nazca mediante tecnologías de realidad virtual y contenido 360°.
+    </p>
+    
+    <h2>2.2 Objetivos Específicos</h2>
+    <table>
+        <tr>
+            <th>#</th>
+            <th>Objetivo</th>
+            <th>Estado</th>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td>Implementar sistema de autenticación seguro con JWT y OAuth 2.0</td>
+            <td>✅ Completado</td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>Diseñar base de datos NoSQL escalable para gestión de contenido</td>
+            <td>✅ Completado</td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td>Integrar pasarela de pagos PayPal para suscripciones</td>
+            <td>✅ Completado</td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td>Desarrollar visor 360° con soporte WebXR para dispositivos VR</td>
+            <td>✅ Completado</td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td>Crear mapa interactivo con geolocalización de figuras</td>
+            <td>✅ Completado</td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td>Implementar streaming de video adaptativo (HLS)</td>
+            <td>✅ Completado</td>
+        </tr>
+    </table>
+    
+    <h1>3. ARQUITECTURA DEL SISTEMA</h1>
+    
+    <h2>3.1 Patrón de Arquitectura</h2>
+    <p>
+        El sistema implementa una <strong>arquitectura de tres capas</strong> (Three-Tier Architecture) que separa 
+        claramente las responsabilidades de presentación, lógica de negocio y persistencia de datos.
+    </p>
+    
+    <table>
+        <tr>
+            <th>Capa</th>
+            <th>Tecnología</th>
+            <th>Puerto</th>
+            <th>Responsabilidad</th>
+        </tr>
+        <tr>
+            <td><strong>Presentación</strong></td>
+            <td>React.js + Three.js</td>
+            <td>3000</td>
+            <td>Interfaz de usuario, renderizado 3D/VR</td>
+        </tr>
+        <tr>
+            <td><strong>Aplicación</strong></td>
+            <td>FastAPI (Python)</td>
+            <td>8001</td>
+            <td>Lógica de negocio, API REST</td>
+        </tr>
+        <tr>
+            <td><strong>Datos</strong></td>
+            <td>MongoDB</td>
+            <td>27017</td>
+            <td>Persistencia y almacenamiento</td>
+        </tr>
+    </table>
+</div>
+
+<!-- DIAGRAMA DE ARQUITECTURA -->
+<div class="page">
+    <h2>3.2 Diagrama de Arquitectura General</h2>
+    
+    <div class="diagram">
+        <div class="diagram-title">ARQUITECTURA DE TRES CAPAS - NAZCA360</div>
+        <pre style="font-size: 7.5pt;">
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              CAPA DE PRESENTACIÓN                               │
+│                                  (Frontend)                                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│   ┌───────────────┐    ┌───────────────┐    ┌───────────────┐    ┌──────────┐ │
+│   │   React.js    │    │   Three.js    │    │   Leaflet     │    │ Tailwind │ │
+│   │   v19.0.0     │    │   WebXR/VR    │    │   Mapas 3D    │    │   CSS    │ │
+│   └───────┬───────┘    └───────┬───────┘    └───────┬───────┘    └────┬─────┘ │
+│           │                    │                    │                  │       │
+│           └────────────────────┼────────────────────┼──────────────────┘       │
+│                                │                    │                          │
+│                         ┌──────┴────────────────────┴──────┐                   │
+│                         │         Axios HTTP Client         │                   │
+│                         │      (Comunicación con API)       │                   │
+│                         └──────────────────┬───────────────┘                   │
+└────────────────────────────────────────────┼───────────────────────────────────┘
+                                             │
+                                             │ HTTPS / REST API
+                                             │ Puerto 443 → /api/*
+                                             ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              CAPA DE APLICACIÓN                                 │
+│                                  (Backend)                                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│   ┌─────────────────────────────────────────────────────────────────────────┐  │
+│   │                      FastAPI (Python 3.11)                               │  │
+│   │                      Servidor: Uvicorn - Puerto 8001                     │  │
+│   └─────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                 │
+│   ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐               │
+│   │  Autenticación  │  │   Suscripciones │  │    Contenido    │               │
+│   │   JWT + OAuth   │  │     PayPal      │  │  Videos / POIs  │               │
+│   └─────────────────┘  └─────────────────┘  └─────────────────┘               │
+│                                                                                 │
+│   ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐               │
+│   │   Reservaciones │  │     Admin       │  │    Contacto     │               │
+│   │    QR Codes     │  │  Panel Control  │  │    SendGrid     │               │
+│   └─────────────────┘  └─────────────────┘  └─────────────────┘               │
+│                                                                                 │
+└────────────────────────────────────────────┬───────────────────────────────────┘
+                                             │
+                                             │ Motor (Driver Async)
+                                             │ Puerto 27017
+                                             ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                CAPA DE DATOS                                    │
+│                               (Base de Datos)                                    │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│   ┌─────────────────────────────────────────────────────────────────────────┐  │
+│   │                        MongoDB v7.x (NoSQL)                              │  │
+│   │                     Base de datos: test_database                         │  │
+│   └─────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                 │
+│   ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐    │
+│   │  users  │ │subscri- │ │  pois   │ │ videos  │ │reserva- │ │sessions │    │
+│   │   (8)   │ │ptions(9)│ │  (59)   │ │   (4)   │ │tions (6)│ │  (350)  │    │
+│   └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘    │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+        </pre>
+    </div>
+</div>
+
+<!-- DIAGRAMA DE COMPONENTES -->
+<div class="page">
+    <h2>3.3 Diagrama de Componentes</h2>
+    
+    <div class="diagram">
+        <div class="diagram-title">COMPONENTES DEL SISTEMA</div>
+        <pre style="font-size: 7.5pt;">
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                  FRONTEND                                        │
+│                              /app/frontend/src/                                   │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                              App.js                                      │   │
+│  │                    (Router + AuthContext Provider)                       │   │
+│  └───────────────────────────────────┬─────────────────────────────────────┘   │
+│                                      │                                          │
+│          ┌───────────────────────────┼───────────────────────────┐             │
+│          │                           │                           │              │
+│          ▼                           ▼                           ▼              │
+│  ┌───────────────┐          ┌───────────────┐          ┌───────────────┐       │
+│  │    PAGES      │          │  COMPONENTS   │          │      UI       │       │
+│  ├───────────────┤          ├───────────────┤          ├───────────────┤       │
+│  │ • Home.jsx    │          │ • Navbar.jsx  │          │ • Button      │       │
+│  │ • Gallery.jsx │          │ • Video360    │          │ • Card        │       │
+│  │ • Map3D.jsx   │          │   Player.jsx  │          │ • Input       │       │
+│  │ • Subscription│          │ • Image360VR  │          │ • Modal       │       │
+│  │ • AdminPanel  │          │   Viewer.jsx  │          │ • Toast       │       │
+│  │ • Contact.jsx │          │ • Footer.jsx  │          │ • Sonner      │       │
+│  │ • Reservations│          │               │          │               │       │
+│  └───────────────┘          └───────────────┘          └───────────────┘       │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                  BACKEND                                         │
+│                                /app/backend/                                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                            server.py                                     │   │
+│  │                    (FastAPI Application Principal)                       │   │
+│  └───────────────────────────────────┬─────────────────────────────────────┘   │
+│                                      │                                          │
+│     ┌────────────────┬───────────────┼───────────────┬────────────────┐        │
+│     │                │               │               │                │         │
+│     ▼                ▼               ▼               ▼                ▼         │
+│ ┌────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    │
+│ │  AUTH  │    │ PAYMENT  │    │ CONTENT  │    │  ADMIN   │    │ CONTACT  │    │
+│ ├────────┤    ├──────────┤    ├──────────┤    ├──────────┤    ├──────────┤    │
+│ │/auth/  │    │/paypal/  │    │/videos   │    │/admin/   │    │/contact  │    │
+│ │register│    │create-   │    │/pois     │    │users     │    │SendGrid  │    │
+│ │login   │    │order     │    │/kmz      │    │stats     │    │          │    │
+│ │logout  │    │capture   │    │          │    │          │    │          │    │
+│ │me      │    │renew     │    │          │    │          │    │          │    │
+│ └────────┘    └──────────┘    └──────────┘    └──────────┘    └──────────┘    │
+│                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                          auth_utils.py                                   │   │
+│  │               (JWT Generation, Password Hashing, OAuth)                  │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+        </pre>
+    </div>
+</div>
+
+<!-- TECNOLOGÍAS -->
+<div class="page">
+    <h1>4. TECNOLOGÍAS UTILIZADAS</h1>
+    
+    <h2>4.1 Stack Frontend</h2>
+    <table>
+        <tr>
+            <th>Tecnología</th>
+            <th>Versión</th>
+            <th>Propósito</th>
+        </tr>
+        <tr>
+            <td>React.js</td>
+            <td>19.0.0</td>
+            <td>Framework de interfaz de usuario</td>
+        </tr>
+        <tr>
+            <td>Three.js</td>
+            <td>0.182.0</td>
+            <td>Renderizado 3D y WebXR/VR</td>
+        </tr>
+        <tr>
+            <td>Tailwind CSS</td>
+            <td>3.4.17</td>
+            <td>Framework de estilos utilitarios</td>
+        </tr>
+        <tr>
+            <td>Shadcn/UI</td>
+            <td>Latest</td>
+            <td>Componentes de interfaz</td>
+        </tr>
+        <tr>
+            <td>Axios</td>
+            <td>1.8.4</td>
+            <td>Cliente HTTP para API</td>
+        </tr>
+        <tr>
+            <td>Leaflet</td>
+            <td>1.9.4</td>
+            <td>Mapas interactivos</td>
+        </tr>
+        <tr>
+            <td>HLS.js</td>
+            <td>1.6.15</td>
+            <td>Streaming de video adaptativo</td>
+        </tr>
+        <tr>
+            <td>PayPal React SDK</td>
+            <td>8.9.2</td>
+            <td>Integración de pagos</td>
+        </tr>
+    </table>
+    
+    <h2>4.2 Stack Backend</h2>
+    <table>
+        <tr>
+            <th>Tecnología</th>
+            <th>Versión</th>
+            <th>Propósito</th>
+        </tr>
+        <tr>
+            <td>Python</td>
+            <td>3.11</td>
+            <td>Lenguaje de programación</td>
+        </tr>
+        <tr>
+            <td>FastAPI</td>
+            <td>0.115.0</td>
+            <td>Framework API REST asíncrono</td>
+        </tr>
+        <tr>
+            <td>Motor</td>
+            <td>3.6.0</td>
+            <td>Driver MongoDB asíncrono</td>
+        </tr>
+        <tr>
+            <td>PyJWT</td>
+            <td>2.9.0</td>
+            <td>Tokens de autenticación</td>
+        </tr>
+        <tr>
+            <td>Bcrypt</td>
+            <td>4.2.0</td>
+            <td>Hash seguro de contraseñas</td>
+        </tr>
+        <tr>
+            <td>SendGrid</td>
+            <td>6.11.0</td>
+            <td>Envío de emails transaccionales</td>
+        </tr>
+        <tr>
+            <td>PayPal SDK</td>
+            <td>1.13.1</td>
+            <td>Procesamiento de pagos</td>
+        </tr>
+    </table>
+    
+    <h2>4.3 Servicios Externos</h2>
+    <table>
+        <tr>
+            <th>Servicio</th>
+            <th>Función</th>
+            <th>Tipo de Integración</th>
+        </tr>
+        <tr>
+            <td><strong>PayPal</strong></td>
+            <td>Procesamiento de pagos</td>
+            <td>API REST (Orders v2)</td>
+        </tr>
+        <tr>
+            <td><strong>Cloudflare Stream</strong></td>
+            <td>Hosting y streaming de video</td>
+            <td>API + HLS</td>
+        </tr>
+        <tr>
+            <td><strong>Google OAuth</strong></td>
+            <td>Autenticación social</td>
+            <td>OAuth 2.0</td>
+        </tr>
+        <tr>
+            <td><strong>SendGrid</strong></td>
+            <td>Emails transaccionales</td>
+            <td>API REST</td>
+        </tr>
+        <tr>
+            <td><strong>Google Maps</strong></td>
+            <td>Tiles satelitales</td>
+            <td>CDN Tiles</td>
+        </tr>
+    </table>
+</div>
+
+<!-- BASE DE DATOS -->
+<div class="page">
+    <h1>5. DISEÑO DE BASE DE DATOS</h1>
+    
+    <h2>5.1 Justificación de MongoDB</h2>
+    <p>MongoDB (NoSQL orientado a documentos) fue seleccionado por las siguientes razones técnicas:</p>
+    
+    <div class="info-box">
+        <ul>
+            <li><strong>Flexibilidad de esquema:</strong> Permite evolución del modelo sin migraciones complejas</li>
+            <li><strong>Documentos JSON:</strong> Mapeo natural con JavaScript/Python</li>
+            <li><strong>Escalabilidad horizontal:</strong> Preparado para crecimiento mediante sharding</li>
+            <li><strong>Índices geoespaciales:</strong> Soporte nativo para coordenadas geográficas de POIs</li>
+            <li><strong>Alto rendimiento:</strong> Optimizado para operaciones de lectura frecuentes</li>
+        </ul>
+    </div>
+    
+    <h2>5.2 Colecciones de la Base de Datos</h2>
+    <table>
+        <tr>
+            <th>Colección</th>
+            <th>Documentos</th>
+            <th>Descripción</th>
+        </tr>
+        <tr>
+            <td><strong>users</strong></td>
+            <td>8</td>
+            <td>Usuarios registrados en la plataforma</td>
+        </tr>
+        <tr>
+            <td><strong>subscriptions</strong></td>
+            <td>9</td>
+            <td>Suscripciones de usuarios (activas/expiradas)</td>
+        </tr>
+        <tr>
+            <td><strong>pois</strong></td>
+            <td>59</td>
+            <td>Puntos de interés (figuras de Nazca)</td>
+        </tr>
+        <tr>
+            <td><strong>videos</strong></td>
+            <td>4</td>
+            <td>Videos 360° disponibles</td>
+        </tr>
+        <tr>
+            <td><strong>reservations</strong></td>
+            <td>6</td>
+            <td>Reservaciones para experiencias VR</td>
+        </tr>
+        <tr>
+            <td><strong>user_sessions</strong></td>
+            <td>350</td>
+            <td>Sesiones activas de usuarios</td>
+        </tr>
+        <tr>
+            <td><strong>contact_messages</strong></td>
+            <td>8</td>
+            <td>Mensajes del formulario de contacto</td>
+        </tr>
+        <tr>
+            <td><strong>payment_transactions</strong></td>
+            <td>12</td>
+            <td>Registro de transacciones de pago</td>
+        </tr>
+        <tr>
+            <td><strong>pending_renewals</strong></td>
+            <td>10</td>
+            <td>Renovaciones pendientes de procesar</td>
+        </tr>
+        <tr>
+            <td><strong>kmz_layers</strong></td>
+            <td>2</td>
+            <td>Capas KMZ para el mapa</td>
+        </tr>
+    </table>
+    
+    <h2>5.3 Diagrama Entidad-Relación</h2>
+    <div class="diagram">
+        <div class="diagram-title">MODELO ENTIDAD-RELACIÓN (Conceptual)</div>
+        <pre style="font-size: 8pt;">
+┌─────────────────────┐                    ┌─────────────────────┐
+│       USERS         │                    │    SUBSCRIPTIONS    │
+├─────────────────────┤                    ├─────────────────────┤
+│ PK  user_id         │───────────────────▶│ PK  id              │
+│     email (UNIQUE)  │        1:N         │ FK  user_id         │
+│     name            │                    │     plan_type       │
+│     password_hash   │                    │     status          │
+│     role            │                    │     start_date      │
+│     subscription_plan│                   │     end_date        │
+│     oauth_provider  │                    │     amount_paid     │
+│     created_at      │                    │     payment_method  │
+└─────────────────────┘                    └─────────────────────┘
+          │
+          │ 1:N
+          ▼
+┌─────────────────────┐                    ┌─────────────────────┐
+│    RESERVATIONS     │                    │    USER_SESSIONS    │
+├─────────────────────┤                    ├─────────────────────┤
+│ PK  id              │                    │ PK  session_token   │
+│ FK  user_id         │                    │ FK  user_id         │
+│     reservation_date│                    │     expires_at      │
+│     time_slot       │                    │     last_activity   │
+│     status          │                    │     created_at      │
+│     qr_code         │                    └─────────────────────┘
+└─────────────────────┘
+
+┌─────────────────────┐                    ┌─────────────────────┐
+│        POIS         │                    │       VIDEOS        │
+├─────────────────────┤                    ├─────────────────────┤
+│ PK  id              │        N:1         │ PK  id              │
+│     name            │───────────────────▶│     title           │
+│     description     │                    │     description     │
+│     latitude        │                    │     url             │
+│     longitude       │                    │     duration        │
+│     altitude        │                    │     is_premium      │
+│     category        │                    │     stereo_format   │
+│ FK  video_id        │                    │     thumbnail_url   │
+│     image_url       │                    └─────────────────────┘
+└─────────────────────┘
+        </pre>
+    </div>
+</div>
+
+<!-- MODELOS DE DATOS -->
+<div class="page">
+    <h1>6. MODELOS DE DATOS (Esquemas)</h1>
+    
+    <h2>6.1 Colección: users</h2>
+    <p>Almacena la información de los usuarios registrados en la plataforma.</p>
+    
+    <pre>{
+  "_id": ObjectId("..."),
+  "user_id": "user_c1a542107a82",        // Identificador único
+  "email": "usuario@email.com",           // Email (índice único)
+  "name": "Nombre del Usuario",           // Nombre completo
+  "password_hash": "$2b$12$...",          // Contraseña hasheada (bcrypt)
+  "picture": "https://...",               // URL de foto de perfil
+  "role": "user",                         // Rol: "user" | "admin"
+  "subscription_plan": "premium",         // Plan: "basic" | "premium"
+  "is_verified": true,                    // Email verificado
+  "is_blocked": false,                    // Cuenta bloqueada
+  "oauth_provider": "emergent_google",    // Proveedor OAuth (opcional)
+  "created_at": "2026-02-20T17:58:22Z"   // Fecha de registro
+}</pre>
+    
+    <div class="info-box">
+        <strong>Índices:</strong>
+        <ul>
+            <li><code>email</code>: Índice único (previene duplicados)</li>
+            <li><code>user_id</code>: Índice único (búsquedas rápidas)</li>
+        </ul>
+    </div>
+    
+    <h2>6.2 Colección: subscriptions</h2>
+    <p>Gestiona las suscripciones de los usuarios.</p>
+    
+    <pre>{
+  "_id": ObjectId("..."),
+  "id": "397d7661-110f-4fea-a845-7cedae11d0b3",  // UUID único
+  "user_id": "user_c1a542107a82",                 // Referencia al usuario
+  "user_email": "usuario@email.com",              // Email (referencia rápida)
+  "plan_type": "1_month",                         // Tipo de plan
+  "paypal_order_id": "3T943204GA7572806",        // ID de orden PayPal
+  "payment_status": "paid",                       // Estado del pago
+  "payment_method": "paypal",                     // Método de pago
+  "amount_paid": 20.0,                            // Monto pagado (USD)
+  "currency": "USD",                              // Moneda
+  "start_date": "2026-02-20T22:00:52Z",          // Inicio de suscripción
+  "end_date": "2026-03-22T22:00:52Z",            // Fin de suscripción
+  "status": "active",                             // active|expired|cancelled
+  "auto_renew": false,                            // Renovación automática
+  "created_at": "2026-02-20T22:00:52Z"           // Fecha de creación
+}</pre>
+    
+    <h3>Planes de Suscripción Disponibles</h3>
+    <table>
+        <tr>
+            <th>Plan</th>
+            <th>Precio (USD)</th>
+            <th>Duración</th>
+            <th>Ahorro</th>
+        </tr>
+        <tr>
+            <td>1_month</td>
+            <td>$20.00</td>
+            <td>30 días</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>3_months</td>
+            <td>$55.00</td>
+            <td>90 días</td>
+            <td>$5.00</td>
+        </tr>
+        <tr>
+            <td>6_months</td>
+            <td>$100.00</td>
+            <td>180 días</td>
+            <td>$20.00</td>
+        </tr>
+        <tr>
+            <td>12_months</td>
+            <td>$200.00</td>
+            <td>365 días</td>
+            <td>$40.00</td>
+        </tr>
+    </table>
+</div>
+
+<!-- MÁS MODELOS -->
+<div class="page">
+    <h2>6.3 Colección: pois (Points of Interest)</h2>
+    <p>Almacena los 59 puntos de interés georreferenciados de las Líneas de Nazca.</p>
+    
+    <pre>{
+  "_id": ObjectId("..."),
+  "id": "poi_el_colibri_001",              // Identificador único
+  "name": "El Colibrí",                     // Nombre de la figura
+  "description": "El colibrí es uno de los geoglifos más reconocidos...",
+  "longitude": -75.1234,                    // Coordenada longitud
+  "latitude": -14.7234,                     // Coordenada latitud
+  "altitude": 1000,                         // Altura de visualización (metros)
+  "category": "geoglifo",                   // Categoría
+  "image_url": "https://...",               // URL imagen 360°
+  "video_id": "video_xyz",                  // Referencia a video (opcional)
+  "is_active": true,                        // Visible en el mapa
+  "created_by": "admin_user_id",            // Usuario que lo creó
+  "created_at": "2025-11-10T00:00:00Z"     // Fecha de creación
+}</pre>
+    
+    <div class="success-box">
+        <strong>Estadísticas de POIs:</strong>
+        <ul>
+            <li>Total de figuras: <strong>59</strong></li>
+            <li>Con imagen 360°: <strong>33</strong></li>
+            <li>Categorías: geoglifo, mirador, museo</li>
+        </ul>
+    </div>
+    
+    <h3>Área Geográfica Cubierta</h3>
+    <table>
+        <tr>
+            <th>Límite</th>
+            <th>Coordenada</th>
+            <th>Descripción</th>
+        </tr>
+        <tr>
+            <td>Norte</td>
+            <td>-14.48°</td>
+            <td>Incluye Líneas de Palpa</td>
+        </tr>
+        <tr>
+            <td>Sur</td>
+            <td>-14.82°</td>
+            <td>Sur de Nazca</td>
+        </tr>
+        <tr>
+            <td>Este</td>
+            <td>-74.90°</td>
+            <td>Límite oriental</td>
+        </tr>
+        <tr>
+            <td>Oeste</td>
+            <td>-75.25°</td>
+            <td>Límite occidental</td>
+        </tr>
+    </table>
+    
+    <h2>6.4 Colección: videos</h2>
+    <p>Almacena los videos 360° disponibles en la plataforma.</p>
+    
+    <pre>{
+  "_id": ObjectId("..."),
+  "id": "video_nazca_spanish_27m",
+  "title": "Las Líneas de Nasca 27m Español",
+  "description": "Documental completo sobre las Líneas de Nazca...",
+  "duration": "27:55",                      // Duración del video
+  "url": "https://customer-xyz.cloudflarestream.com/...",
+  "category": "nasca",                      // Categoría
+  "cultural_tags": ["nazca", "geoglifos", "perú"],
+  "thumbnail_url": "https://...",           // Miniatura
+  "is_premium": true,                       // Requiere suscripción
+  "stereo_format": "mono",                  // mono|sbs|tb
+  "created_at": "2025-11-10T00:00:00Z"
+}</pre>
+    
+    <h3>Catálogo de Videos</h3>
+    <table>
+        <tr>
+            <th>Título</th>
+            <th>Duración</th>
+            <th>Idioma</th>
+            <th>Premium</th>
+        </tr>
+        <tr>
+            <td>Las Líneas de Nasca 27m</td>
+            <td>27:55</td>
+            <td>Español</td>
+            <td>Sí</td>
+        </tr>
+        <tr>
+            <td>Líneas de Nasca 16m</td>
+            <td>16:10</td>
+            <td>Español</td>
+            <td>Sí</td>
+        </tr>
+        <tr>
+            <td>Nazca Lines English 01</td>
+            <td>16:10</td>
+            <td>Inglés</td>
+            <td>Sí</td>
+        </tr>
+        <tr>
+            <td>Nazca Lines 02 English</td>
+            <td>27:00</td>
+            <td>Inglés</td>
+            <td>Sí</td>
+        </tr>
+    </table>
+</div>
+
+<!-- API REST -->
+<div class="page">
+    <h1>7. API REST - ENDPOINTS</h1>
+    
+    <h2>7.1 Autenticación</h2>
+    <table>
+        <tr>
+            <th>Método</th>
+            <th>Endpoint</th>
+            <th>Descripción</th>
+            <th>Auth</th>
+        </tr>
+        <tr>
+            <td><span style="background:#38a169;color:white;padding:2px 6px;border-radius:3px;">POST</span></td>
+            <td><code>/api/auth/register</code></td>
+            <td>Registro de nuevo usuario</td>
+            <td>No</td>
+        </tr>
+        <tr>
+            <td><span style="background:#38a169;color:white;padding:2px 6px;border-radius:3px;">POST</span></td>
+            <td><code>/api/auth/login</code></td>
+            <td>Inicio de sesión</td>
+            <td>No</td>
+        </tr>
+        <tr>
+            <td><span style="background:#38a169;color:white;padding:2px 6px;border-radius:3px;">POST</span></td>
+            <td><code>/api/auth/logout</code></td>
+            <td>Cerrar sesión</td>
+            <td>Sí</td>
+        </tr>
+        <tr>
+            <td><span style="background:#3182ce;color:white;padding:2px 6px;border-radius:3px;">GET</span></td>
+            <td><code>/api/auth/me</code></td>
+            <td>Obtener usuario actual</td>
+            <td>Sí</td>
+        </tr>
+        <tr>
+            <td><span style="background:#38a169;color:white;padding:2px 6px;border-radius:3px;">POST</span></td>
+            <td><code>/api/auth/google</code></td>
+            <td>Login con Google OAuth</td>
+            <td>No</td>
+        </tr>
+    </table>
+    
+    <h2>7.2 Suscripciones y Pagos</h2>
+    <table>
+        <tr>
+            <th>Método</th>
+            <th>Endpoint</th>
+            <th>Descripción</th>
+            <th>Auth</th>
+        </tr>
+        <tr>
+            <td><span style="background:#3182ce;color:white;padding:2px 6px;border-radius:3px;">GET</span></td>
+            <td><code>/api/subscription/status</code></td>
+            <td>Estado de suscripción del usuario</td>
+            <td>Sí</td>
+        </tr>
+        <tr>
+            <td><span style="background:#3182ce;color:white;padding:2px 6px;border-radius:3px;">GET</span></td>
+            <td><code>/api/subscription/packages</code></td>
+            <td>Planes disponibles</td>
+            <td>No</td>
+        </tr>
+        <tr>
+            <td><span style="background:#38a169;color:white;padding:2px 6px;border-radius:3px;">POST</span></td>
+            <td><code>/api/paypal/create-order-popup</code></td>
+            <td>Crear orden PayPal (popup)</td>
+            <td>No</td>
+        </tr>
+        <tr>
+            <td><span style="background:#38a169;color:white;padding:2px 6px;border-radius:3px;">POST</span></td>
+            <td><code>/api/paypal/capture-order-popup</code></td>
+            <td>Capturar pago</td>
+            <td>Sí</td>
+        </tr>
+        <tr>
+            <td><span style="background:#38a169;color:white;padding:2px 6px;border-radius:3px;">POST</span></td>
+            <td><code>/api/paypal/renew-subscription</code></td>
+            <td>Renovar suscripción</td>
+            <td>Sí</td>
+        </tr>
+    </table>
+    
+    <h2>7.3 Contenido</h2>
+    <table>
+        <tr>
+            <th>Método</th>
+            <th>Endpoint</th>
+            <th>Descripción</th>
+            <th>Auth</th>
+        </tr>
+        <tr>
+            <td><span style="background:#3182ce;color:white;padding:2px 6px;border-radius:3px;">GET</span></td>
+            <td><code>/api/videos</code></td>
+            <td>Listar videos</td>
+            <td>Opcional</td>
+        </tr>
+        <tr>
+            <td><span style="background:#3182ce;color:white;padding:2px 6px;border-radius:3px;">GET</span></td>
+            <td><code>/api/videos/{id}</code></td>
+            <td>Obtener video específico</td>
+            <td>Sí</td>
+        </tr>
+        <tr>
+            <td><span style="background:#3182ce;color:white;padding:2px 6px;border-radius:3px;">GET</span></td>
+            <td><code>/api/pois</code></td>
+            <td>Listar puntos de interés</td>
+            <td>Opcional</td>
+        </tr>
+        <tr>
+            <td><span style="background:#38a169;color:white;padding:2px 6px;border-radius:3px;">POST</span></td>
+            <td><code>/api/pois</code></td>
+            <td>Crear POI</td>
+            <td>Admin</td>
+        </tr>
+        <tr>
+            <td><span style="background:#dd6b20;color:white;padding:2px 6px;border-radius:3px;">PUT</span></td>
+            <td><code>/api/pois/{id}</code></td>
+            <td>Actualizar POI</td>
+            <td>Admin</td>
+        </tr>
+        <tr>
+            <td><span style="background:#e53e3e;color:white;padding:2px 6px;border-radius:3px;">DELETE</span></td>
+            <td><code>/api/pois/{id}</code></td>
+            <td>Eliminar POI</td>
+            <td>Admin</td>
+        </tr>
+    </table>
+    
+    <h2>7.4 Administración</h2>
+    <table>
+        <tr>
+            <th>Método</th>
+            <th>Endpoint</th>
+            <th>Descripción</th>
+            <th>Auth</th>
+        </tr>
+        <tr>
+            <td><span style="background:#3182ce;color:white;padding:2px 6px;border-radius:3px;">GET</span></td>
+            <td><code>/api/admin/users</code></td>
+            <td>Listar todos los usuarios</td>
+            <td>Admin</td>
+        </tr>
+        <tr>
+            <td><span style="background:#dd6b20;color:white;padding:2px 6px;border-radius:3px;">PUT</span></td>
+            <td><code>/api/admin/users/{id}</code></td>
+            <td>Actualizar usuario</td>
+            <td>Admin</td>
+        </tr>
+        <tr>
+            <td><span style="background:#e53e3e;color:white;padding:2px 6px;border-radius:3px;">DELETE</span></td>
+            <td><code>/api/admin/users/{id}</code></td>
+            <td>Eliminar usuario</td>
+            <td>Admin</td>
+        </tr>
+        <tr>
+            <td><span style="background:#3182ce;color:white;padding:2px 6px;border-radius:3px;">GET</span></td>
+            <td><code>/api/admin/stats</code></td>
+            <td>Estadísticas del sistema</td>
+            <td>Admin</td>
+        </tr>
+    </table>
+</div>
+
+<!-- DIAGRAMAS -->
+<div class="page">
+    <h1>8. DIAGRAMAS DEL SISTEMA</h1>
+    
+    <h2>8.1 Diagrama de Casos de Uso</h2>
+    <div class="diagram">
+        <div class="diagram-title">CASOS DE USO - NAZCA360</div>
+        <pre style="font-size: 7.5pt;">
+                                    ┌─────────────────────────────────────────┐
+                                    │              SISTEMA NAZCA360            │
+                                    └─────────────────────────────────────────┘
+                                                         │
+         ┌───────────────────────────────────────────────┴───────────────────────────────────────────────┐
+         │                                                                                               │
+         │    ┌─────────────────────────────────────────────────────────────────────────────────────┐   │
+         │    │                              MÓDULO DE USUARIO                                       │   │
+         │    │                                                                                      │   │
+    ┌────┴────┴────┐     ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐              │   │
+    │              │     │Registrar │    │  Login   │    │  Login   │    │  Ver     │              │   │
+    │   VISITANTE  │────▶│  cuenta  │    │  Email   │    │  Google  │    │  Home    │              │   │
+    │              │     └──────────┘    └──────────┘    └──────────┘    └──────────┘              │   │
+    └──────────────┘                                                                               │   │
+                                                                                                   │   │
+    ┌──────────────┐     ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐             │   │
+    │              │     │  Ver     │    │  Ver     │    │ Reservar │    │  Ver     │             │   │
+    │   USUARIO    │────▶│ Galería  │    │ Mapa 3D  │    │   VR     │    │ Perfil   │             │   │
+    │  SUSCRITO    │     │  360°    │    │          │    │          │    │          │             │   │
+    └──────────────┘     └──────────┘    └──────────┘    └──────────┘    └──────────┘             │   │
+          │                   │              │               │               │                     │   │
+          │              ┌────┴──────────────┴───────────────┴───────────────┘                     │   │
+          │              │                                                                         │   │
+          │              ▼                                                                         │   │
+          │    ┌──────────────────┐    ┌──────────────────┐                                       │   │
+          │    │   Ver Videos     │    │   Ver Fotos      │                                       │   │
+          │    │   Inmersivos     │    │   360° con VR    │                                       │   │
+          │    └──────────────────┘    └──────────────────┘                                       │   │
+          │                                                                                        │   │
+          │    ┌─────────────────────────────────────────────────────────────────────────────┐    │   │
+          │    │                           MÓDULO DE PAGOS                                    │    │   │
+          │    │                                                                              │    │   │
+          └───▶│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐              │    │   │
+               │  │Seleccionar│    │  Pagar   │    │ Renovar  │    │ Ver      │              │    │   │
+               │  │   Plan   │───▶│  PayPal  │    │Suscripción│   │ Historial│              │    │   │
+               │  └──────────┘    └──────────┘    └──────────┘    └──────────┘              │    │   │
+               └──────────────────────────────────────────────────────────────────────────────┘    │   │
+                                                                                                   │   │
+    ┌──────────────┐     ┌─────────────────────────────────────────────────────────────────────┐  │   │
+    │              │     │                        MÓDULO ADMIN                                  │  │   │
+    │    ADMIN     │────▶│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐      │  │   │
+    │              │     │  │ Gestionar│    │ Gestionar│    │   Ver    │    │ Gestionar│      │  │   │
+    └──────────────┘     │  │ Usuarios │    │   POIs   │    │  Stats   │    │  Videos  │      │  │   │
+                         │  └──────────┘    └──────────┘    └──────────┘    └──────────┘      │  │   │
+                         └─────────────────────────────────────────────────────────────────────┘  │   │
+                                                                                                  │   │
+         └────────────────────────────────────────────────────────────────────────────────────────┘   │
+                                                                                                      │
+                                    └─────────────────────────────────────────────────────────────────┘
+        </pre>
+    </div>
+</div>
+
+<!-- DIAGRAMA DE SECUENCIA -->
+<div class="page">
+    <h2>8.2 Diagrama de Secuencia: Flujo de Suscripción con PayPal</h2>
+    
+    <div class="diagram">
+        <div class="diagram-title">SECUENCIA DE PAGO - PAYPAL POPUP</div>
+        <pre style="font-size: 7.5pt;">
+    USUARIO              FRONTEND              BACKEND               PAYPAL              MONGODB
+       │                    │                    │                    │                    │
+       │  1. Selecciona     │                    │                    │                    │
+       │     plan           │                    │                    │                    │
+       │───────────────────▶│                    │                    │                    │
+       │                    │                    │                    │                    │
+       │                    │  2. POST           │                    │                    │
+       │                    │  /paypal/create-   │                    │                    │
+       │                    │  order-popup       │                    │                    │
+       │                    │───────────────────▶│                    │                    │
+       │                    │                    │                    │                    │
+       │                    │                    │  3. Create Order   │                    │
+       │                    │                    │───────────────────▶│                    │
+       │                    │                    │                    │                    │
+       │                    │                    │  4. Order ID       │                    │
+       │                    │                    │◀───────────────────│                    │
+       │                    │                    │                    │                    │
+       │                    │                    │  5. Guardar        │                    │
+       │                    │                    │  pending_payment   │                    │
+       │                    │                    │───────────────────────────────────────▶│
+       │                    │                    │                    │                    │
+       │                    │  6. Order ID       │                    │                    │
+       │                    │◀───────────────────│                    │                    │
+       │                    │                    │                    │                    │
+       │  7. Popup PayPal   │                    │                    │                    │
+       │◀───────────────────│                    │                    │                    │
+       │                    │                    │                    │                    │
+       │  8. Usuario        │                    │                    │                    │
+       │     autoriza       │                    │                    │                    │
+       │     pago           │                    │                    │                    │
+       │──────────────────────────────────────────────────────────▶│                    │
+       │                    │                    │                    │                    │
+       │  9. Confirmación   │                    │                    │                    │
+       │◀──────────────────────────────────────────────────────────│                    │
+       │                    │                    │                    │                    │
+       │                    │  10. POST          │                    │                    │
+       │                    │  /paypal/capture-  │                    │                    │
+       │                    │  order-popup       │                    │                    │
+       │                    │───────────────────▶│                    │                    │
+       │                    │                    │                    │                    │
+       │                    │                    │  11. Capture       │                    │
+       │                    │                    │───────────────────▶│                    │
+       │                    │                    │                    │                    │
+       │                    │                    │  12. Payment OK    │                    │
+       │                    │                    │◀───────────────────│                    │
+       │                    │                    │                    │                    │
+       │                    │                    │  13. Crear         │                    │
+       │                    │                    │  subscription      │                    │
+       │                    │                    │───────────────────────────────────────▶│
+       │                    │                    │                    │                    │
+       │                    │  14. Success       │                    │                    │
+       │                    │◀───────────────────│                    │                    │
+       │                    │                    │                    │                    │
+       │  15. Acceso        │                    │                    │                    │
+       │      Premium       │                    │                    │                    │
+       │◀───────────────────│                    │                    │                    │
+       │                    │                    │                    │                    │
+        </pre>
+    </div>
+</div>
+
+<!-- DIAGRAMA DE AUTENTICACIÓN -->
+<div class="page">
+    <h2>8.3 Diagrama de Secuencia: Autenticación JWT</h2>
+    
+    <div class="diagram">
+        <div class="diagram-title">FLUJO DE AUTENTICACIÓN</div>
+        <pre style="font-size: 7.5pt;">
+    USUARIO              FRONTEND              BACKEND               MONGODB
+       │                    │                    │                    │
+       │  1. Ingresa        │                    │                    │
+       │     credenciales   │                    │                    │
+       │───────────────────▶│                    │                    │
+       │                    │                    │                    │
+       │                    │  2. POST           │                    │
+       │                    │  /auth/login       │                    │
+       │                    │  {email, password} │                    │
+       │                    │───────────────────▶│                    │
+       │                    │                    │                    │
+       │                    │                    │  3. Buscar usuario │
+       │                    │                    │  por email         │
+       │                    │                    │───────────────────▶│
+       │                    │                    │                    │
+       │                    │                    │  4. User document  │
+       │                    │                    │◀───────────────────│
+       │                    │                    │                    │
+       │                    │                    │  5. Verificar      │
+       │                    │                    │  password con      │
+       │                    │                    │  bcrypt.verify()   │
+       │                    │                    │                    │
+       │                    │                    │  6. Si válido:     │
+       │                    │                    │  Generar JWT       │
+       │                    │                    │  (PyJWT + HS256)   │
+       │                    │                    │                    │
+       │                    │                    │  7. Crear sesión   │
+       │                    │                    │───────────────────▶│
+       │                    │                    │                    │
+       │                    │  8. JWT Token +    │                    │
+       │                    │     User Data      │                    │
+       │                    │◀───────────────────│                    │
+       │                    │                    │                    │
+       │                    │  9. Guardar token  │                    │
+       │                    │  en localStorage   │                    │
+       │                    │                    │                    │
+       │  10. Login OK      │                    │                    │
+       │◀───────────────────│                    │                    │
+       │                    │                    │                    │
+       │══════════════════════════════════════════════════════════════│
+       │                    ACCESO A RECURSOS PROTEGIDOS              │
+       │══════════════════════════════════════════════════════════════│
+       │                    │                    │                    │
+       │  11. Ver Galería   │                    │                    │
+       │───────────────────▶│                    │                    │
+       │                    │                    │                    │
+       │                    │  12. GET /videos   │                    │
+       │                    │  Authorization:    │                    │
+       │                    │  Bearer {token}    │                    │
+       │                    │───────────────────▶│                    │
+       │                    │                    │                    │
+       │                    │                    │  13. Validar JWT   │
+       │                    │                    │  (firma + exp)     │
+       │                    │                    │                    │
+       │                    │                    │  14. Verificar     │
+       │                    │                    │  suscripción       │
+       │                    │                    │───────────────────▶│
+       │                    │                    │                    │
+       │                    │  15. Videos data   │                    │
+       │                    │◀───────────────────│                    │
+       │                    │                    │                    │
+       │  16. Mostrar       │                    │                    │
+       │      videos        │                    │                    │
+       │◀───────────────────│                    │                    │
+        </pre>
+    </div>
+</div>
+
+<!-- DIAGRAMA DE DESPLIEGUE -->
+<div class="page">
+    <h2>8.4 Diagrama de Despliegue</h2>
+    
+    <div class="diagram">
+        <div class="diagram-title">ARQUITECTURA DE DESPLIEGUE - KUBERNETES</div>
+        <pre style="font-size: 7.5pt;">
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                      INTERNET / USUARIOS                                         │
+│                                                                                                  │
+│    ┌────────────┐    ┌────────────┐    ┌────────────┐    ┌────────────┐    ┌────────────┐      │
+│    │  Browser   │    │  Browser   │    │Meta Quest 3│    │  Mobile    │    │  Browser   │      │
+│    │  Desktop   │    │   Mobile   │    │     VR     │    │   App      │    │  Tablet    │      │
+│    └─────┬──────┘    └─────┬──────┘    └─────┬──────┘    └─────┬──────┘    └─────┬──────┘      │
+│          │                 │                 │                 │                 │              │
+│          └─────────────────┴─────────────────┼─────────────────┴─────────────────┘              │
+│                                              │                                                   │
+└──────────────────────────────────────────────┼───────────────────────────────────────────────────┘
+                                               │ HTTPS (443)
+                                               ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    CLOUDFLARE (CDN/WAF/DDoS)                                     │
+│                                                                                                  │
+│    ┌──────────────────────────────────────────────────────────────────────────────────────┐     │
+│    │  • SSL/TLS Termination        • Edge Caching           • DDoS Protection             │     │
+│    │  • Web Application Firewall   • Geographic Load Balancing                            │     │
+│    └──────────────────────────────────────────────────────────────────────────────────────┘     │
+│                                                                                                  │
+└──────────────────────────────────────────────┬───────────────────────────────────────────────────┘
+                                               │
+                                               ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                              KUBERNETES CLUSTER (EMERGENT PLATFORM)                              │
+├──────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                  │
+│    ┌──────────────────────────────────────────────────────────────────────────────────────┐     │
+│    │                               NGINX INGRESS CONTROLLER                                │     │
+│    │                                                                                       │     │
+│    │    /              → Frontend Pod (3000)                                              │     │
+│    │    /api/*         → Backend Pod (8001)                                               │     │
+│    └──────────────────────────────────────────────────────────────────────────────────────┘     │
+│                                              │                                                   │
+│                    ┌─────────────────────────┴─────────────────────────┐                        │
+│                    │                                                   │                         │
+│                    ▼                                                   ▼                         │
+│    ┌─────────────────────────────────┐           ┌─────────────────────────────────┐           │
+│    │        FRONTEND POD             │           │         BACKEND POD             │           │
+│    │                                 │           │                                 │           │
+│    │  ┌───────────────────────────┐  │           │  ┌───────────────────────────┐  │           │
+│    │  │      React.js App         │  │           │  │     FastAPI Server        │  │           │
+│    │  │      (Build estático)     │  │           │  │     (Uvicorn ASGI)        │  │           │
+│    │  │                           │  │           │  │                           │  │           │
+│    │  │  Puerto: 3000             │  │    API    │  │  Puerto: 8001             │  │           │
+│    │  │  Servidor: NGINX          │  │◀─────────▶│  │  Workers: 4               │  │           │
+│    │  └───────────────────────────┘  │           │  └───────────────────────────┘  │           │
+│    │                                 │           │              │                  │           │
+│    │  Recursos:                      │           │  Recursos:   │                  │           │
+│    │  • CPU: 100m-500m               │           │  • CPU: 200m-1000m              │           │
+│    │  • RAM: 128Mi-512Mi             │           │  • RAM: 256Mi-1Gi               │           │
+│    └─────────────────────────────────┘           └──────────────┼──────────────────┘           │
+│                                                                 │                              │
+│                                                                 │ Motor (async)               │
+│                                                                 ▼                              │
+│    ┌────────────────────────────────────────────────────────────────────────────────────┐     │
+│    │                              MONGODB POD / ATLAS                                    │     │
+│    │                                                                                     │     │
+│    │    ┌──────────────────────────────────────────────────────────────────────────┐   │     │
+│    │    │  MongoDB v7.x                                                             │   │     │
+│    │    │  Puerto: 27017                                                            │   │     │
+│    │    │  Base de datos: test_database                                             │   │     │
+│    │    │                                                                           │   │     │
+│    │    │  Producción: MongoDB Atlas (Replica Set + Backup automático)              │   │     │
+│    │    └──────────────────────────────────────────────────────────────────────────┘   │     │
+│    │                                                                                     │     │
+│    └────────────────────────────────────────────────────────────────────────────────────┘     │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+        </pre>
+    </div>
+</div>
+
+<!-- SEGURIDAD -->
+<div class="page">
+    <h1>9. SEGURIDAD E INTEGRACIONES</h1>
+    
+    <h2>9.1 Medidas de Seguridad Implementadas</h2>
+    <table>
+        <tr>
+            <th>Aspecto</th>
+            <th>Implementación</th>
+            <th>Descripción</th>
+        </tr>
+        <tr>
+            <td><strong>Contraseñas</strong></td>
+            <td>Bcrypt (12 rounds)</td>
+            <td>Hash seguro con salt aleatorio</td>
+        </tr>
+        <tr>
+            <td><strong>Tokens</strong></td>
+            <td>JWT (HS256)</td>
+            <td>Expiración configurable (7 días)</td>
+        </tr>
+        <tr>
+            <td><strong>Sesiones</strong></td>
+            <td>UUID + MongoDB</td>
+            <td>Tokens únicos por sesión</td>
+        </tr>
+        <tr>
+            <td><strong>Transporte</strong></td>
+            <td>HTTPS/TLS 1.3</td>
+            <td>Comunicación encriptada</td>
+        </tr>
+        <tr>
+            <td><strong>CORS</strong></td>
+            <td>FastAPI Middleware</td>
+            <td>Orígenes permitidos configurados</td>
+        </tr>
+        <tr>
+            <td><strong>Validación</strong></td>
+            <td>Pydantic Models</td>
+            <td>Validación estricta de entrada</td>
+        </tr>
+        <tr>
+            <td><strong>Roles</strong></td>
+            <td>RBAC</td>
+            <td>user, admin con permisos diferenciados</td>
+        </tr>
+        <tr>
+            <td><strong>Base de Datos</strong></td>
+            <td>Índice único email</td>
+            <td>Previene duplicados</td>
+        </tr>
+    </table>
+    
+    <h2>9.2 Flujo de Autenticación</h2>
+    <div class="flow-container">
+        <div class="flow-box">Usuario ingresa credenciales</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">Verificación bcrypt</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">Genera JWT</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">Crea sesión en DB</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">Retorna token</div>
+    </div>
+    
+    <h2>9.3 Variables de Entorno Protegidas</h2>
+    <div class="warning-box">
+        <p><strong>⚠️ Las siguientes variables contienen información sensible:</strong></p>
+        <pre style="background: transparent; color: inherit; padding: 10px 0;">
+# Autenticación
+JWT_SECRET_KEY="[SECRETO - 256 bits]"
+
+# PayPal
+PAYPAL_CLIENT_ID="[CLIENT_ID]"
+PAYPAL_CLIENT_SECRET="[SECRETO]"
+
+# SendGrid
+SENDGRID_API_KEY="[API_KEY]"
+
+# Google OAuth
+GOOGLE_CLIENT_ID="[CLIENT_ID]"
+GOOGLE_CLIENT_SECRET="[SECRETO]"
+
+# Cloudflare Stream
+CF_STREAM_TOKEN="[TOKEN]"
+        </pre>
+    </div>
+    
+    <h2>9.4 Integraciones de Terceros</h2>
+    <table>
+        <tr>
+            <th>Servicio</th>
+            <th>Tipo</th>
+            <th>Seguridad</th>
+        </tr>
+        <tr>
+            <td>PayPal</td>
+            <td>API REST v2</td>
+            <td>OAuth 2.0 + Sandbox/Live keys</td>
+        </tr>
+        <tr>
+            <td>Google OAuth</td>
+            <td>OAuth 2.0</td>
+            <td>OpenID Connect</td>
+        </tr>
+        <tr>
+            <td>SendGrid</td>
+            <td>API REST</td>
+            <td>API Key + Domain verification</td>
+        </tr>
+        <tr>
+            <td>Cloudflare Stream</td>
+            <td>API + HLS</td>
+            <td>Signed URLs + Token auth</td>
+        </tr>
+    </table>
+</div>
+
+<!-- INFRAESTRUCTURA -->
+<div class="page">
+    <h1>10. INFRAESTRUCTURA DE DESPLIEGUE</h1>
+    
+    <h2>10.1 Entornos de Ejecución</h2>
+    <table>
+        <tr>
+            <th>Entorno</th>
+            <th>URL</th>
+            <th>Base de Datos</th>
+            <th>Propósito</th>
+        </tr>
+        <tr>
+            <td><strong>Preview</strong></td>
+            <td>ancient-lines-vr.preview.emergentagent.com</td>
+            <td>MongoDB Local</td>
+            <td>Desarrollo y pruebas</td>
+        </tr>
+        <tr>
+            <td><strong>Producción</strong></td>
+            <td>nazca360.com (pendiente)</td>
+            <td>MongoDB Atlas</td>
+            <td>Usuarios finales</td>
+        </tr>
+    </table>
+    
+    <h2>10.2 Configuración de Servicios</h2>
+    <table>
+        <tr>
+            <th>Servicio</th>
+            <th>Puerto Interno</th>
+            <th>Puerto Externo</th>
+            <th>Tecnología</th>
+        </tr>
+        <tr>
+            <td>Frontend</td>
+            <td>3000</td>
+            <td>443 (HTTPS)</td>
+            <td>React + NGINX</td>
+        </tr>
+        <tr>
+            <td>Backend</td>
+            <td>8001</td>
+            <td>/api/* → 8001</td>
+            <td>FastAPI + Uvicorn</td>
+        </tr>
+        <tr>
+            <td>MongoDB</td>
+            <td>27017</td>
+            <td>Interno</td>
+            <td>MongoDB 7.x</td>
+        </tr>
+    </table>
+    
+    <h2>10.3 Escalabilidad</h2>
+    <div class="info-box">
+        <p>El sistema está preparado para escalar horizontalmente:</p>
+        <ul>
+            <li><strong>Frontend:</strong> Puede replicarse en múltiples pods (stateless)</li>
+            <li><strong>Backend:</strong> Stateless, escalable horizontalmente con load balancing</li>
+            <li><strong>Base de datos:</strong> MongoDB Atlas con replica sets y sharding en producción</li>
+        </ul>
+    </div>
+    
+    <h1>11. MÉTRICAS Y ESTADÍSTICAS</h1>
+    
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-value">8</div>
+            <div class="metric-label">Usuarios Registrados</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">1</div>
+            <div class="metric-label">Suscripción Activa</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">59</div>
+            <div class="metric-label">Puntos de Interés</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">33</div>
+            <div class="metric-label">Imágenes 360°</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">4</div>
+            <div class="metric-label">Videos 360°</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">~500 km²</div>
+            <div class="metric-label">Área Cubierta</div>
+        </div>
+    </div>
+    
+    <h2>11.1 Distribución de Datos</h2>
+    <table>
+        <tr>
+            <th>Colección</th>
+            <th>Documentos</th>
+            <th>% del Total</th>
+        </tr>
+        <tr>
+            <td>user_sessions</td>
+            <td>350</td>
+            <td>74.5%</td>
+        </tr>
+        <tr>
+            <td>pois</td>
+            <td>59</td>
+            <td>12.6%</td>
+        </tr>
+        <tr>
+            <td>pending_popup_payments</td>
+            <td>21</td>
+            <td>4.5%</td>
+        </tr>
+        <tr>
+            <td>Otros</td>
+            <td>40</td>
+            <td>8.4%</td>
+        </tr>
+    </table>
+</div>
+
+<!-- CONCLUSIONES -->
+<div class="page">
+    <h1>12. CONCLUSIONES</h1>
+    
+    <h2>12.1 Logros Técnicos</h2>
+    
+    <div class="success-box">
+        <ol>
+            <li><strong>Arquitectura Robusta:</strong> Implementación exitosa de arquitectura de tres capas con separación clara de responsabilidades.</li>
+            <li><strong>Base de Datos Flexible:</strong> MongoDB permite evolución del esquema sin downtime y manejo eficiente de datos geoespaciales.</li>
+            <li><strong>Experiencia Inmersiva:</strong> Integración de WebXR para visualización VR compatible con Meta Quest 3.</li>
+            <li><strong>Pagos Seguros:</strong> Integración completa con PayPal Orders API v2 para procesamiento de pagos.</li>
+            <li><strong>Autenticación Múltiple:</strong> Soporte para autenticación tradicional y OAuth 2.0 (Google).</li>
+            <li><strong>Streaming Optimizado:</strong> Videos 360° con HLS adaptativo vía Cloudflare Stream.</li>
+        </ol>
+    </div>
+    
+    <h2>12.2 Trabajo Futuro</h2>
+    <table>
+        <tr>
+            <th>Prioridad</th>
+            <th>Tarea</th>
+            <th>Descripción</th>
+        </tr>
+        <tr>
+            <td>P1</td>
+            <td>DRM Integration</td>
+            <td>Protección de contenido premium</td>
+        </tr>
+        <tr>
+            <td>P1</td>
+            <td>Modularización Backend</td>
+            <td>Separar server.py en microservicios</td>
+        </tr>
+        <tr>
+            <td>P2</td>
+            <td>Multiidioma</td>
+            <td>Soporte completo i18n</td>
+        </tr>
+        <tr>
+            <td>P2</td>
+            <td>Analytics</td>
+            <td>Dashboard de métricas avanzadas</td>
+        </tr>
+        <tr>
+            <td>P3</td>
+            <td>App Móvil</td>
+            <td>Aplicación nativa iOS/Android</td>
+        </tr>
+    </table>
+    
+    <h2>12.3 Recomendaciones</h2>
+    <div class="warning-box">
+        <ul>
+            <li>Implementar monitoreo continuo con herramientas como Prometheus/Grafana</li>
+            <li>Configurar backups automáticos de MongoDB en producción</li>
+            <li>Realizar auditorías de seguridad periódicas</li>
+            <li>Implementar rate limiting en endpoints críticos</li>
+            <li>Considerar CDN adicional para assets estáticos</li>
+        </ul>
+    </div>
+    
+    <hr style="margin: 40px 0;">
+    
+    <h1>ANEXOS</h1>
+    
+    <h2>Anexo A: Credenciales de Prueba</h2>
+    <table>
+        <tr>
+            <th>Tipo</th>
+            <th>Email</th>
+            <th>Contraseña</th>
+            <th>Rol</th>
+        </tr>
+        <tr>
+            <td>Administrador</td>
+            <td>benavidesdenasca@gmail.com</td>
+            <td>Benavides02@</td>
+            <td>admin</td>
+        </tr>
+    </table>
+    
+    <h2>Anexo B: URLs del Sistema</h2>
+    <table>
+        <tr>
+            <th>Recurso</th>
+            <th>URL</th>
+        </tr>
+        <tr>
+            <td>Aplicación</td>
+            <td>https://ancient-lines-vr.preview.emergentagent.com</td>
+        </tr>
+        <tr>
+            <td>Panel Admin</td>
+            <td>https://ancient-lines-vr.preview.emergentagent.com/admin</td>
+        </tr>
+        <tr>
+            <td>API Base</td>
+            <td>https://ancient-lines-vr.preview.emergentagent.com/api</td>
+        </tr>
+    </table>
+    
+    <h2>Anexo C: Contacto del Proyecto</h2>
+    <table>
+        <tr>
+            <th>Campo</th>
+            <th>Valor</th>
+        </tr>
+        <tr>
+            <td>Empresa</td>
+            <td>Nazca360</td>
+        </tr>
+        <tr>
+            <td>Dirección</td>
+            <td>Calle Lima 160 (Restobar Nazka), Nasca, Ica, Perú</td>
+        </tr>
+        <tr>
+            <td>WhatsApp</td>
+            <td>+51 956 567 391</td>
+        </tr>
+        <tr>
+            <td>Email</td>
+            <td>max@nazca360.com</td>
+        </tr>
+    </table>
+    
+    <div style="text-align: center; margin-top: 60px; padding: 20px; background: var(--light-bg); border-radius: 8px;">
+        <p style="font-size: 10pt; color: #666;">
+            <strong>Documento generado el 21 de Febrero de 2026</strong><br>
+            Nazca360 - Plataforma de Turismo Virtual Inmersivo<br>
+            © 2026 Todos los derechos reservados
+        </p>
+    </div>
+</div>
+
+</body>
+</html>
