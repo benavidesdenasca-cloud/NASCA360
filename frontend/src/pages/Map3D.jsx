@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Info, X, ChevronRight, ZoomIn, ZoomOut, RotateCcw, Plus, Edit, Trash2, Save, Settings, Image, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import Image360VRViewer from '@/components/Image360VRViewer';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
