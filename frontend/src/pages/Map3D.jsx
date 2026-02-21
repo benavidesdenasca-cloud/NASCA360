@@ -980,43 +980,15 @@ const Map3D = () => {
         </div>
       </div>
       
-      {/* 360° Image Viewer Modal */}
+      {/* 360° Image Viewer Modal with VR Support */}
       {show360Viewer && current360Image && (
-        <div className="fixed inset-0 z-[9999] bg-black flex flex-col">
-          {/* Header */}
-          <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-white text-xl font-bold">{current360Image.name}</h2>
-                <p className="text-white/70 text-sm">{current360Image.description}</p>
-              </div>
-              <Button
-                onClick={close360Viewer}
-                variant="ghost"
-                className="text-white hover:bg-white/20"
-              >
-                <X className="w-6 h-6" />
-              </Button>
-            </div>
-          </div>
-          
-          {/* 360° Viewer - Using iframe with Pannellum CDN and proxy */}
-          <div className="flex-1 relative">
-            <iframe
-              src={`https://cdn.pannellum.org/2.5/pannellum.htm#panorama=${encodeURIComponent(`${API}/api/image-proxy?url=${encodeURIComponent(current360Image.url)}`)}&autoLoad=true&autoRotate=-2`}
-              className="w-full h-full border-0"
-              allowFullScreen
-              title="360° Viewer"
-            />
-          </div>
-          
-          {/* Footer with controls hint */}
-          <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 to-transparent p-4">
-            <p className="text-white/70 text-sm text-center">
-              Arrastra para mirar alrededor • Usa la rueda del mouse para zoom
-            </p>
-          </div>
-        </div>
+        <Image360VRViewer
+          imageUrl={current360Image.url}
+          title={current360Image.name}
+          description={current360Image.description}
+          onClose={close360Viewer}
+          proxyUrl={`${API}/api/image-proxy`}
+        />
       )}
         </>
       )}
