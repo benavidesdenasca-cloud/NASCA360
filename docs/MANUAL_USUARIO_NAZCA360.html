@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - Nazca360</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary: #1a365d;
+            --secondary: #2b6cb0;
+            --accent: #ed8936;
+            --success: #38a169;
+            --warning: #d69e2e;
+            --danger: #e53e3e;
+            --text: #2d3748;
+            --light-bg: #f7fafc;
+            --border: #e2e8f0;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: var(--text);
+            background: white;
+        }
+        
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 0 auto;
+            background: white;
+        }
+        
+        @media print {
+            .page { page-break-after: always; }
+            .no-break { page-break-inside: avoid; }
+        }
+        
+        /* Cover */
+        .cover {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            min-height: 257mm;
+        }
+        
+        .cover h1 {
+            font-size: 32pt;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        .cover h2 {
+            font-size: 18pt;
+            color: var(--secondary);
+            font-weight: 400;
+            margin-bottom: 30px;
+        }
+        
+        /* Headers */
+        h1 {
+            font-size: 20pt;
+            color: var(--primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 10px;
+            margin: 30px 0 20px 0;
+        }
+        
+        h2 {
+            font-size: 14pt;
+            color: var(--secondary);
+            margin: 25px 0 15px 0;
+            border-left: 4px solid var(--accent);
+            padding-left: 10px;
+        }
+        
+        h3 {
+            font-size: 12pt;
+            color: var(--primary);
+            margin: 20px 0 10px 0;
+        }
+        
+        p { margin: 10px 0; text-align: justify; }
+        
+        /* Steps */
+        .step {
+            background: var(--light-bg);
+            border-left: 4px solid var(--accent);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .step-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .step-title {
+            font-weight: 600;
+            color: var(--primary);
+            display: inline;
+        }
+        
+        .step-content {
+            margin-top: 10px;
+            padding-left: 38px;
+        }
+        
+        /* Info boxes */
+        .info-box {
+            background: #ebf8ff;
+            border-left: 4px solid var(--secondary);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .info-box::before {
+            content: "ℹ️ ";
+            font-size: 14pt;
+        }
+        
+        .warning-box {
+            background: #fffaf0;
+            border-left: 4px solid var(--warning);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .warning-box::before {
+            content: "⚠️ ";
+            font-size: 14pt;
+        }
+        
+        .success-box {
+            background: #f0fff4;
+            border-left: 4px solid var(--success);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .success-box::before {
+            content: "✅ ";
+            font-size: 14pt;
+        }
+        
+        .danger-box {
+            background: #fff5f5;
+            border-left: 4px solid var(--danger);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .danger-box::before {
+            content: "🚫 ";
+            font-size: 14pt;
+        }
+        
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 10pt;
+        }
+        
+        th {
+            background: var(--primary);
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+        }
+        
+        td {
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        tr:nth-child(even) { background: var(--light-bg); }
+        
+        /* Feature cards */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .feature-card {
+            background: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .feature-icon {
+            font-size: 36pt;
+            margin-bottom: 10px;
+        }
+        
+        .feature-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .feature-desc {
+            font-size: 10pt;
+            color: #666;
+        }
+        
+        /* Screenshots placeholder */
+        .screenshot {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            color: white;
+            margin: 15px 0;
+            font-style: italic;
+        }
+        
+        /* Navigation */
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: var(--light-bg);
+            border-radius: 8px;
+        }
+        
+        .nav-icon {
+            font-size: 20pt;
+            margin-right: 15px;
+        }
+        
+        .nav-text {
+            flex: 1;
+        }
+        
+        .nav-text strong {
+            display: block;
+            color: var(--primary);
+        }
+        
+        .nav-text span {
+            font-size: 9pt;
+            color: #666;
+        }
+        
+        /* Keyboard shortcuts */
+        kbd {
+            background: #eee;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: monospace;
+            font-size: 10pt;
+        }
+        
+        /* TOC */
+        .toc {
+            background: var(--light-bg);
+            padding: 20px 30px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .toc ul {
+            list-style: none;
+            margin: 0;
+        }
+        
+        .toc li {
+            padding: 8px 0;
+            border-bottom: 1px dotted var(--border);
+        }
+        
+        ul, ol {
+            margin: 10px 0 10px 25px;
+        }
+        
+        li { margin: 5px 0; }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            background: var(--light-bg);
+            border-radius: 8px;
+            font-size: 10pt;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+<!-- PORTADA -->
+<div class="page cover">
+    <div style="font-size: 80pt; margin-bottom: 20px;">🏛️</div>
+    <h1>MANUAL DE USUARIO</h1>
+    <h2>Plataforma de Turismo Virtual Nazca360</h2>
+    <p style="font-size: 14pt; color: var(--accent); margin-bottom: 40px;">
+        Explora las Líneas de Nazca en 360° y Realidad Virtual
+    </p>
+    
+    <div style="margin: 30px 0;">
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🗺️</div>
+                <div class="feature-title">Mapa 3D Interactivo</div>
+                <div class="feature-desc">59 figuras georreferenciadas</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎬</div>
+                <div class="feature-title">Videos 360°</div>
+                <div class="feature-desc">Documentales inmersivos</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🥽</div>
+                <div class="feature-title">Realidad Virtual</div>
+                <div class="feature-desc">Compatible con Meta Quest 3</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📷</div>
+                <div class="feature-title">Fotos 360°</div>
+                <div class="feature-desc">33 panorámicas inmersivas</div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="margin-top: 40px; font-size: 11pt; color: #666;">
+        <p><strong>Versión:</strong> 1.0 | <strong>Fecha:</strong> Febrero 2026</p>
+        <p><strong>URL:</strong> https://ancient-lines-vr.preview.emergentagent.com</p>
+    </div>
+</div>
+
+<!-- ÍNDICE -->
+<div class="page">
+    <h1>📚 ÍNDICE DE CONTENIDOS</h1>
+    
+    <div class="toc">
+        <ul>
+            <li><strong>1.</strong> Introducción a Nazca360</li>
+            <li><strong>2.</strong> Requisitos del Sistema</li>
+            <li><strong>3.</strong> Registro y Acceso</li>
+            <li><strong>4.</strong> Navegación Principal</li>
+            <li><strong>5.</strong> Mapa 3D Interactivo</li>
+            <li><strong>6.</strong> Galería de Videos 360°</li>
+            <li><strong>7.</strong> Visor de Fotos 360° con VR</li>
+            <li><strong>8.</strong> Suscripciones y Pagos</li>
+            <li><strong>9.</strong> Reservaciones VR</li>
+            <li><strong>10.</strong> Panel de Administración</li>
+            <li><strong>11.</strong> Preguntas Frecuentes (FAQ)</li>
+            <li><strong>12.</strong> Soporte y Contacto</li>
+        </ul>
+    </div>
+    
+    <h1>1. INTRODUCCIÓN A NAZCA360</h1>
+    
+    <h2>1.1 ¿Qué es Nazca360?</h2>
+    <p>
+        <strong>Nazca360</strong> es una plataforma de turismo virtual que te permite explorar las misteriosas 
+        Líneas de Nazca y Palpa desde cualquier lugar del mundo. A través de tecnología de punta en videos 360°, 
+        fotografías panorámicas y realidad virtual, podrás descubrir estos increíbles geoglifos milenarios 
+        como si estuvieras volando sobre ellos.
+    </p>
+    
+    <h2>1.2 ¿Qué puedes hacer en Nazca360?</h2>
+    
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🗺️</div>
+            <div class="feature-title">Explorar el Mapa 3D</div>
+            <div class="feature-desc">Navega por 59 figuras con ubicación exacta</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎥</div>
+            <div class="feature-title">Ver Videos Inmersivos</div>
+            <div class="feature-desc">Documentales en 360° en español e inglés</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📸</div>
+            <div class="feature-title">Fotos Panorámicas</div>
+            <div class="feature-desc">33 imágenes 360° de alta resolución</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🥽</div>
+            <div class="feature-title">Experiencia VR</div>
+            <div class="feature-desc">Modo inmersivo para Meta Quest 3</div>
+        </div>
+    </div>
+    
+    <h2>1.3 Tipos de Usuario</h2>
+    <table>
+        <tr>
+            <th>Tipo</th>
+            <th>Acceso</th>
+            <th>Funcionalidades</th>
+        </tr>
+        <tr>
+            <td><strong>Visitante</strong></td>
+            <td>Sin registro</td>
+            <td>Ver página de inicio, información general</td>
+        </tr>
+        <tr>
+            <td><strong>Usuario Básico</strong></td>
+            <td>Con registro gratuito</td>
+            <td>Acceso limitado, ver información de suscripción</td>
+        </tr>
+        <tr>
+            <td><strong>Usuario Premium</strong></td>
+            <td>Con suscripción activa</td>
+            <td>Acceso completo: Mapa 3D, Videos, Fotos 360°, VR</td>
+        </tr>
+        <tr>
+            <td><strong>Administrador</strong></td>
+            <td>Cuenta especial</td>
+            <td>Gestión de usuarios, contenido y estadísticas</td>
+        </tr>
+    </table>
+</div>
+
+<!-- REQUISITOS -->
+<div class="page">
+    <h1>2. REQUISITOS DEL SISTEMA</h1>
+    
+    <h2>2.1 Para Navegador Web (PC/Laptop)</h2>
+    <table>
+        <tr>
+            <th>Requisito</th>
+            <th>Mínimo</th>
+            <th>Recomendado</th>
+        </tr>
+        <tr>
+            <td>Navegador</td>
+            <td>Chrome 90+, Firefox 88+, Edge 90+</td>
+            <td>Chrome 100+ (última versión)</td>
+        </tr>
+        <tr>
+            <td>Conexión Internet</td>
+            <td>5 Mbps</td>
+            <td>20+ Mbps para videos HD</td>
+        </tr>
+        <tr>
+            <td>Resolución pantalla</td>
+            <td>1280 x 720</td>
+            <td>1920 x 1080 o superior</td>
+        </tr>
+        <tr>
+            <td>JavaScript</td>
+            <td colspan="2">Debe estar habilitado</td>
+        </tr>
+    </table>
+    
+    <h2>2.2 Para Dispositivos Móviles</h2>
+    <table>
+        <tr>
+            <th>Sistema</th>
+            <th>Versión Mínima</th>
+            <th>Navegador</th>
+        </tr>
+        <tr>
+            <td>iOS (iPhone/iPad)</td>
+            <td>iOS 14+</td>
+            <td>Safari 14+</td>
+        </tr>
+        <tr>
+            <td>Android</td>
+            <td>Android 10+</td>
+            <td>Chrome Mobile</td>
+        </tr>
+    </table>
+    
+    <h2>2.3 Para Realidad Virtual (VR)</h2>
+    <div class="info-box">
+        Para la experiencia VR inmersiva completa, necesitas:
+        <ul>
+            <li><strong>Meta Quest 3</strong> (recomendado) o Meta Quest 2</li>
+            <li>Navegador <strong>Meta Quest Browser</strong></li>
+            <li>Conexión WiFi estable (5 GHz recomendado)</li>
+        </ul>
+    </div>
+    
+    <div class="warning-box">
+        El modo VR solo está disponible en dispositivos compatibles con WebXR. En navegadores de escritorio normales, verás las fotos 360° en modo panorámico.
+    </div>
+    
+    <h1>3. REGISTRO Y ACCESO</h1>
+    
+    <h2>3.1 Crear una Cuenta Nueva</h2>
+    
+    <div class="step">
+        <span class="step-number">1</span>
+        <span class="step-title">Accede a la página de registro</span>
+        <div class="step-content">
+            Ve a <strong>https://ancient-lines-vr.preview.emergentagent.com</strong> y haz clic en el botón <strong>"Registrarse"</strong> en la esquina superior derecha.
+        </div>
+    </div>
+    
+    <div class="step">
+        <span class="step-number">2</span>
+        <span class="step-title">Completa el formulario</span>
+        <div class="step-content">
+            <ul>
+                <li><strong>Nombre completo:</strong> Tu nombre real</li>
+                <li><strong>Email:</strong> Un correo válido (será tu usuario)</li>
+                <li><strong>Contraseña:</strong> Mínimo 6 caracteres</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="step">
+        <span class="step-number">3</span>
+        <span class="step-title">Confirma tu registro</span>
+        <div class="step-content">
+            Haz clic en <strong>"Crear Cuenta"</strong>. Serás redirigido automáticamente a la página principal.
+        </div>
+    </div>
+    
+    <h2>3.2 Iniciar Sesión con Google</h2>
+    <p>También puedes registrarte e iniciar sesión usando tu cuenta de Google:</p>
+    
+    <div class="step">
+        <span class="step-number">1</span>
+        <span class="step-title">Haz clic en "Continuar con Google"</span>
+        <div class="step-content">
+            En la página de login, selecciona el botón de Google.
+        </div>
+    </div>
+    
+    <div class="step">
+        <span class="step-number">2</span>
+        <span class="step-title">Autoriza el acceso</span>
+        <div class="step-content">
+            Selecciona tu cuenta de Google y autoriza a Nazca360 a acceder a tu información básica.
+        </div>
+    </div>
+    
+    <div class="success-box">
+        Al usar Google, no necesitas recordar una contraseña adicional y tu registro es instantáneo.
+    </div>
+</div>
+
+<!-- NAVEGACIÓN -->
+<div class="page">
+    <h1>4. NAVEGACIÓN PRINCIPAL</h1>
+    
+    <h2>4.1 Barra de Navegación</h2>
+    <p>La barra de navegación superior te permite acceder a todas las secciones de la plataforma:</p>
+    
+    <div class="nav-item">
+        <span class="nav-icon">🏠</span>
+        <div class="nav-text">
+            <strong>Inicio</strong>
+            <span>Página principal con información general</span>
+        </div>
+    </div>
+    
+    <div class="nav-item">
+        <span class="nav-icon">🗺️</span>
+        <div class="nav-text">
+            <strong>Mapa 3D</strong>
+            <span>Explorar las figuras de Nazca georreferenciadas (Premium)</span>
+        </div>
+    </div>
+    
+    <div class="nav-item">
+        <span class="nav-icon">🎬</span>
+        <div class="nav-text">
+            <strong>Galería</strong>
+            <span>Ver videos 360° inmersivos (Premium)</span>
+        </div>
+    </div>
+    
+    <div class="nav-item">
+        <span class="nav-icon">📅</span>
+        <div class="nav-text">
+            <strong>Reservaciones</strong>
+            <span>Reservar experiencia VR presencial</span>
+        </div>
+    </div>
+    
+    <div class="nav-item">
+        <span class="nav-icon">💳</span>
+        <div class="nav-text">
+            <strong>Suscripción</strong>
+            <span>Ver planes y suscribirte</span>
+        </div>
+    </div>
+    
+    <div class="nav-item">
+        <span class="nav-icon">📞</span>
+        <div class="nav-text">
+            <strong>Contacto</strong>
+            <span>Enviar mensaje al equipo de Nazca360</span>
+        </div>
+    </div>
+    
+    <h2>4.2 Menú de Usuario</h2>
+    <p>Al hacer clic en tu nombre o foto de perfil, verás opciones adicionales:</p>
+    <ul>
+        <li><strong>Mi Perfil:</strong> Ver y editar tu información</li>
+        <li><strong>Mi Suscripción:</strong> Estado de tu plan actual</li>
+        <li><strong>Cerrar Sesión:</strong> Salir de tu cuenta</li>
+    </ul>
+    
+    <h1>5. MAPA 3D INTERACTIVO</h1>
+    
+    <div class="warning-box">
+        El Mapa 3D requiere una <strong>suscripción Premium activa</strong>. Si no tienes suscripción, verás un mensaje invitándote a suscribirte.
+    </div>
+    
+    <h2>5.1 Vista General del Mapa</h2>
+    <p>El mapa muestra una vista satelital del desierto de Nazca con todas las figuras marcadas. Puedes:</p>
+    <ul>
+        <li><strong>Hacer zoom:</strong> Usa la rueda del mouse o los botones +/- </li>
+        <li><strong>Mover el mapa:</strong> Arrastra con el mouse</li>
+        <li><strong>Ver una figura:</strong> Haz clic en cualquier marcador</li>
+    </ul>
+    
+    <h2>5.2 Panel Lateral de Figuras</h2>
+    <p>A la izquierda del mapa verás una lista con las 59 figuras disponibles:</p>
+    <ul>
+        <li><strong>Nombre de la figura</strong></li>
+        <li><strong>Icono de cámara 📷</strong> si tiene foto 360°</li>
+        <li><strong>Icono de video 🎬</strong> si tiene video asociado</li>
+    </ul>
+    
+    <h2>5.3 Panel de Detalle</h2>
+    <p>Al seleccionar una figura, aparece un panel con:</p>
+    <ul>
+        <li>Nombre y descripción histórica</li>
+        <li>Coordenadas GPS exactas</li>
+        <li>Botón <strong>"Ver en 360°"</strong> para abrir el visor inmersivo</li>
+        <li>Botón <strong>"Centrar en Mapa"</strong> para ubicarla</li>
+    </ul>
+</div>
+
+<!-- VISOR 360 -->
+<div class="page">
+    <h1>6. GALERÍA DE VIDEOS 360°</h1>
+    
+    <h2>6.1 Acceder a la Galería</h2>
+    <p>Desde el menú principal, haz clic en <strong>"Galería"</strong>. Verás todos los videos disponibles organizados por categoría.</p>
+    
+    <h2>6.2 Reproducir un Video</h2>
+    
+    <div class="step">
+        <span class="step-number">1</span>
+        <span class="step-title">Selecciona un video</span>
+        <div class="step-content">
+            Haz clic en la miniatura o título del video que deseas ver.
+        </div>
+    </div>
+    
+    <div class="step">
+        <span class="step-number">2</span>
+        <span class="step-title">Controla la reproducción</span>
+        <div class="step-content">
+            <ul>
+                <li><strong>Play/Pausa:</strong> Barra espaciadora o clic en el botón</li>
+                <li><strong>Volumen:</strong> Deslizador en la barra inferior</li>
+                <li><strong>Pantalla completa:</strong> Botón de expansión o tecla <kbd>F</kbd></li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="step">
+        <span class="step-number">3</span>
+        <span class="step-title">Mira en 360°</span>
+        <div class="step-content">
+            <ul>
+                <li><strong>Mouse:</strong> Arrastra para mirar en cualquier dirección</li>
+                <li><strong>Móvil:</strong> Mueve tu dispositivo o arrastra con el dedo</li>
+                <li><strong>VR:</strong> Gira tu cabeza para mirar alrededor</li>
+            </ul>
+        </div>
+    </div>
+    
+    <h2>6.3 Videos Disponibles</h2>
+    <table>
+        <tr>
+            <th>Título</th>
+            <th>Duración</th>
+            <th>Idioma</th>
+        </tr>
+        <tr>
+            <td>Las Líneas de Nasca - Documental Completo</td>
+            <td>27:55</td>
+            <td>Español</td>
+        </tr>
+        <tr>
+            <td>Líneas de Nasca - Versión Corta</td>
+            <td>16:10</td>
+            <td>Español</td>
+        </tr>
+        <tr>
+            <td>Nazca Lines - Full Documentary</td>
+            <td>27:00</td>
+            <td>English</td>
+        </tr>
+        <tr>
+            <td>Nazca Lines - Short Version</td>
+            <td>16:10</td>
+            <td>English</td>
+        </tr>
+    </table>
+    
+    <h1>7. VISOR DE FOTOS 360° CON VR</h1>
+    
+    <h2>7.1 Abrir una Foto 360°</h2>
+    <p>Desde el Mapa 3D, selecciona una figura que tenga el icono 📷 y haz clic en <strong>"Ver en 360°"</strong>.</p>
+    
+    <h2>7.2 Controles del Visor</h2>
+    
+    <table>
+        <tr>
+            <th>Control</th>
+            <th>Acción</th>
+        </tr>
+        <tr>
+            <td>🔄 Botón de Rotación</td>
+            <td>Activa/desactiva la rotación automática</td>
+        </tr>
+        <tr>
+            <td>⛶ Pantalla Completa</td>
+            <td>Expande el visor a toda la pantalla</td>
+        </tr>
+        <tr>
+            <td>✕ Cerrar</td>
+            <td>Cierra el visor y vuelve al mapa</td>
+        </tr>
+        <tr>
+            <td>🥽 Entrar en Modo VR</td>
+            <td>Activa la experiencia de realidad virtual (solo en dispositivos compatibles)</td>
+        </tr>
+    </table>
+    
+    <h2>7.3 Modo VR con Meta Quest 3</h2>
+    
+    <div class="info-box">
+        Para la mejor experiencia VR:
+        <ol>
+            <li>Abre la URL de Nazca360 en el navegador de Meta Quest</li>
+            <li>Inicia sesión con tu cuenta Premium</li>
+            <li>Ve al Mapa 3D y selecciona una figura con foto 360°</li>
+            <li>Haz clic en "Ver en 360°"</li>
+            <li>Presiona el botón <strong>"Entrar en Modo VR"</strong></li>
+            <li>¡Disfruta de la experiencia inmersiva!</li>
+        </ol>
+    </div>
+    
+    <div class="success-box">
+        En modo VR, simplemente gira tu cabeza para mirar en cualquier dirección. La imagen te rodea completamente como si estuvieras flotando sobre las líneas de Nazca.
+    </div>
+</div>
+
+<!-- SUSCRIPCIONES -->
+<div class="page">
+    <h1>8. SUSCRIPCIONES Y PAGOS</h1>
+    
+    <h2>8.1 Planes Disponibles</h2>
+    
+    <table>
+        <tr>
+            <th>Plan</th>
+            <th>Precio</th>
+            <th>Duración</th>
+            <th>Ahorro</th>
+        </tr>
+        <tr>
+            <td>🥉 <strong>1 Mes</strong></td>
+            <td>$20 USD</td>
+            <td>30 días</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>🥈 <strong>3 Meses</strong></td>
+            <td>$55 USD</td>
+            <td>90 días</td>
+            <td>$5 USD</td>
+        </tr>
+        <tr>
+            <td>🥇 <strong>6 Meses</strong></td>
+            <td>$100 USD</td>
+            <td>180 días</td>
+            <td>$20 USD</td>
+        </tr>
+        <tr>
+            <td>💎 <strong>12 Meses</strong></td>
+            <td>$200 USD</td>
+            <td>365 días</td>
+            <td>$40 USD</td>
+        </tr>
+    </table>
+    
+    <h2>8.2 Cómo Suscribirte</h2>
+    
+    <div class="step">
+        <span class="step-number">1</span>
+        <span class="step-title">Ve a la página de Suscripción</span>
+        <div class="step-content">
+            Haz clic en <strong>"Suscripción"</strong> en el menú principal o en el botón <strong>"Suscribirme"</strong> cuando intentes acceder a contenido premium.
+        </div>
+    </div>
+    
+    <div class="step">
+        <span class="step-number">2</span>
+        <span class="step-title">Elige tu plan</span>
+        <div class="step-content">
+            Selecciona el plan que mejor se adapte a tus necesidades. Los planes más largos tienen mayor descuento.
+        </div>
+    </div>
+    
+    <div class="step">
+        <span class="step-number">3</span>
+        <span class="step-title">Completa el pago con PayPal</span>
+        <div class="step-content">
+            <ol>
+                <li>Se abrirá una ventana emergente de PayPal</li>
+                <li>Inicia sesión en tu cuenta PayPal</li>
+                <li>Confirma el pago</li>
+                <li>¡Listo! Tu suscripción se activa inmediatamente</li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="info-box">
+        PayPal acepta pagos con tarjeta de crédito/débito aunque no tengas cuenta PayPal. Solo selecciona "Pagar con tarjeta" en la ventana de PayPal.
+    </div>
+    
+    <h2>8.3 Renovar tu Suscripción</h2>
+    <p>Cuando tu suscripción esté por vencer, recibirás un aviso. Para renovar:</p>
+    <ul>
+        <li>Ve a <strong>"Mi Suscripción"</strong> en tu perfil</li>
+        <li>Haz clic en <strong>"Renovar"</strong></li>
+        <li>Completa el pago</li>
+    </ul>
+    
+    <div class="warning-box">
+        Tu suscripción NO se renueva automáticamente. Debes renovarla manualmente antes de que expire para mantener el acceso.
+    </div>
+    
+    <h1>9. RESERVACIONES VR</h1>
+    
+    <h2>9.1 ¿Qué es una Reservación VR?</h2>
+    <p>
+        Además de la experiencia virtual online, puedes reservar una sesión presencial en nuestras instalaciones 
+        en Nazca, donde podrás disfrutar de la experiencia VR con equipos de alta gama.
+    </p>
+    
+    <h2>9.2 Hacer una Reservación</h2>
+    
+    <div class="step">
+        <span class="step-number">1</span>
+        <span class="step-title">Accede a Reservaciones</span>
+        <div class="step-content">
+            Haz clic en <strong>"Reservaciones"</strong> en el menú principal.
+        </div>
+    </div>
+    
+    <div class="step">
+        <span class="step-number">2</span>
+        <span class="step-title">Selecciona fecha y hora</span>
+        <div class="step-content">
+            Elige el día y horario disponible que prefieras.
+        </div>
+    </div>
+    
+    <div class="step">
+        <span class="step-number">3</span>
+        <span class="step-title">Confirma y paga</span>
+        <div class="step-content">
+            Realiza el pago de la reservación mediante PayPal.
+        </div>
+    </div>
+    
+    <div class="step">
+        <span class="step-number">4</span>
+        <span class="step-title">Recibe tu código QR</span>
+        <div class="step-content">
+            Recibirás un código QR que deberás presentar el día de tu visita.
+        </div>
+    </div>
+</div>
+
+<!-- ADMIN -->
+<div class="page">
+    <h1>10. PANEL DE ADMINISTRACIÓN</h1>
+    
+    <div class="danger-box">
+        Esta sección es solo para usuarios con rol de <strong>Administrador</strong>. Si eres un usuario normal, puedes omitir esta sección.
+    </div>
+    
+    <h2>10.1 Acceder al Panel Admin</h2>
+    <p>Los administradores pueden acceder al panel desde:</p>
+    <ul>
+        <li>El menú de usuario → <strong>"Panel Admin"</strong></li>
+        <li>Directamente: <code>/admin</code></li>
+    </ul>
+    
+    <h2>10.2 Funciones Disponibles</h2>
+    
+    <h3>👥 Gestión de Usuarios</h3>
+    <ul>
+        <li>Ver lista de todos los usuarios registrados</li>
+        <li>Ver información de suscripción de cada usuario</li>
+        <li>Editar datos del usuario (nombre, email, rol)</li>
+        <li>Modificar suscripción (fechas, plan, estado)</li>
+        <li>Agregar tiempo de suscripción (+1, +3, +6, +12 meses)</li>
+        <li>Bloquear/desbloquear usuarios</li>
+    </ul>
+    
+    <h3>🗺️ Gestión de POIs</h3>
+    <ul>
+        <li>Agregar nuevas figuras al mapa</li>
+        <li>Editar información de figuras existentes</li>
+        <li>Subir/cambiar imágenes 360°</li>
+        <li>Activar/desactivar figuras</li>
+    </ul>
+    
+    <h3>📊 Estadísticas</h3>
+    <ul>
+        <li>Total de usuarios registrados</li>
+        <li>Suscripciones activas</li>
+        <li>Ingresos por período</li>
+        <li>Reservaciones pendientes</li>
+    </ul>
+    
+    <h1>11. PREGUNTAS FRECUENTES (FAQ)</h1>
+    
+    <h2>Cuenta y Acceso</h2>
+    
+    <h3>❓ Olvidé mi contraseña, ¿qué hago?</h3>
+    <p>Contacta a soporte a través del formulario de contacto o WhatsApp para restablecer tu contraseña.</p>
+    
+    <h3>❓ ¿Puedo usar mi cuenta en varios dispositivos?</h3>
+    <p>Sí, puedes iniciar sesión en múltiples dispositivos con la misma cuenta.</p>
+    
+    <h2>Suscripción y Pagos</h2>
+    
+    <h3>❓ ¿Qué métodos de pago aceptan?</h3>
+    <p>Aceptamos pagos a través de <strong>PayPal</strong>, que incluye tarjetas de crédito y débito Visa, Mastercard, American Express.</p>
+    
+    <h3>❓ ¿Puedo cancelar mi suscripción?</h3>
+    <p>Las suscripciones no tienen renovación automática, por lo que simplemente no renueves cuando expire.</p>
+    
+    <h3>❓ ¿Hay reembolsos?</h3>
+    <p>Contacta a soporte dentro de las primeras 24 horas si tienes problemas con tu compra.</p>
+    
+    <h2>Contenido y VR</h2>
+    
+    <h3>❓ Los videos cargan muy lento, ¿qué hago?</h3>
+    <p>Verifica tu conexión a internet. Recomendamos mínimo 10 Mbps para videos 360° fluidos.</p>
+    
+    <h3>❓ No veo el botón de VR</h3>
+    <p>El botón solo aparece en dispositivos compatibles con WebXR como Meta Quest 2/3. En navegadores de escritorio normales no está disponible.</p>
+    
+    <h3>❓ ¿Las fotos 360° funcionan en mi celular?</h3>
+    <p>Sí, puedes ver las fotos 360° moviendo tu teléfono o arrastrando con el dedo.</p>
+</div>
+
+<!-- SOPORTE -->
+<div class="page">
+    <h1>12. SOPORTE Y CONTACTO</h1>
+    
+    <h2>12.1 Formulario de Contacto</h2>
+    <p>Para cualquier consulta, ve a la sección <strong>"Contacto"</strong> en el menú principal y completa el formulario. Te responderemos a la brevedad.</p>
+    
+    <h2>12.2 Información de Contacto Directo</h2>
+    
+    <table>
+        <tr>
+            <th>Canal</th>
+            <th>Contacto</th>
+        </tr>
+        <tr>
+            <td>📧 Email</td>
+            <td>max@nazca360.com</td>
+        </tr>
+        <tr>
+            <td>📱 WhatsApp</td>
+            <td>+51 956 567 391</td>
+        </tr>
+        <tr>
+            <td>📍 Dirección</td>
+            <td>Calle Lima 160 (Restobar Nazka), Nasca, Ica, Perú</td>
+        </tr>
+    </table>
+    
+    <h2>12.3 Horario de Atención</h2>
+    <table>
+        <tr>
+            <th>Día</th>
+            <th>Horario</th>
+        </tr>
+        <tr>
+            <td>Lunes a Viernes</td>
+            <td>9:00 AM - 6:00 PM (Hora Perú)</td>
+        </tr>
+        <tr>
+            <td>Sábados</td>
+            <td>10:00 AM - 2:00 PM</td>
+        </tr>
+        <tr>
+            <td>Domingos y Feriados</td>
+            <td>Cerrado</td>
+        </tr>
+    </table>
+    
+    <h2>12.4 Redes Sociales</h2>
+    <p>Síguenos para novedades y contenido exclusivo:</p>
+    <ul>
+        <li>Facebook: @Nazca360</li>
+        <li>Instagram: @nazca360vr</li>
+        <li>YouTube: Nazca360 VR Tours</li>
+    </ul>
+    
+    <div class="footer">
+        <h2 style="border: none; padding: 0; margin-bottom: 10px;">¡Gracias por usar Nazca360!</h2>
+        <p>
+            Esperamos que disfrutes explorando las misteriosas Líneas de Nazca.<br>
+            Si tienes sugerencias para mejorar la plataforma, no dudes en contactarnos.
+        </p>
+        <br>
+        <p>
+            <strong>Nazca360 - Plataforma de Turismo Virtual Inmersivo</strong><br>
+            Versión 1.0 | Febrero 2026<br>
+            © 2026 Todos los derechos reservados
+        </p>
+    </div>
+</div>
+
+</body>
+</html>
