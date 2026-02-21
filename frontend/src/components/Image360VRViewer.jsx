@@ -393,7 +393,7 @@ const Image360VRViewer = ({
         </div>
       </div>
 
-      {/* A-Frame container */}
+      {/* Three.js container */}
       <div 
         ref={containerRef} 
         className="flex-1 w-full h-full"
@@ -433,7 +433,7 @@ const Image360VRViewer = ({
       {/* Footer with VR button and instructions */}
       <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-6 pointer-events-auto">
         <div className="flex flex-col items-center gap-4">
-          {/* VR Button - Only show if VR is supported */}
+          {/* VR Button - Only show if VR is supported and not already in VR */}
           {vrSupported && !isInVR && (
             <button
               onClick={enterVR}
@@ -459,7 +459,7 @@ const Image360VRViewer = ({
           <p className="text-white/70 text-sm text-center max-w-lg">
             {vrSupported 
               ? 'Arrastra para mirar alrededor • Usa el botón VR para experiencia inmersiva con Meta Quest 3' 
-              : 'Arrastra para mirar alrededor • Usa la rueda del mouse para zoom'
+              : 'Arrastra para mirar alrededor • Usa scroll para moverte'
             }
           </p>
           
@@ -471,10 +471,6 @@ const Image360VRViewer = ({
           )}
         </div>
       </div>
-
-      {/* Custom VR enter/exit buttons (hidden, used by A-Frame) */}
-      <button id="enterVRButton" style={{ display: 'none' }} />
-      <button id="exitVRButton" style={{ display: 'none' }} />
     </div>
   );
 };
