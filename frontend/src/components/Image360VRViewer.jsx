@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Maximize2, Minimize2, RotateCcw, Eye, EyeOff } from 'lucide-react';
+import * as THREE from 'three';
+import { X, Maximize2, Minimize2, RotateCcw, Eye } from 'lucide-react';
 
 /**
  * Image360VRViewer - Immersive 360° photo viewer with WebXR/VR support
- * Uses A-Frame for WebXR compatibility with Meta Quest 3 and other VR headsets
+ * Uses Three.js for WebXR compatibility with Meta Quest 3 and other VR headsets
  */
 const Image360VRViewer = ({ 
   imageUrl, 
@@ -13,13 +14,26 @@ const Image360VRViewer = ({
   proxyUrl = null // Optional: use proxy for CORS
 }) => {
   const containerRef = useRef(null);
-  const aframeSceneRef = useRef(null);
+  const rendererRef = useRef(null);
+  const sceneRef = useRef(null);
+  const cameraRef = useRef(null);
+  const sphereRef = useRef(null);
+  const cleanupRef = useRef(null);
+  const vrButtonRef = useRef(null);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [vrSupported, setVrSupported] = useState(false);
   const [isInVR, setIsInVR] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
+  
+  // Mouse/touch control refs
+  const lonRef = useRef(0);
+  const latRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const lastPosRef = useRef({ x: 0, y: 0 });
+  const autoRotateRef = useRef(autoRotate);
 
   // Get the final image URL (with proxy if needed)
   const getFinalImageUrl = useCallback(() => {
@@ -40,145 +54,248 @@ const Image360VRViewer = ({
       });
     }
   }, []);
+  
+  // Keep autoRotateRef in sync
+  useEffect(() => {
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
 
-  // Initialize A-Frame scene
+  // Initialize Three.js scene with WebXR
   useEffect(() => {
     if (!containerRef.current || !imageUrl) return;
 
-    // Dynamically load A-Frame if not already loaded
-    const loadAFrame = () => {
-      return new Promise((resolve, reject) => {
-        if (window.AFRAME) {
-          resolve();
-          return;
-        }
+    const container = containerRef.current;
+    const width = container.clientWidth;
+    const height = container.clientHeight;
 
-        const script = document.createElement('script');
-        script.src = 'https://aframe.io/releases/1.7.0/aframe.min.js';
-        script.async = true;
-        script.onload = () => {
-          // Wait a bit for AFRAME to fully initialize
-          setTimeout(resolve, 100);
-        };
-        script.onerror = reject;
-        document.head.appendChild(script);
+    // Scene
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
+
+    // Camera
+    const camera = new THREE.PerspectiveCamera(75, width / height, 1, 1100);
+    camera.position.set(0, 0, 0);
+    cameraRef.current = camera;
+
+    // Renderer with WebXR support
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.xr.enabled = true;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
+
+    // Load texture
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.crossOrigin = 'anonymous';
+    
+    setIsLoading(true);
+    textureLoader.load(
+      getFinalImageUrl(),
+      (texture) => {
+        // Success
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+
+        // Create sphere with inverted normals for inside view
+        const geometry = new THREE.SphereGeometry(500, 80, 60);
+        geometry.scale(-1, 1, 1);
+        
+        const material = new THREE.MeshBasicMaterial({ 
+          map: texture,
+          side: THREE.FrontSide
+        });
+        
+        const sphere = new THREE.Mesh(geometry, material);
+        scene.add(sphere);
+        sphereRef.current = sphere;
+        
+        setIsLoading(false);
+        setError(null);
+      },
+      undefined,
+      (err) => {
+        // Error
+        console.error('Error loading panorama:', err);
+        setIsLoading(false);
+        setError('Error al cargar la imagen 360°. Verifica la URL.');
+      }
+    );
+
+    // Add VR Button if supported
+    if (navigator.xr) {
+      navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+        if (supported) {
+          // Dynamically import VRButton
+          import('three/examples/jsm/webxr/VRButton.js').then(({ VRButton }) => {
+            const vrButton = VRButton.createButton(renderer);
+            vrButton.style.position = 'absolute';
+            vrButton.style.bottom = '100px';
+            vrButton.style.left = '50%';
+            vrButton.style.transform = 'translateX(-50%)';
+            vrButton.style.zIndex = '100';
+            vrButton.style.background = 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)';
+            vrButton.style.border = 'none';
+            vrButton.style.borderRadius = '25px';
+            vrButton.style.padding = '16px 32px';
+            vrButton.style.fontWeight = 'bold';
+            vrButton.style.fontSize = '16px';
+            vrButton.style.cursor = 'pointer';
+            container.appendChild(vrButton);
+            vrButtonRef.current = vrButton;
+          });
+
+          // Track VR session state
+          renderer.xr.addEventListener('sessionstart', () => {
+            setIsInVR(true);
+            console.log('VR session started');
+          });
+          
+          renderer.xr.addEventListener('sessionend', () => {
+            setIsInVR(false);
+            console.log('VR session ended');
+          });
+        }
       });
+    }
+
+    // Animation loop
+    let lastTime = 0;
+    renderer.setAnimationLoop((time) => {
+      if (!rendererRef.current) return;
+      
+      // Auto-rotate when not dragging and not in VR
+      if (autoRotateRef.current && !isDraggingRef.current && !renderer.xr.isPresenting) {
+        const delta = (time - lastTime) / 1000;
+        lonRef.current += delta * 3; // 3 degrees per second
+      }
+      lastTime = time;
+      
+      // Update camera only when not in VR
+      if (!renderer.xr.isPresenting) {
+        const lat = Math.max(-85, Math.min(85, latRef.current));
+        const phi = THREE.MathUtils.degToRad(90 - lat);
+        const theta = THREE.MathUtils.degToRad(lonRef.current);
+
+        camera.lookAt(
+          500 * Math.sin(phi) * Math.cos(theta),
+          500 * Math.cos(phi),
+          500 * Math.sin(phi) * Math.sin(theta)
+        );
+      }
+
+      renderer.render(scene, camera);
+    });
+
+    // Mouse/Touch handlers
+    const canvas = renderer.domElement;
+    canvas.style.cursor = 'grab';
+
+    const onMouseDown = (e) => {
+      isDraggingRef.current = true;
+      lastPosRef.current = { x: e.clientX, y: e.clientY };
+      canvas.style.cursor = 'grabbing';
     };
 
-    const initScene = async () => {
-      try {
-        await loadAFrame();
-        
-        if (!containerRef.current) return;
+    const onMouseMove = (e) => {
+      if (!isDraggingRef.current) return;
+      lonRef.current -= (e.clientX - lastPosRef.current.x) * 0.15;
+      latRef.current += (e.clientY - lastPosRef.current.y) * 0.15;
+      lastPosRef.current = { x: e.clientX, y: e.clientY };
+    };
 
-        // Clear any existing content
-        containerRef.current.innerHTML = '';
+    const onMouseUp = () => {
+      isDraggingRef.current = false;
+      canvas.style.cursor = 'grab';
+    };
 
-        // Create A-Frame scene
-        const scene = document.createElement('a-scene');
-        scene.setAttribute('embedded', '');
-        scene.setAttribute('vr-mode-ui', 'enabled: true; enterVRButton: #enterVRButton; exitVRButton: #exitVRButton');
-        scene.setAttribute('webxr', 'requiredFeatures: local-floor; optionalFeatures: hand-tracking, layers');
-        scene.setAttribute('renderer', 'antialias: true; colorManagement: true');
-        scene.setAttribute('loading-screen', 'enabled: false');
-        
-        // Create assets container for preloading
-        const assets = document.createElement('a-assets');
-        assets.setAttribute('timeout', '30000');
-        
-        const img = document.createElement('img');
-        img.id = 'panorama-img';
-        img.crossOrigin = 'anonymous';
-        img.src = getFinalImageUrl();
-        
-        img.onload = () => {
-          setIsLoading(false);
-          setError(null);
-        };
-        
-        img.onerror = () => {
-          setIsLoading(false);
-          setError('Error al cargar la imagen 360°. Verifica la URL.');
-        };
-        
-        assets.appendChild(img);
-        scene.appendChild(assets);
-
-        // Create sky (360° sphere with panorama)
-        const sky = document.createElement('a-sky');
-        sky.setAttribute('src', '#panorama-img');
-        sky.setAttribute('rotation', '0 -90 0');
-        
-        if (autoRotate) {
-          sky.setAttribute('animation', 'property: rotation; from: 0 0 0; to: 0 360 0; loop: true; dur: 200000; easing: linear');
-        }
-        
-        scene.appendChild(sky);
-
-        // Create camera rig for better VR control
-        const cameraRig = document.createElement('a-entity');
-        cameraRig.id = 'cameraRig';
-        cameraRig.setAttribute('position', '0 1.6 0');
-        
-        const camera = document.createElement('a-camera');
-        camera.setAttribute('look-controls', 'enabled: true; magicWindowTrackingEnabled: true; touchEnabled: true');
-        camera.setAttribute('wasd-controls', 'enabled: false');
-        
-        cameraRig.appendChild(camera);
-        scene.appendChild(cameraRig);
-
-        // Add instruction text that's visible in VR
-        const textEntity = document.createElement('a-text');
-        textEntity.setAttribute('value', title);
-        textEntity.setAttribute('position', '0 2.5 -3');
-        textEntity.setAttribute('align', 'center');
-        textEntity.setAttribute('color', '#ffffff');
-        textEntity.setAttribute('width', '6');
-        textEntity.setAttribute('font', 'roboto');
-        textEntity.setAttribute('opacity', '0.8');
-        scene.appendChild(textEntity);
-
-        // Add event listeners for VR session
-        scene.addEventListener('enter-vr', () => {
-          setIsInVR(true);
-          console.log('Entered VR mode');
-        });
-
-        scene.addEventListener('exit-vr', () => {
-          setIsInVR(false);
-          console.log('Exited VR mode');
-        });
-
-        containerRef.current.appendChild(scene);
-        aframeSceneRef.current = scene;
-
-      } catch (err) {
-        console.error('Error initializing A-Frame:', err);
-        setError('Error al inicializar el visor VR');
-        setIsLoading(false);
+    const onTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        isDraggingRef.current = true;
+        lastPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }
     };
 
-    initScene();
+    const onTouchMove = (e) => {
+      if (!isDraggingRef.current || e.touches.length !== 1) return;
+      lonRef.current -= (e.touches[0].clientX - lastPosRef.current.x) * 0.15;
+      latRef.current += (e.touches[0].clientY - lastPosRef.current.y) * 0.15;
+      lastPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    };
+
+    const onTouchEnd = () => {
+      isDraggingRef.current = false;
+    };
+
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('mouseleave', onMouseUp);
+    canvas.addEventListener('touchstart', onTouchStart, { passive: true });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: true });
+    canvas.addEventListener('touchend', onTouchEnd);
+
+    const onResize = () => {
+      if (!containerRef.current || !rendererRef.current) return;
+      const w = containerRef.current.clientWidth;
+      const h = containerRef.current.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    };
+    window.addEventListener('resize', onResize);
+
+    // Cleanup function
+    cleanupRef.current = () => {
+      window.removeEventListener('resize', onResize);
+      canvas.removeEventListener('mousedown', onMouseDown);
+      canvas.removeEventListener('mousemove', onMouseMove);
+      canvas.removeEventListener('mouseup', onMouseUp);
+      canvas.removeEventListener('mouseleave', onMouseUp);
+      canvas.removeEventListener('touchstart', onTouchStart);
+      canvas.removeEventListener('touchmove', onTouchMove);
+      canvas.removeEventListener('touchend', onTouchEnd);
+      
+      if (renderer.xr.isPresenting) {
+        const session = renderer.xr.getSession();
+        if (session) session.end().catch(() => {});
+      }
+      
+      renderer.setAnimationLoop(null);
+      
+      if (vrButtonRef.current && container.contains(vrButtonRef.current)) {
+        container.removeChild(vrButtonRef.current);
+      }
+      
+      if (sphereRef.current) {
+        sphereRef.current.geometry.dispose();
+        sphereRef.current.material.map?.dispose();
+        sphereRef.current.material.dispose();
+      }
+      
+      renderer.dispose();
+      
+      if (container.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement);
+      }
+    };
 
     return () => {
-      // Cleanup
-      if (aframeSceneRef.current) {
-        try {
-          // Exit VR if still in it
-          if (aframeSceneRef.current.is && aframeSceneRef.current.is('vr-mode')) {
-            aframeSceneRef.current.exitVR();
-          }
-        } catch (e) {
-          console.log('VR exit error:', e);
-        }
-        aframeSceneRef.current = null;
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
       }
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
-      }
+      rendererRef.current = null;
+      sceneRef.current = null;
+      cameraRef.current = null;
+      sphereRef.current = null;
     };
-  }, [imageUrl, getFinalImageUrl, title, autoRotate]);
+  }, [imageUrl, getFinalImageUrl]);
 
   // Toggle fullscreen
   const toggleFullscreen = () => {
