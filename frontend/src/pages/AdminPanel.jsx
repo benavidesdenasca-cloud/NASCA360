@@ -996,6 +996,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="none">Sin Plan</option>
+                  <option value="premium">Premium (Acceso Manual)</option>
                   <option value="1_month">1 Mes ($20)</option>
                   <option value="3_months">3 Meses ($55)</option>
                   <option value="6_months">6 Meses ($100)</option>
