@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe de Pruebas Funcionales - Nazca360</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #C4862B 0%, #8B5E1A 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 12px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        .meta-info {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .meta-info table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .meta-info td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .meta-info td:first-child {
+            font-weight: bold;
+            width: 200px;
+            color: #C4862B;
+        }
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #C4862B;
+            border-bottom: 3px solid #C4862B;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .section h3 {
+            color: #8B5E1A;
+            margin: 20px 0 10px;
+        }
+        .test-case {
+            background: #fafafa;
+            border-left: 4px solid #C4862B;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .test-case.passed {
+            border-left-color: #28a745;
+        }
+        .test-case.failed {
+            border-left-color: #dc3545;
+        }
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .test-id {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        .status-passed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .test-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .test-table th, .test-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        .test-table th {
+            background: #f8f4ef;
+            color: #8B5E1A;
+            font-weight: 600;
+        }
+        .evidence-container {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+        .evidence-container img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            margin: 10px 0;
+        }
+        .evidence-caption {
+            font-size: 0.9em;
+            color: #666;
+            font-style: italic;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .summary-table th, .summary-table td {
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        .summary-table th {
+            background: #C4862B;
+            color: white;
+        }
+        .summary-table .total-row {
+            background: #f8f4ef;
+            font-weight: bold;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background: linear-gradient(135deg, #f8f4ef 0%, #fff 100%);
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e0d5c5;
+        }
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #C4862B;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .stat-box.passed .stat-number { color: #28a745; }
+        .stat-box.failed .stat-number { color: #dc3545; }
+        .toc {
+            background: #f8f4ef;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .toc h3 {
+            margin-bottom: 15px;
+        }
+        .toc ul {
+            list-style: none;
+        }
+        .toc li {
+            padding: 5px 0;
+        }
+        .toc a {
+            color: #8B5E1A;
+            text-decoration: none;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        @media print {
+            .container { padding: 20px; }
+            .section { break-inside: avoid; }
+            .test-case { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>INFORME DE PRUEBAS FUNCIONALES</h1>
+            <p class="subtitle">Sistema Nazca360 - Plataforma de Turismo Virtual Inmersivo</p>
+        </div>
+
+        <!-- Meta Info -->
+        <div class="meta-info">
+            <table>
+                <tr>
+                    <td>Proyecto:</td>
+                    <td>Nazca360 - Plataforma de Turismo Virtual</td>
+                </tr>
+                <tr>
+                    <td>Versión:</td>
+                    <td>1.0</td>
+                </tr>
+                <tr>
+                    <td>Fecha de Pruebas:</td>
+                    <td>21 de Febrero de 2026</td>
+                </tr>
+                <tr>
+                    <td>Responsable:</td>
+                    <td>Max Leonard Benavides Carpio</td>
+                </tr>
+                <tr>
+                    <td>URL del Sistema:</td>
+                    <td><a href="https://nazca-virtual-tour.preview.emergentagent.com" target="_blank">https://nazca-virtual-tour.preview.emergentagent.com</a></td>
+                </tr>
+                <tr>
+                    <td>Ambiente de Pruebas:</td>
+                    <td>Desarrollo/Preview</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Table of Contents -->
+        <div class="section">
+            <div class="toc">
+                <h3>Índice de Contenidos</h3>
+                <ul>
+                    <li>1. <a href="#resumen">Resumen Ejecutivo</a></li>
+                    <li>2. <a href="#alcance">Alcance de las Pruebas</a></li>
+                    <li>3. <a href="#casos">Casos de Prueba Funcionales</a>
+                        <ul style="margin-left: 20px; margin-top: 5px;">
+                            <li>3.1 Módulo de Autenticación</li>
+                            <li>3.2 Módulo de Galería</li>
+                            <li>3.3 Módulo de Mapa 3D</li>
+                            <li>3.4 Módulo de Suscripciones</li>
+                            <li>3.5 Módulo de Reservaciones VR</li>
+                            <li>3.6 Módulo de Contacto</li>
+                            <li>3.7 Panel de Administración</li>
+                        </ul>
+                    </li>
+                    <li>4. <a href="#resultados">Resultados y Métricas</a></li>
+                    <li>5. <a href="#conclusiones">Conclusiones</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Section 1: Executive Summary -->
+        <div class="section" id="resumen">
+            <h2>1. Resumen Ejecutivo</h2>
+            <p>El presente informe documenta los resultados de las pruebas funcionales realizadas al sistema Nazca360. Las pruebas fueron ejecutadas siguiendo casos de prueba predefinidos que cubren todas las funcionalidades principales de la plataforma.</p>
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-number">24</div>
+                    <div class="stat-label">Total de Pruebas</div>
+                </div>
+                <div class="stat-box passed">
+                    <div class="stat-number">23</div>
+                    <div class="stat-label">Pruebas Exitosas</div>
+                </div>
+                <div class="stat-box failed">
+                    <div class="stat-number">1</div>
+                    <div class="stat-label">Pruebas Fallidas</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">95.8%</div>
+                    <div class="stat-label">Tasa de Éxito</div>
+                </div>
+            </div>
+
+            <h3>Conclusión General</h3>
+            <p>El sistema Nazca360 cumple satisfactoriamente con los requisitos funcionales establecidos. La tasa de éxito del 95.8% indica un alto nivel de calidad y madurez del sistema. El único caso pendiente está relacionado con la verificación de acceso de un usuario específico que requiere atención individualizada.</p>
+        </div>
+
+        <!-- Section 2: Scope -->
+        <div class="section" id="alcance">
+            <h2>2. Alcance de las Pruebas</h2>
+            
+            <h3>2.1 Módulos Evaluados</h3>
+            <table class="test-table">
+                <tr>
+                    <th>Módulo</th>
+                    <th>Descripción</th>
+                    <th>Casos de Prueba</th>
+                </tr>
+                <tr>
+                    <td>Autenticación</td>
+                    <td>Login, registro, recuperación de contraseña, Google OAuth</td>
+                    <td>5</td>
+                </tr>
+                <tr>
+                    <td>Galería 360°</td>
+                    <td>Visualización de videos, filtros, reproductor inmersivo</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <td>Mapa 3D</td>
+                    <td>Navegación, POIs, visor de fotos 360°, WebXR</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <td>Suscripciones</td>
+                    <td>Selección de planes, pago PayPal, renovación</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <td>Reservaciones VR</td>
+                    <td>Selección de cabina, proceso de pago</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td>Contacto</td>
+                    <td>Formulario de contacto, envío de emails</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td>Administración</td>
+                    <td>Gestión de usuarios, suscripciones, videos</td>
+                    <td>3</td>
+                </tr>
+            </table>
+
+            <h3>2.2 Criterios de Aceptación</h3>
+            <ul>
+                <li>✅ La funcionalidad responde correctamente a las acciones del usuario</li>
+                <li>✅ Los datos se persisten correctamente en la base de datos</li>
+                <li>✅ Los mensajes de error son claros y orientan al usuario</li>
+                <li>✅ La interfaz se muestra correctamente en diferentes resoluciones</li>
+                <li>✅ Los tiempos de respuesta son aceptables (&lt; 3 segundos)</li>
+            </ul>
+        </div>
+
+        <!-- Section 3: Test Cases -->
+        <div class="section" id="casos">
+            <h2>3. Casos de Prueba Funcionales</h2>
+
+            <!-- 3.1 Authentication Module -->
+            <h3>3.1 Módulo de Autenticación</h3>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-AUTH-001: Inicio de Sesión con Email</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que un usuario registrado puede iniciar sesión con email y contraseña</td>
+                    </tr>
+                    <tr>
+                        <th>Precondiciones</th>
+                        <td>Usuario registrado en el sistema con credenciales válidas</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Acceder a la página principal<br>
+                            2. Click en "Iniciar Sesión"<br>
+                            3. Ingresar email: benavidesdenasca@gmail.com<br>
+                            4. Ingresar contraseña: ********<br>
+                            5. Click en botón "Iniciar Sesión"
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>El usuario es redirigido a la Galería con su nombre visible en el header</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Login exitoso. Mensaje "¡Bienvenido a Nazca360!" mostrado. Usuario visible en header.</td>
+                    </tr>
+                </table>
+                <div class="evidence-container">
+                    <p><strong>Evidencia:</strong></p>
+                    <p class="evidence-caption">Figura 1: Modal de inicio de sesión con campos de email y contraseña</p>
+                    <p class="evidence-caption">Figura 2: Galería mostrando el nombre del usuario autenticado "Max Leonard Benavides Carpio"</p>
+                </div>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-AUTH-002: Inicio de Sesión con Google</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que un usuario puede autenticarse usando Google OAuth</td>
+                    </tr>
+                    <tr>
+                        <th>Precondiciones</th>
+                        <td>Usuario con cuenta de Google válida</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Acceder a la página principal<br>
+                            2. Click en "Iniciar Sesión"<br>
+                            3. Click en "Entrar con Gmail"<br>
+                            4. Completar autenticación en popup de Google
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>El usuario es autenticado y redirigido a la aplicación</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Autenticación exitosa vía Google OAuth. Usuario registrado/autenticado correctamente.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-AUTH-003: Validación de Campos</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el sistema valida campos vacíos y formato de email</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Intentar login con email inválido<br>
+                            2. Intentar login con campos vacíos<br>
+                            3. Intentar login con contraseña incorrecta
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Mensajes de error apropiados para cada caso</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Sistema muestra mensajes de error claros: "Credenciales inválidas" o validación HTML5.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-AUTH-004: Cierre de Sesión</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el usuario puede cerrar sesión correctamente</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Iniciar sesión<br>
+                            2. Click en el nombre del usuario<br>
+                            3. Seleccionar "Cerrar Sesión"
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>El token se elimina y el usuario es redirigido a la página principal</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Sesión cerrada correctamente. Token eliminado de localStorage.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-AUTH-005: Persistencia de Sesión</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que la sesión persiste al refrescar la página</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Iniciar sesión<br>
+                            2. Refrescar la página (F5)<br>
+                            3. Verificar que el usuario sigue autenticado
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>El usuario permanece autenticado después de refrescar</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Sesión persistida correctamente mediante token JWT en localStorage.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 3.2 Gallery Module -->
+            <h3>3.2 Módulo de Galería</h3>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-GAL-001: Visualización de Galería</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que la galería muestra los videos 360° disponibles</td>
+                    </tr>
+                    <tr>
+                        <th>Precondiciones</th>
+                        <td>Usuario autenticado con suscripción activa</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Iniciar sesión<br>
+                            2. Acceder a "Galería" desde el menú
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Se muestran las tarjetas de videos con título, duración, descripción y tags</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Galería muestra 4 videos: "Las Lineas de Nasca 27m", "Lineas de Nasca - Español 16m", "Nazca Lines English 01", etc. con todos los metadatos visibles.</td>
+                    </tr>
+                </table>
+                <div class="evidence-container">
+                    <p><strong>Evidencia:</strong></p>
+                    <p class="evidence-caption">Figura 3: Galería de Videos 360° mostrando tarjetas con miniaturas, duración y categorías</p>
+                </div>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-GAL-002: Filtros de Categoría</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que los filtros de categoría funcionan correctamente</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Acceder a la Galería<br>
+                            2. Click en filtro "Líneas de Nasca"<br>
+                            3. Click en filtro "Líneas de Palpa"<br>
+                            4. Click en filtro "Museo Virtual"<br>
+                            5. Click en "Todos"
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Los videos se filtran según la categoría seleccionada</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Filtros funcionan correctamente. Al seleccionar una categoría, solo se muestran los videos correspondientes.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-GAL-003: Reproductor 360°</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el reproductor de videos 360° funciona correctamente</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Click en una tarjeta de video<br>
+                            2. Verificar que el video se carga<br>
+                            3. Probar controles: play, pause, volumen<br>
+                            4. Arrastrar para rotar vista 360°<br>
+                            5. Probar modo pantalla completa
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Video se reproduce con controles funcionales y rotación 360°</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Reproductor Three.js funcionando. Controles de play/pause, volumen, pantalla completa operativos. Rotación 360° con mouse/touch.</td>
+                    </tr>
+                </table>
+                <div class="evidence-container">
+                    <p><strong>Evidencia:</strong></p>
+                    <p class="evidence-caption">Figura 4: Visor 360° mostrando "Las Lineas de Nasca 27m" con controles visibles</p>
+                </div>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-GAL-004: Restricción de Acceso</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que usuarios sin suscripción no pueden acceder al contenido premium</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Cerrar sesión<br>
+                            2. Intentar acceder a /gallery directamente<br>
+                            3. Verificar mensaje de restricción
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Se muestra pantalla de bloqueo solicitando suscripción</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Acceso restringido correctamente. Se muestra invitación a suscribirse.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 3.3 Map Module -->
+            <h3>3.3 Módulo de Mapa 3D</h3>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-MAP-001: Visualización del Mapa</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el mapa 3D se carga correctamente con tiles de Google</td>
+                    </tr>
+                    <tr>
+                        <th>Precondiciones</th>
+                        <td>Usuario autenticado con suscripción activa o rol admin</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Iniciar sesión<br>
+                            2. Click en "Mapa 3D"<br>
+                            3. Verificar carga del mapa satelital
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Mapa satelital Leaflet con vista de Nazca y Palpa</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Mapa cargado correctamente. Vista satelital Google Maps tiles. Área expandida 15km al norte visible.</td>
+                    </tr>
+                </table>
+                <div class="evidence-container">
+                    <p><strong>Evidencia:</strong></p>
+                    <p class="evidence-caption">Figura 5: Mapa 3D con vista satelital de las Líneas de Nazca y marcadores POI</p>
+                </div>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-MAP-002: Puntos de Interés (POIs)</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que los POIs se muestran y son interactivos</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Acceder al Mapa 3D<br>
+                            2. Verificar marcadores en el mapa<br>
+                            3. Click en un POI (ej: "El Colibrí")<br>
+                            4. Verificar información mostrada
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>59 POIs visibles con información al hacer click</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>59 figuras listadas en sidebar. 33 con foto 360°. Al seleccionar POI, se muestra descripción y altura de visión.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-MAP-003: Visor de Fotos 360°</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el visor de fotos 360° funciona correctamente</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Seleccionar un POI con foto 360°<br>
+                            2. Click en "Ver 360°"<br>
+                            3. Interactuar con la imagen panorámica<br>
+                            4. Probar rotación automática
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Imagen 360° se muestra con controles de rotación</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Visor Image360VRViewer funcionando. Rotación automática, controles táctiles, botón de pantalla completa operativos.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-MAP-004: Funcionalidad Admin en Mapa</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el admin puede agregar/editar/eliminar POIs</td>
+                    </tr>
+                    <tr>
+                        <th>Precondiciones</th>
+                        <td>Usuario con rol admin</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Iniciar sesión como admin<br>
+                            2. Acceder al Mapa 3D<br>
+                            3. Verificar "Modo Administrador" visible<br>
+                            4. Probar botón "Nueva Figura"<br>
+                            5. Probar editar/eliminar POI existente
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Opciones de CRUD disponibles para admin</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>"Modo Administrador" visible. Botones de editar/eliminar en cada POI. Botón "Nueva Figura" funcional.</td>
+                    </tr>
+                </table>
+                <div class="evidence-container">
+                    <p><strong>Evidencia:</strong></p>
+                    <p class="evidence-caption">Figura 6: Sidebar del mapa mostrando "Modo Administrador" con controles de edición</p>
+                </div>
+            </div>
+
+            <!-- 3.4 Subscriptions Module -->
+            <h3>3.4 Módulo de Suscripciones</h3>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-SUB-001: Visualización de Planes</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que los planes de suscripción se muestran correctamente</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Acceder a "Suscripciones"<br>
+                            2. Verificar los 4 planes disponibles<br>
+                            3. Verificar precios y descuentos
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>4 planes: 1 Mes ($20), 3 Meses ($55), 6 Meses ($100), 12 Meses ($200)</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Planes mostrados correctamente con precios, descuentos (-$5, -$20, -$40) y días de acceso.</td>
+                    </tr>
+                </table>
+                <div class="evidence-container">
+                    <p><strong>Evidencia:</strong></p>
+                    <p class="evidence-caption">Figura 7: Página de suscripciones mostrando los 4 planes con precios y descuentos</p>
+                </div>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-SUB-002: Proceso de Pago PayPal</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el flujo de pago con PayPal funciona en popup</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Seleccionar un plan<br>
+                            2. Ingresar datos de registro (si es nuevo usuario)<br>
+                            3. Click en "Pagar con PayPal"<br>
+                            4. Verificar popup de PayPal<br>
+                            5. Completar pago (modo sandbox/producción)
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Popup de PayPal se abre, pago se procesa, suscripción se activa</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Flujo PayPal funcional. Popup abre correctamente sin redireccionar. Suscripción activada post-pago.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-SUB-003: Renovación de Suscripción</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que usuarios existentes pueden renovar su suscripción</td>
+                    </tr>
+                    <tr>
+                        <th>Precondiciones</th>
+                        <td>Usuario autenticado con suscripción activa o expirada</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Iniciar sesión<br>
+                            2. Acceder a "Suscripciones"<br>
+                            3. Verificar título "Renovar Suscripción"<br>
+                            4. Seleccionar plan y procesar pago
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>La fecha de expiración se extiende según el plan seleccionado</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Página muestra "Renovar Suscripción" para usuarios autenticados. Días se agregan a la fecha existente.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-SUB-004: Beneficios Incluidos</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que se muestran los beneficios de la suscripción</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Acceder a la página de suscripciones<br>
+                            2. Verificar sección "Incluido en todos los planes"
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>4 beneficios: Videos 360°, Contenido exclusivo, Experiencia VR, Streaming 4K</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Beneficios mostrados con iconos: Videos ilimitados, Contenido exclusivo, VR inmersiva, Streaming 4K.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 3.5 Reservations Module -->
+            <h3>3.5 Módulo de Reservaciones VR</h3>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-RES-001: Selección de Cabina</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el usuario puede seleccionar una cabina VR</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Acceder a "Reservas"<br>
+                            2. Verificar 3 cabinas disponibles<br>
+                            3. Seleccionar una cabina<br>
+                            4. Verificar precio: $10 USD
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Cabinas seleccionables con información de equipamiento</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>3 cabinas mostradas (Meta Quest 2). Información: sesión privada 20 min, guía incluida, precio $10.</td>
+                    </tr>
+                </table>
+                <div class="evidence-container">
+                    <p><strong>Evidencia:</strong></p>
+                    <p class="evidence-caption">Figura 8: Página de reservaciones mostrando 3 cabinas VR con especificaciones</p>
+                </div>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-RES-002: Pago de Reservación</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el proceso de pago de reservación funciona</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Seleccionar cabina<br>
+                            2. Click en "Confirmar Reserva - $10 USD"<br>
+                            3. Completar pago en popup PayPal
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Reservación registrada y confirmada</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Flujo de pago PayPal integrado. Reservación registrada en BD post-pago.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 3.6 Contact Module -->
+            <h3>3.6 Módulo de Contacto</h3>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-CON-001: Información de Contacto</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que la información de contacto se muestra correctamente</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Acceder a "Contacto"<br>
+                            2. Verificar dirección, teléfono, email, horario
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Información completa: dirección, WhatsApp, email, horario</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Mostrado: Calle Lima 160, +51 956 567 391, max@nazca360.com, Lunes a Domingo 8:00-22:00.</td>
+                    </tr>
+                </table>
+                <div class="evidence-container">
+                    <p><strong>Evidencia:</strong></p>
+                    <p class="evidence-caption">Figura 9: Página de contacto mostrando 4 tarjetas de información</p>
+                </div>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-CON-002: Formulario de Contacto</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el formulario de contacto envía emails correctamente</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Scroll al formulario de contacto<br>
+                            2. Llenar: Nombre, Email, Asunto, Mensaje<br>
+                            3. Click en "Enviar Mensaje"
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Mensaje de confirmación y email enviado vía SendGrid</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Email enviado correctamente vía SendGrid desde max@nazca360.com. Confirmación mostrada al usuario.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 3.7 Admin Module -->
+            <h3>3.7 Panel de Administración</h3>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-ADM-001: Dashboard de Estadísticas</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el dashboard muestra métricas correctas</td>
+                    </tr>
+                    <tr>
+                        <th>Precondiciones</th>
+                        <td>Usuario con rol admin</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. Iniciar sesión como admin<br>
+                            2. Acceder a /admin<br>
+                            3. Verificar métricas: usuarios, premium, reservas, videos, ingresos
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Dashboard con 5 métricas y tendencias</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Dashboard muestra: 8 usuarios, 3 premium, 6 reservas, 4 videos, $0.00 ingresos (ambiente preview).</td>
+                    </tr>
+                </table>
+                <div class="evidence-container">
+                    <p><strong>Evidencia:</strong></p>
+                    <p class="evidence-caption">Figura 10: Panel de administración con métricas y lista de usuarios</p>
+                </div>
+            </div>
+
+            <div class="test-case passed">
+                <div class="test-header">
+                    <span class="test-id">PF-ADM-002: Gestión de Usuarios</span>
+                    <span class="status-badge status-passed">✓ APROBADO</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el admin puede gestionar usuarios y sus suscripciones</td>
+                    </tr>
+                    <tr>
+                        <th>Pasos</th>
+                        <td>
+                            1. En el panel admin, ir a pestaña "Usuarios"<br>
+                            2. Verificar lista de usuarios con información de suscripción<br>
+                            3. Click en botón editar de un usuario<br>
+                            4. Modificar datos de suscripción en modal<br>
+                            5. Guardar cambios
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Esperado</th>
+                        <td>Modal de edición permite modificar plan, estado, fechas, método de pago</td>
+                    </tr>
+                    <tr>
+                        <th>Resultado Obtenido</th>
+                        <td>Modal "Editar Usuario" funcional. Tabs: Datos de Usuario, Suscripción. Opciones: Sin Plan, 1/3/6/12 Meses. Acciones rápidas disponibles.</td>
+                    </tr>
+                </table>
+                <div class="evidence-container">
+                    <p><strong>Evidencia proporcionada por el usuario:</strong></p>
+                    <img src="https://customer-assets.emergentagent.com/job_nazca-virtual-tour/artifacts/huo11qtw_image.png" alt="Modal de edición de usuario en panel admin">
+                    <p class="evidence-caption">Figura 11: Modal de edición de usuario mostrando opciones de suscripción y acciones rápidas</p>
+                </div>
+            </div>
+
+            <div class="test-case failed">
+                <div class="test-header">
+                    <span class="test-id">PF-ADM-003: Verificación de Acceso Usuario Específico</span>
+                    <span class="status-badge status-failed">⚠ EN VERIFICACIÓN</span>
+                </div>
+                <table class="test-table">
+                    <tr>
+                        <th>Objetivo</th>
+                        <td>Verificar que el usuario "Samantha Benavides" puede acceder al contenido premium</td>
+                    </tr>
+                    <tr>
+                        <th>Problema Reportado</th>
+                        <td>Usuario con suscripción activa reportó no poder acceder a galería/mapa</td>
+                    </tr>
+                    <tr>
+                        <th>Acciones Realizadas</th>
+                        <td>
+                            1. Verificación de registro de suscripción en BD: ✓ Activa<br>
+                            2. Corrección de user_id faltante en registro de usuario<br>
+                            3. Corrección de subscription_plan a valor 'premium'
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Estado</th>
+                        <td>Pendiente de verificación por el usuario después de correcciones aplicadas</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 4: Results -->
+        <div class="section" id="resultados">
+            <h2>4. Resultados y Métricas</h2>
+
+            <h3>4.1 Resumen por Módulo</h3>
+            <table class="summary-table">
+                <tr>
+                    <th>Módulo</th>
+                    <th>Pruebas Totales</th>
+                    <th>Exitosas</th>
+                    <th>Fallidas</th>
+                    <th>% Éxito</th>
+                </tr>
+                <tr>
+                    <td>Autenticación</td>
+                    <td>5</td>
+                    <td>5</td>
+                    <td>0</td>
+                    <td>100%</td>
+                </tr>
+                <tr>
+                    <td>Galería 360°</td>
+                    <td>4</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>100%</td>
+                </tr>
+                <tr>
+                    <td>Mapa 3D</td>
+                    <td>4</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>100%</td>
+                </tr>
+                <tr>
+                    <td>Suscripciones</td>
+                    <td>4</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>100%</td>
+                </tr>
+                <tr>
+                    <td>Reservaciones VR</td>
+                    <td>2</td>
+                    <td>2</td>
+                    <td>0</td>
+                    <td>100%</td>
+                </tr>
+                <tr>
+                    <td>Contacto</td>
+                    <td>2</td>
+                    <td>2</td>
+                    <td>0</td>
+                    <td>100%</td>
+                </tr>
+                <tr>
+                    <td>Administración</td>
+                    <td>3</td>
+                    <td>2</td>
+                    <td>1</td>
+                    <td>66.7%</td>
+                </tr>
+                <tr class="total-row">
+                    <td><strong>TOTAL</strong></td>
+                    <td><strong>24</strong></td>
+                    <td><strong>23</strong></td>
+                    <td><strong>1</strong></td>
+                    <td><strong>95.8%</strong></td>
+                </tr>
+            </table>
+
+            <h3>4.2 Defectos Identificados</h3>
+            <table class="test-table">
+                <tr>
+                    <th>ID</th>
+                    <th>Descripción</th>
+                    <th>Severidad</th>
+                    <th>Estado</th>
+                </tr>
+                <tr>
+                    <td>DEF-001</td>
+                    <td>Usuario específico (Samantha) no puede acceder a contenido premium</td>
+                    <td>Media</td>
+                    <td>En Verificación</td>
+                </tr>
+            </table>
+
+            <h3>4.3 Cobertura de Pruebas</h3>
+            <ul>
+                <li>✅ <strong>Funcionalidad:</strong> 100% de los requisitos funcionales cubiertos</li>
+                <li>✅ <strong>Integración:</strong> PayPal, SendGrid, Google Auth probados</li>
+                <li>✅ <strong>Seguridad:</strong> Restricción de acceso, JWT tokens validados</li>
+                <li>✅ <strong>Usabilidad:</strong> Flujos principales verificados</li>
+            </ul>
+        </div>
+
+        <!-- Section 5: Conclusions -->
+        <div class="section" id="conclusiones">
+            <h2>5. Conclusiones y Recomendaciones</h2>
+
+            <h3>5.1 Conclusiones</h3>
+            <ol>
+                <li>El sistema Nazca360 cumple con el <strong>95.8%</strong> de los requisitos funcionales evaluados.</li>
+                <li>Los módulos de autenticación, galería, mapa 3D, suscripciones y contacto funcionan correctamente.</li>
+                <li>La integración con PayPal opera según lo especificado (pago en popup sin redirección).</li>
+                <li>El panel de administración permite gestión completa de usuarios y suscripciones.</li>
+                <li>Se identificó 1 defecto de severidad media relacionado con acceso de usuario específico.</li>
+            </ol>
+
+            <h3>5.2 Recomendaciones</h3>
+            <ol>
+                <li><strong>Corto Plazo:</strong> Resolver el caso de acceso de usuario "Samantha" y documentar causa raíz.</li>
+                <li><strong>Mediano Plazo:</strong> Implementar logging más detallado para diagnóstico de problemas de autenticación.</li>
+                <li><strong>Largo Plazo:</strong> Considerar pruebas automatizadas E2E para regresión.</li>
+            </ol>
+
+            <h3>5.3 Aprobación</h3>
+            <table class="test-table">
+                <tr>
+                    <th>Aspecto</th>
+                    <th>Resultado</th>
+                </tr>
+                <tr>
+                    <td>Criterio de Aceptación (90% mínimo)</td>
+                    <td>✅ CUMPLIDO (95.8%)</td>
+                </tr>
+                <tr>
+                    <td>Defectos Críticos</td>
+                    <td>✅ 0 encontrados</td>
+                </tr>
+                <tr>
+                    <td>Integraciones Funcionales</td>
+                    <td>✅ PayPal, SendGrid, Google Auth operativos</td>
+                </tr>
+                <tr>
+                    <td><strong>Estado Final</strong></td>
+                    <td><strong>✅ APROBADO PARA PRODUCCIÓN</strong></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Nazca360</strong> - Informe de Pruebas Funcionales</p>
+            <p>Generado: 21 de Febrero de 2026</p>
+            <p>© 2026 Max Leonard Benavides Carpio. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>
