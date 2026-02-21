@@ -64,6 +64,12 @@ Plataforma de turismo virtual premium para administrar y mostrar contenido 360°
   - Nuevo endpoint: GET /api/subscription/status
   - Usuarios sin suscripción ven pantalla de bloqueo
   - Admin siempre tiene acceso
+- **Visor 360° con soporte WebXR/VR** (21 Feb 2026)
+  - Nuevo componente: Image360VRViewer.jsx usando Three.js
+  - Soporte para Meta Quest 3 y otros dispositivos WebXR
+  - Botón "Entrar en Modo VR" aparece automáticamente en dispositivos compatibles
+  - Rotación automática, pantalla completa, controles táctiles
+  - Reemplaza el iframe de Pannellum por visor nativo Three.js
 
 ### 🔴 Eliminado
 - Integración Stripe (reemplazada por PayPal)
