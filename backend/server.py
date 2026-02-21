@@ -4057,54 +4057,6 @@ async def proxy_image(url: str):
         logging.error(f"Image proxy error: {e}")
         raise HTTPException(status_code=500, detail="Error al obtener imagen")
 
-# ==================== DOCUMENTATION ENDPOINTS ====================
-
-@api_router.get("/documentos/list")
-async def list_documents():
-    """List all available documentation files"""
-    docs_dir = Path("/app/docs")
-    if not docs_dir.exists():
-        return {"documents": []}
-    
-    documents = []
-    for file in docs_dir.iterdir():
-        if file.suffix in ['.pdf', '.html', '.md']:
-            documents.append({
-                "filename": file.name,
-                "type": file.suffix[1:],
-                "size_bytes": file.stat().st_size,
-                "download_url": f"/api/documentos/download/{file.name}"
-            })
-    
-    return {"documents": sorted(documents, key=lambda x: x['filename'])}
-
-@api_router.get("/documentos/download/{filename}")
-async def download_document(filename: str):
-    """Download a documentation file"""
-    docs_dir = Path("/app/docs")
-    file_path = docs_dir / filename
-    
-    # Security: prevent path traversal
-    if ".." in filename or "/" in filename:
-        raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
-    
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Documento no encontrado")
-    
-    # Determine media type
-    media_types = {
-        ".pdf": "application/pdf",
-        ".html": "text/html",
-        ".md": "text/markdown"
-    }
-    media_type = media_types.get(file_path.suffix, "application/octet-stream")
-    
-    return FileResponse(
-        path=str(file_path),
-        filename=filename,
-        media_type=media_type
-    )
-
 # Add middlewares BEFORE including routers
 app.add_middleware(
     CORSMiddleware,
