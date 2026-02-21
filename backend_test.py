@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import time
 
 class Nazca360APITester:
-    def __init__(self, base_url="https://peru-heritage-vr.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://ancient-lines-vr.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.session_token = None
         self.admin_token = None
@@ -134,7 +134,7 @@ class Nazca360APITester:
         # Test create checkout (should work but we won't complete payment)
         checkout_data = {
             "plan_type": "premium",
-            "origin_url": "https://peru-heritage-vr.preview.emergentagent.com"
+            "origin_url": "https://ancient-lines-vr.preview.emergentagent.com"
         }
         self.run_test("Create Subscription Checkout", "POST", "subscriptions/checkout", 200, 
                      data=checkout_data, headers=headers)
