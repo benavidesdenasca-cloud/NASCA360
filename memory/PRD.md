@@ -129,8 +129,11 @@ Plataforma de turismo virtual premium para administrar y mostrar contenido 360°
 ### 🟡 Pendiente
 - Actualizar API key de SendGrid para emails
 - Probar flujo completo de PayPal en producción
+- Probar experiencia VR en Meta Quest 3 (requiere dispositivo físico)
 
 ### 🔵 Backlog
-- Modularizar server.py
-- Refactorizar Map3D.jsx
-- Integración DRM
+- Modularizar server.py en routes/, models/, services/
+- Refactorizar Map3D.jsx en componentes más pequeños
+- Implementar manejo global de errores API (apiErrorHandler.js)
+- Eliminar código AWS S3 no utilizado
+- Integración DRM para seguridad de medios
