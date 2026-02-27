@@ -1983,15 +1983,24 @@ async def get_all_users(admin: User = Depends(require_admin)):
     """Get all users with subscription info (admin only)"""
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
     
-    # Enrich each user with their subscription info
+    # Batch fetch all active subscriptions at once (optimized - no N+1 queries)
+    user_ids = [user.get('user_id') for user in users if user.get('user_id')]
+    subscriptions = await db.subscriptions.find(
+        {"user_id": {"$in": user_ids}, "status": "active"},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    # Create lookup map by user_id
+    sub_map = {}
+    for sub in subscriptions:
+        uid = sub.get('user_id')
+        # Keep the most recent subscription per user
+        if uid and (uid not in sub_map or sub.get('created_at', '') > sub_map[uid].get('created_at', '')):
+            sub_map[uid] = sub
+    
+    # Enrich users with subscription info
     for user in users:
-        # Find active subscription for this user
-        subscription = await db.subscriptions.find_one(
-            {"user_id": user['user_id'], "status": "active"},
-            {"_id": 0},
-            sort=[("created_at", -1)]
-        )
-        
+        subscription = sub_map.get(user.get('user_id'))
         if subscription:
             user['subscription_info'] = {
                 "payment_date": subscription.get('payment_date'),
