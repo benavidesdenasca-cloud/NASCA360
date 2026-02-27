@@ -482,7 +482,9 @@ async def login(request: LoginRequest):
 @api_router.get("/auth/google")
 async def google_login(request: Request):
     """Initiate Google OAuth login"""
-    redirect_uri = GOOGLE_REDIRECT_URI
+    # Construir redirect URI dinámicamente desde el request
+    base_url = str(request.base_url).rstrip('/')
+    redirect_uri = f"{base_url}/api/auth/google/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @api_router.get("/auth/google/callback")
