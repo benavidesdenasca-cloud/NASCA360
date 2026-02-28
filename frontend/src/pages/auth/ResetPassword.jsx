@@ -91,7 +91,7 @@ const ResetPassword = () => {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <img 
-            src="/logo.jpg" 
+            src="/logo.png" 
             alt="Nazca360 Logo" 
             className="h-24 w-auto object-contain"
           />

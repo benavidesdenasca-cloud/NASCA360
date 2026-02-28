@@ -43,7 +43,7 @@ const VerifyEmail = () => {
       <div className="glass rounded-3xl p-8 sm:p-12 w-full max-w-md shadow-2xl text-center">
         <div className="flex justify-center mb-8">
           <img 
-            src="/logo.jpg" 
+            src="/logo.png" 
             alt="Nazca360 Logo" 
             className="h-24 w-auto object-contain"
           />

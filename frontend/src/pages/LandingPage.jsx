@@ -29,7 +29,7 @@ const LandingPage = () => {
         <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
           <div className="mb-8 flex justify-center">
             <img 
-              src="/logo.jpg" 
+              src="/logo.png" 
               alt="Nazca360 Logo" 
               className="h-32 sm:h-40 lg:h-48 w-auto object-contain drop-shadow-2xl"
             />
@@ -151,7 +151,7 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto text-center">
           <div className="mb-4 flex justify-center">
             <img 
-              src="/logo.jpg" 
+              src="/logo.png" 
               alt="Nazca360 Logo" 
               className="h-16 w-auto object-contain opacity-90"
             />

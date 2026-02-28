@@ -39,7 +39,7 @@ const Navbar = () => {
             className="flex items-center space-x-3"
           >
             <img 
-              src="/logo.jpg" 
+              src="/logo.png" 
               alt="Nazca360 Logo" 
               className="h-12 w-auto object-contain"
             />
